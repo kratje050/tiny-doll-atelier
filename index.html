@@ -174,7 +174,11 @@
           <span>Totaal</span>
           <strong data-cart-total>€0,00</strong>
         </div>
-        <form class="checkout-form" data-checkout-form>
+        <div class="cart-actions">
+          <button class="primary-action" type="button" data-show-checkout>Gegevens invullen</button>
+          <button class="secondary-action" type="button" data-clear-cart>Winkelmand leegmaken</button>
+        </div>
+        <form class="checkout-form" data-checkout-form hidden>
           <label>
             Naam
             <input name="name" autocomplete="name" required />
@@ -202,9 +206,6 @@
           <p class="form-note" data-order-message></p>
           <button class="primary-action" type="submit">Bestelverzoek maken</button>
         </form>
-        <div class="cart-actions">
-          <button class="secondary-action" type="button" data-clear-cart>Leegmaken</button>
-        </div>
       </div>
     </aside>
 

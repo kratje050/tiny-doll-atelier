@@ -6,6 +6,7 @@ const state = {
   cart: JSON.parse(localStorage.getItem("poppenatelier-cart") || "{}"),
   products: TinyStore.getProducts().filter((product) => product.active),
   categories: TinyStore.getCategories(),
+  checkoutVisible: false,
 };
 
 const grid = document.querySelector("[data-product-grid]");
@@ -18,6 +19,7 @@ const cartItems = document.querySelector("[data-cart-items]");
 const cartTotal = document.querySelector("[data-cart-total]");
 const cartCount = document.querySelector("[data-cart-count]");
 const checkoutForm = document.querySelector("[data-checkout-form]");
+const checkoutToggle = document.querySelector("[data-show-checkout]");
 const orderMessage = document.querySelector("[data-order-message]");
 const giftCardOrderForm = document.querySelector("[data-gift-card-order-form]");
 const giftCardMessage = document.querySelector("[data-gift-card-message]");
@@ -47,6 +49,18 @@ function stockLabel(product) {
     ? ` - ${product.stock}`
     : "";
   return `Nog ${quantity} op voorraad${extra}`;
+}
+
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, (character) =>
+    ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;",
+    })[character],
+  );
 }
 
 function renderFilters() {
@@ -121,8 +135,28 @@ function addToCart(productId) {
   openCart();
 }
 
+function setCartQuantity(productId, quantity) {
+  if (quantity <= 0) {
+    delete state.cart[productId];
+  } else {
+    state.cart[productId] = quantity;
+  }
+
+  saveCart();
+  renderCart();
+}
+
+function removeFromCart(productId) {
+  delete state.cart[productId];
+  saveCart();
+  renderCart();
+}
+
 function clearCart() {
   state.cart = {};
+  state.checkoutVisible = false;
+  checkoutForm.reset();
+  orderMessage.textContent = "";
   saveCart();
   renderCart();
 }
@@ -146,14 +180,21 @@ function renderCart() {
 
   entries.forEach(({ product, quantity }) => {
     const line = document.createElement("article");
+    const productName = escapeHtml(product.name);
+    const productImage = escapeHtml(product.image);
     line.className = "cart-line";
     line.innerHTML = `
-      <img src="${product.image}" alt="${product.name}">
+      <img src="${productImage}" alt="${productName}">
       <div>
-        <strong>${product.name}</strong>
+        <strong>${productName}</strong>
         <span>${formatMoney(product.price)} per stuk</span>
       </div>
-      <span class="quantity">${quantity}x</span>
+      <div class="quantity-controls" aria-label="Aantal voor ${productName}">
+        <button type="button" data-cart-action="decrease" data-product-id="${product.id}" aria-label="Minder ${productName}">-</button>
+        <span class="quantity">${quantity}x</span>
+        <button type="button" data-cart-action="increase" data-product-id="${product.id}" aria-label="Meer ${productName}">+</button>
+        <button class="remove-item" type="button" data-cart-action="remove" data-product-id="${product.id}">Verwijder</button>
+      </div>
     `;
     cartItems.append(line);
   });
@@ -162,6 +203,19 @@ function renderCart() {
   const count = entries.reduce((sum, entry) => sum + entry.quantity, 0);
   cartTotal.textContent = formatMoney(total);
   cartCount.textContent = count;
+  checkoutToggle.disabled = !count;
+  checkoutToggle.hidden = state.checkoutVisible || !count;
+  checkoutForm.hidden = !state.checkoutVisible || !count;
+}
+
+function showCheckout() {
+  if (!cartEntries().length) {
+    return;
+  }
+
+  state.checkoutVisible = true;
+  renderCart();
+  checkoutForm.querySelector("input")?.focus();
 }
 
 function openCart() {
@@ -227,6 +281,29 @@ document.querySelectorAll("[data-close-cart]").forEach((button) => {
 });
 
 document.querySelector("[data-clear-cart]").addEventListener("click", clearCart);
+checkoutToggle.addEventListener("click", showCheckout);
+
+cartItems.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-cart-action]");
+  if (!button) {
+    return;
+  }
+
+  const productId = button.dataset.productId;
+  const currentQuantity = state.cart[productId] || 0;
+
+  if (button.dataset.cartAction === "increase") {
+    setCartQuantity(productId, currentQuantity + 1);
+  }
+
+  if (button.dataset.cartAction === "decrease") {
+    setCartQuantity(productId, currentQuantity - 1);
+  }
+
+  if (button.dataset.cartAction === "remove") {
+    removeFromCart(productId);
+  }
+});
 
 checkoutForm.addEventListener("submit", (event) => {
   event.preventDefault();
@@ -256,6 +333,7 @@ checkoutForm.addEventListener("submit", (event) => {
 
   orderMessage.textContent = `Bestelling ${order.id} is opgeslagen in beheer.`;
   state.cart = {};
+  state.checkoutVisible = false;
   saveCart();
   renderCart();
 
