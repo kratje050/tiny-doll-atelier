@@ -7,22 +7,7 @@
     <title>Beheer - Tiny Doll Atelier</title>
     <link rel="stylesheet" href="admin.css" />
   </head>
-  <body class="admin-locked">
-    <section class="login-screen" data-login-screen aria-labelledby="login-title">
-      <form class="login-card" data-login-form>
-        <span class="login-mark">T</span>
-        <p class="eyebrow">Beveiligd beheer</p>
-        <h1 id="login-title">Tiny Doll Atelier</h1>
-        <p>Log in om producten, bestellingen, klanten en cadeaubonnen te beheren.</p>
-        <label>
-          Wachtwoord
-          <input name="password" type="password" autocomplete="current-password" required />
-        </label>
-        <p class="login-error" data-login-error></p>
-        <button class="primary-button" type="submit">Inloggen</button>
-      </form>
-    </section>
-
+  <body>
     <aside class="admin-sidebar">
       <a class="admin-brand" href="index.html">
         <span>T</span>
@@ -37,7 +22,7 @@
         <button type="button" data-view-button="customers">Klanten</button>
         <button type="button" data-view-button="orders">Bestellingen</button>
       </nav>
-      <a class="store-link" href="index.html">Bekijk webshop</a>
+      <a class="store-link" href="/">Bekijk webshop</a>
       <button class="store-link logout-button" type="button" data-admin-logout>Uitloggen</button>
     </aside>
 

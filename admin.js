@@ -1,8 +1,3 @@
-const ADMIN_PASSWORD = "TinyDoll2026!";
-const ADMIN_SESSION_KEY = "tiny-doll-admin-unlocked";
-
-const loginForm = document.querySelector("[data-login-form]");
-const loginError = document.querySelector("[data-login-error]");
 const logoutButton = document.querySelector("[data-admin-logout]");
 
 const adminState = {
@@ -28,32 +23,9 @@ const productUpload = document.querySelector("[data-product-upload]");
 const uploadName = document.querySelector("[data-upload-name]");
 const imagePreview = document.querySelector("[data-image-preview]");
 
-function unlockAdmin() {
-  sessionStorage.setItem(ADMIN_SESSION_KEY, "true");
-  document.body.classList.remove("admin-locked");
-  renderAll();
-}
-
-function lockAdmin() {
-  sessionStorage.removeItem(ADMIN_SESSION_KEY);
-  document.body.classList.add("admin-locked");
-  loginForm.elements.password.value = "";
-  loginForm.elements.password.focus();
-}
-
-loginForm.addEventListener("submit", (event) => {
-  event.preventDefault();
-  const password = new FormData(loginForm).get("password");
-  if (password === ADMIN_PASSWORD) {
-    loginError.textContent = "";
-    unlockAdmin();
-    return;
-  }
-
-  loginError.textContent = "Wachtwoord klopt niet.";
+logoutButton.addEventListener("click", () => {
+  window.location.href = "/admin/logout";
 });
-
-logoutButton.addEventListener("click", lockAdmin);
 
 function categoryName(id) {
   return adminState.categories.find((category) => category.id === id)?.name || id;
@@ -584,8 +556,4 @@ document.querySelector("[data-reset-demo]").addEventListener("click", () => {
   renderAll();
 });
 
-if (sessionStorage.getItem(ADMIN_SESSION_KEY) === "true") {
-  unlockAdmin();
-} else {
-  lockAdmin();
-}
+renderAll();
