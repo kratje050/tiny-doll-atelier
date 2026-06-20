@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="nl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tiny Doll Atelier - Handgemaakte poppenkleding</title>
+    <meta
+      name="description"
+      content="Een kleine webshop voor handgemaakte poppenkleding in zachte linnen, naturel en warme aardetinten."
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="site-header" id="top">
+      <a class="brand" href="#top" aria-label="Tiny Doll Atelier start">
+        <span class="brand-mark">T</span>
+        <span>
+          <strong>Tiny Doll Atelier</strong>
+          <small>handgemaakte poppenkleding</small>
+        </span>
+      </a>
+      <nav class="top-nav" aria-label="Hoofdnavigatie">
+        <a href="#collectie">Collectie</a>
+        <a href="#maatwerk">Maatwerk</a>
+        <a href="#cadeaubon">Cadeaubon</a>
+        <a href="#bestellen">Bestellen</a>
+      </nav>
+      <button class="cart-button" type="button" data-open-cart>
+        <span class="cart-dot" data-cart-count>0</span>
+        Winkelmand
+      </button>
+    </header>
+
+    <main>
+      <section class="hero-shell">
+        <div class="hero-copy">
+          <p class="eyebrow">Nieuw in het atelier</p>
+          <h1>Zachte linnen setjes voor poppen.</h1>
+          <p>
+            Handgemaakte poppenkleding in naturel tinten, met rustige stoffen,
+            fijne strikjes en een warme atelierstijl.
+          </p>
+          <div class="hero-actions">
+            <a class="primary-action" href="#collectie">Bekijk collectie</a>
+            <a class="secondary-action" href="#maatwerk">Vraag maatwerk aan</a>
+          </div>
+        </div>
+        <figure class="hero-image">
+          <img src="assets/tiny-hero.png" alt="Pop met linnen poppenkleding van Tiny Doll Atelier" />
+        </figure>
+      </section>
+
+      <section class="shop-band" id="collectie" aria-labelledby="collectie-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Collectie</p>
+            <h2 id="collectie-title">Klaar om te bestellen</h2>
+          </div>
+          <div class="collection-tools">
+            <label class="search-box">
+              <span>Zoeken</span>
+              <input
+                type="search"
+                data-product-search
+                placeholder="Zoek op jurkje, linnen, haarband..."
+                autocomplete="off"
+              />
+            </label>
+            <div class="filter-tabs" aria-label="Filter collectie" data-filter-tabs></div>
+          </div>
+        </div>
+
+        <p class="result-count" data-result-count></p>
+        <div class="product-grid" data-product-grid></div>
+      </section>
+
+      <section class="service-band" id="maatwerk" aria-labelledby="maatwerk-title">
+        <div class="service-copy">
+          <p class="eyebrow">Maatwerk</p>
+          <h2 id="maatwerk-title">Ook op aanvraag</h2>
+          <p>
+            Kies een stijl, geef de popmaat door en stem samen stof, kleur en
+            details af.
+          </p>
+        </div>
+        <div class="service-list" aria-label="Maatwerk opties">
+          <article>
+            <strong>Popmaat</strong>
+            <span>32 cm, 36 cm of eigen maat</span>
+          </article>
+          <article>
+            <strong>Stofkeuze</strong>
+            <span>Linnenlook, katoen, tricot of zachte naturelstof</span>
+          </article>
+          <article>
+            <strong>Afwerking</strong>
+            <span>Strikjes, haarbanden, elastiek, knoopjes of fijne randjes</span>
+          </article>
+        </div>
+      </section>
+
+      <section class="gift-card-band" id="cadeaubon" aria-labelledby="cadeaubon-title">
+        <div>
+          <p class="eyebrow">Cadeaubon</p>
+          <h2 id="cadeaubon-title">Geef atelier-tegoed cadeau</h2>
+          <p>
+            Bestel een cadeaubon voor poppenkleding. Na betaling kun je in beheer
+            zelf de code aanmaken en naar de ontvanger sturen.
+          </p>
+        </div>
+        <form class="gift-card-form" data-gift-card-order-form>
+          <label>
+            Bedrag
+            <select name="amount">
+              <option value="15">€15</option>
+              <option value="25" selected>€25</option>
+              <option value="50">€50</option>
+              <option value="75">€75</option>
+            </select>
+          </label>
+          <label>
+            Jouw naam
+            <input name="name" autocomplete="name" required />
+          </label>
+          <label>
+            Jouw e-mail
+            <input name="email" type="email" autocomplete="email" required />
+          </label>
+          <label>
+            Voor wie is de bon?
+            <input name="recipient" />
+          </label>
+          <label>
+            E-mail ontvanger
+            <input name="recipientEmail" type="email" autocomplete="email" />
+          </label>
+          <label>
+            Bericht
+            <textarea name="message" rows="3"></textarea>
+          </label>
+          <p class="form-note" data-gift-card-message></p>
+          <button class="primary-action" type="submit">Cadeaubon bestellen</button>
+        </form>
+      </section>
+
+      <section class="order-band" id="bestellen" aria-labelledby="bestellen-title">
+        <div>
+          <p class="eyebrow">Bestellen</p>
+          <h2 id="bestellen-title">Stuur een bestelverzoek</h2>
+          <p>
+            Het winkelmandje maakt automatisch een bericht met de gekozen items.
+            Daarna kunnen jullie maat, betaling, levertijd en stofvoorraad persoonlijk
+            afstemmen.
+          </p>
+        </div>
+        <button class="primary-action" type="button" data-open-cart>Open winkelmand</button>
+      </section>
+    </main>
+
+    <aside class="cart-panel" data-cart-panel aria-label="Winkelmand" aria-hidden="true">
+      <div class="cart-backdrop" data-close-cart></div>
+      <div class="cart-drawer" role="dialog" aria-modal="true" aria-labelledby="cart-title">
+        <div class="cart-top">
+          <div>
+            <p class="eyebrow">Besteloverzicht</p>
+            <h2 id="cart-title">Winkelmand</h2>
+          </div>
+          <button class="icon-button" type="button" data-close-cart aria-label="Winkelmand sluiten">
+            ×
+          </button>
+        </div>
+        <div class="cart-items" data-cart-items></div>
+        <div class="cart-summary">
+          <span>Totaal</span>
+          <strong data-cart-total>€0,00</strong>
+        </div>
+        <form class="checkout-form" data-checkout-form>
+          <label>
+            Naam
+            <input name="name" autocomplete="name" required />
+          </label>
+          <label>
+            E-mail
+            <input name="email" type="email" autocomplete="email" required />
+          </label>
+          <label>
+            Telefoon
+            <input name="phone" autocomplete="tel" />
+          </label>
+          <label>
+            Kortingscode
+            <input name="discountCode" autocomplete="off" />
+          </label>
+          <label>
+            Cadeauboncode
+            <input name="giftCardCode" autocomplete="off" />
+          </label>
+          <label>
+            Opmerking
+            <textarea name="notes" rows="3"></textarea>
+          </label>
+          <p class="form-note" data-order-message></p>
+          <button class="primary-action" type="submit">Bestelverzoek maken</button>
+        </form>
+        <div class="cart-actions">
+          <button class="secondary-action" type="button" data-clear-cart>Leegmaken</button>
+        </div>
+      </div>
+    </aside>
+
+    <template id="product-card-template">
+      <article class="product-card">
+        <div class="product-photo">
+          <img alt="" />
+          <span class="product-badge"></span>
+        </div>
+        <div class="product-info">
+          <p class="product-category"></p>
+          <h3></h3>
+          <p class="product-description"></p>
+          <div class="product-meta">
+            <strong class="product-price"></strong>
+            <span class="product-stock"></span>
+          </div>
+          <button class="add-button" type="button">Toevoegen</button>
+        </div>
+      </article>
+    </template>
+
+    <script src="store.js"></script>
+    <script src="script.js"></script>
+  </body>
+</html>

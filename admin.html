@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="nl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex,nofollow" />
+    <title>Beheer - Tiny Doll Atelier</title>
+    <link rel="stylesheet" href="admin.css" />
+  </head>
+  <body class="admin-locked">
+    <section class="login-screen" data-login-screen aria-labelledby="login-title">
+      <form class="login-card" data-login-form>
+        <span class="login-mark">T</span>
+        <p class="eyebrow">Beveiligd beheer</p>
+        <h1 id="login-title">Tiny Doll Atelier</h1>
+        <p>Log in om producten, bestellingen, klanten en cadeaubonnen te beheren.</p>
+        <label>
+          Wachtwoord
+          <input name="password" type="password" autocomplete="current-password" required />
+        </label>
+        <p class="login-error" data-login-error></p>
+        <button class="primary-button" type="submit">Inloggen</button>
+      </form>
+    </section>
+
+    <aside class="admin-sidebar">
+      <a class="admin-brand" href="index.html">
+        <span>T</span>
+        <strong>Tiny Doll Atelier</strong>
+      </a>
+      <nav class="admin-nav" aria-label="Beheer navigatie">
+        <button class="is-active" type="button" data-view-button="dashboard">Dashboard</button>
+        <button type="button" data-view-button="products">Producten</button>
+        <button type="button" data-view-button="categories">Categorieen</button>
+        <button type="button" data-view-button="discounts">Kortingscodes</button>
+        <button type="button" data-view-button="giftcards">Cadeaubonnen</button>
+        <button type="button" data-view-button="customers">Klanten</button>
+        <button type="button" data-view-button="orders">Bestellingen</button>
+      </nav>
+      <a class="store-link" href="index.html">Bekijk webshop</a>
+      <button class="store-link logout-button" type="button" data-admin-logout>Uitloggen</button>
+    </aside>
+
+    <main class="admin-main">
+      <header class="admin-top">
+        <div>
+          <p class="eyebrow">Beheer</p>
+          <h1>Atelier dashboard</h1>
+        </div>
+        <button class="ghost-button" type="button" data-reset-demo>Voorbeelddata herstellen</button>
+      </header>
+
+      <section class="admin-view is-active" data-view="dashboard">
+        <div class="metric-grid" data-metrics></div>
+        <div class="dashboard-grid">
+          <section class="panel">
+            <div class="panel-heading">
+              <h2>Bezoekers laatste 7 dagen</h2>
+            </div>
+            <div class="bar-chart" data-visit-chart></div>
+          </section>
+          <section class="panel">
+            <div class="panel-heading">
+              <h2>Bestsellers</h2>
+            </div>
+            <div class="seller-list" data-bestsellers></div>
+          </section>
+        </div>
+      </section>
+
+      <section class="admin-view" data-view="products">
+        <div class="work-grid">
+          <form class="panel form-panel" data-product-form>
+            <div class="panel-heading">
+              <h2>Product toevoegen</h2>
+              <button class="ghost-button" type="button" data-cancel-product hidden>Annuleren</button>
+            </div>
+            <input name="id" type="hidden" />
+            <label>Naam <input name="name" required /></label>
+            <label>Categorie <select name="categoryId" required></select></label>
+            <label>Prijs <input name="price" type="number" min="0" step="0.01" required /></label>
+            <label>Aantal op voorraad <input name="stockQuantity" type="number" min="0" step="1" required /></label>
+            <label>Voorraadtekst <input name="stock" placeholder="Bijv. op bestelling of limited edition" /></label>
+            <label>Label <input name="badge" placeholder="Pop 32-36 cm" /></label>
+            <label>
+              Afbeelding
+              <input name="image" placeholder="assets/tiny-look-card.png" required />
+            </label>
+            <div class="upload-box">
+              <input
+                id="product-image-upload"
+                name="imageUpload"
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                data-product-upload
+              />
+              <label class="upload-button" for="product-image-upload">Afbeelding uploaden</label>
+              <span data-upload-name>Geen bestand gekozen</span>
+            </div>
+            <figure class="image-preview" data-image-preview hidden>
+              <img alt="Voorbeeld van productafbeelding" />
+            </figure>
+            <label>Omschrijving <textarea name="description" rows="4" required></textarea></label>
+            <label class="check-row"><input name="active" type="checkbox" checked /> Zichtbaar in webshop</label>
+            <button class="primary-button" type="submit">Product opslaan</button>
+          </form>
+          <section class="panel table-panel">
+            <div class="panel-heading">
+              <h2>Producten</h2>
+              <span data-product-count></span>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Product</th>
+                    <th>Categorie</th>
+                    <th>Prijs</th>
+                    <th>Voorraad</th>
+                    <th>Status</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody data-product-table></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section class="admin-view" data-view="categories">
+        <div class="work-grid compact">
+          <form class="panel form-panel" data-category-form>
+            <div class="panel-heading">
+              <h2>Categorie toevoegen</h2>
+            </div>
+            <label>Naam <input name="name" required /></label>
+            <button class="primary-button" type="submit">Categorie opslaan</button>
+          </form>
+          <section class="panel table-panel">
+            <div class="panel-heading">
+              <h2>Categorieen</h2>
+            </div>
+            <div class="chip-list" data-category-list></div>
+          </section>
+        </div>
+      </section>
+
+      <section class="admin-view" data-view="discounts">
+        <div class="work-grid compact">
+          <form class="panel form-panel" data-discount-form>
+            <div class="panel-heading">
+              <h2>Kortingscode maken</h2>
+            </div>
+            <label>Code <input name="code" placeholder="WELKOM10" required /></label>
+            <label>
+              Soort korting
+              <select name="type">
+                <option value="percent">Percentage</option>
+                <option value="fixed">Vast bedrag</option>
+              </select>
+            </label>
+            <label>Waarde <input name="value" type="number" min="0" step="0.01" required /></label>
+            <label class="check-row"><input name="active" type="checkbox" checked /> Actief</label>
+            <button class="primary-button" type="submit">Kortingscode opslaan</button>
+          </form>
+          <section class="panel table-panel">
+            <div class="panel-heading">
+              <h2>Kortingscodes</h2>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Code</th>
+                    <th>Korting</th>
+                    <th>Gebruikt</th>
+                    <th>Status</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody data-discount-table></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section class="admin-view" data-view="giftcards">
+        <div class="work-grid compact">
+          <form class="panel form-panel" data-gift-card-form>
+            <div class="panel-heading">
+              <h2>Cadeaubon aanmaken</h2>
+            </div>
+            <label>Code <input name="code" placeholder="CADEAU25" required /></label>
+            <label>Waarde <input name="initialValue" type="number" min="0" step="0.01" required /></label>
+            <label>Resterend saldo <input name="balance" type="number" min="0" step="0.01" /></label>
+            <label>Ontvanger <input name="recipient" /></label>
+            <label>E-mail ontvanger <input name="email" type="email" /></label>
+            <label>Geldig tot <input name="expiresAt" type="date" /></label>
+            <label class="check-row"><input name="active" type="checkbox" checked /> Actief</label>
+            <button class="primary-button" type="submit">Cadeaubon opslaan</button>
+          </form>
+          <section class="panel table-panel">
+            <div class="panel-heading">
+              <h2>Cadeaubonnen</h2>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Code</th>
+                    <th>Ontvanger</th>
+                    <th>Waarde</th>
+                    <th>Saldo</th>
+                    <th>Geldig tot</th>
+                    <th>Status</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody data-gift-card-table></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section class="admin-view" data-view="customers">
+        <section class="panel table-panel">
+          <div class="panel-heading">
+            <h2>Klanten</h2>
+            <input class="search-input" data-customer-search placeholder="Zoek klant" />
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Naam</th>
+                  <th>E-mail</th>
+                  <th>Telefoon</th>
+                  <th>Bestellingen</th>
+                  <th>Omzet</th>
+                  <th>Laatste bestelling</th>
+                </tr>
+              </thead>
+              <tbody data-customer-table></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+
+      <section class="admin-view" data-view="orders">
+        <section class="panel table-panel">
+          <div class="panel-heading">
+            <h2>Bestellingoverzicht</h2>
+            <select data-order-status-filter>
+              <option value="alles">Alle statussen</option>
+              <option>Nieuw</option>
+              <option>Betaald</option>
+              <option>In productie</option>
+              <option>Verzonden</option>
+              <option>Afgerond</option>
+            </select>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Bestelling</th>
+                  <th>Klant</th>
+                  <th>Items</th>
+                  <th>Totaal</th>
+                  <th>Status</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody data-order-table></tbody>
+            </table>
+          </div>
+          <div class="order-detail" data-order-detail-panel></div>
+        </section>
+      </section>
+    </main>
+
+    <script src="store.js"></script>
+    <script src="admin.js"></script>
+  </body>
+</html>
