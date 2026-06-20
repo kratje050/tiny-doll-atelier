@@ -22,6 +22,7 @@
 
 html {
   scroll-behavior: smooth;
+  scroll-padding-top: 96px;
 }
 
 body {
@@ -116,6 +117,13 @@ button {
 
 .top-nav a {
   padding: 8px 2px;
+  border-radius: 8px;
+  white-space: nowrap;
+}
+
+.top-nav a:focus-visible,
+.top-nav a:hover {
+  color: var(--ink);
 }
 
 .cart-button,
@@ -266,6 +274,7 @@ h3 {
 .gift-card-band,
 .order-band {
   padding: clamp(42px, 7vw, 86px) clamp(16px, 4vw, 56px);
+  scroll-margin-top: 96px;
 }
 
 .section-heading {
@@ -561,7 +570,9 @@ h3 {
   display: flex;
   width: min(100%, 440px);
   height: 100%;
+  min-height: 0;
   flex-direction: column;
+  overflow: auto;
   padding: 22px;
   background: var(--paper);
   box-shadow: var(--shadow);
@@ -594,6 +605,7 @@ h3 {
 
 .cart-items {
   display: grid;
+  flex: 0 0 auto;
   gap: 12px;
   overflow: auto;
   padding: 18px 0;
@@ -700,10 +712,29 @@ h3 {
 @media (max-width: 980px) {
   .site-header {
     grid-template-columns: 1fr auto;
+    gap: 12px;
   }
 
   .top-nav {
+    grid-column: 1 / -1;
+    justify-content: start;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 2px 0 4px;
+    scrollbar-width: none;
+  }
+
+  .top-nav::-webkit-scrollbar {
     display: none;
+  }
+
+  .top-nav a {
+    flex: 0 0 auto;
+    padding: 9px 13px;
+    background: #fff;
+    color: var(--sage-dark);
+    box-shadow: inset 0 0 0 1px var(--line);
+    font-weight: 800;
   }
 
   .hero-shell,
@@ -749,9 +780,13 @@ h3 {
 }
 
 @media (max-width: 640px) {
+  html {
+    scroll-padding-top: 126px;
+  }
+
   .site-header {
     gap: 10px;
-    padding: 12px;
+    padding: 10px 12px 9px;
   }
 
   .brand small {
@@ -763,13 +798,33 @@ h3 {
     height: 34px;
   }
 
+  .brand strong {
+    font-size: 0.94rem;
+  }
+
   .cart-button {
+    gap: 7px;
     padding-inline: 10px;
-    font-size: 0.9rem;
+    font-size: 0.86rem;
+  }
+
+  .cart-dot {
+    min-width: 22px;
+    height: 22px;
+  }
+
+  .top-nav {
+    margin-inline: -2px;
+  }
+
+  .top-nav a {
+    min-height: 40px;
+    padding: 9px 12px;
+    font-size: 0.86rem;
   }
 
   .hero-shell {
-    padding: 22px 12px 28px;
+    padding: 20px 12px 28px;
   }
 
   .hero-copy {
@@ -790,22 +845,36 @@ h3 {
   }
 
   .hero-image {
-    min-height: 260px;
+    min-height: 250px;
   }
 
   .shop-band,
   .service-band,
   .gift-card-band,
   .order-band {
-    padding: 38px 12px;
+    padding: 34px 12px;
+    scroll-margin-top: 126px;
+  }
+
+  .section-heading {
+    gap: 16px;
+    margin-bottom: 18px;
   }
 
   .filter-tabs {
     width: 100%;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+  }
+
+  .filter-tabs::-webkit-scrollbar {
+    display: none;
   }
 
   .filter-tabs button {
-    flex: 1 1 46%;
+    flex: 0 0 auto;
   }
 
   .product-grid,
@@ -819,6 +888,74 @@ h3 {
 
   .cart-drawer {
     width: 100%;
-    padding: 18px;
+    padding: 16px 14px 18px;
+  }
+
+  .cart-top {
+    gap: 12px;
+    padding-bottom: 12px;
+  }
+
+  .cart-top h2 {
+    font-size: 2rem;
+  }
+
+  .cart-items {
+    max-height: 22vh;
+    padding: 12px 0;
+  }
+
+  .cart-line {
+    grid-template-columns: 52px minmax(0, 1fr) auto;
+    gap: 10px;
+  }
+
+  .cart-line img {
+    width: 52px;
+    height: 52px;
+  }
+
+  .cart-line strong {
+    overflow-wrap: anywhere;
+    font-size: 0.92rem;
+    line-height: 1.2;
+  }
+
+  .cart-line span {
+    font-size: 0.82rem;
+  }
+
+  .quantity {
+    min-width: 32px;
+    height: 32px;
+  }
+
+  .cart-summary {
+    padding: 14px 0;
+  }
+
+  .checkout-form {
+    gap: 9px;
+    padding: 12px 0;
+  }
+
+  .checkout-form label {
+    gap: 5px;
+    font-size: 0.82rem;
+  }
+
+  .checkout-form input,
+  .checkout-form textarea {
+    min-height: 40px;
+    padding: 9px 11px;
+  }
+
+  .checkout-form textarea {
+    min-height: 70px;
+  }
+
+  .cart-actions .secondary-action,
+  .checkout-form .primary-action {
+    min-height: 46px;
   }
 }
