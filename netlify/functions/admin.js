@@ -3,7 +3,7 @@ const fs = require("fs");
 const path = require("path");
 
 const COOKIE_NAME = "tiny_doll_admin_session";
-const SESSION_MAX_AGE = 60 * 60 * 8;
+const SESSION_MAX_AGE = 60 * 60 * 2;
 
 function getSecret() {
   return process.env.ADMIN_SESSION_SECRET || "";

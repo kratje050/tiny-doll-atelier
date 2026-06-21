@@ -7,18 +7,36 @@ const adminState = {
   giftCards: TinyStore.getGiftCards(),
   orders: TinyStore.getOrders(),
   customers: TinyStore.getCustomers(),
+  settings: TinyStore.getSettings(),
+  reviews: TinyStore.getReviews(),
+  emailTemplates: TinyStore.getEmailTemplates(),
   editingProductId: "",
+  editingReviewId: "",
+  selectedOrderId: "",
   orderFilter: "alles",
   customerSearch: "",
 };
 
 const money = TinyStore.formatMoney;
+const orderStatuses = [
+  "Nieuw",
+  "Afgestemd",
+  "In afwachting van betaling",
+  "Betaald",
+  "In productie",
+  "Verzonden",
+  "Afgerond",
+  "Geannuleerd",
+];
+const paymentStatuses = ["Nog niet betaald", "Betaalverzoek gestuurd", "Betaald", "Terugbetaald"];
 const views = document.querySelectorAll("[data-view]");
 const navButtons = document.querySelectorAll("[data-view-button]");
 const productForm = document.querySelector("[data-product-form]");
 const categoryForm = document.querySelector("[data-category-form]");
 const discountForm = document.querySelector("[data-discount-form]");
 const giftCardForm = document.querySelector("[data-gift-card-form]");
+const reviewForm = document.querySelector("[data-review-form]");
+const settingsForm = document.querySelector("[data-settings-form]");
 const productUpload = document.querySelector("[data-product-upload]");
 const uploadName = document.querySelector("[data-upload-name]");
 const imagePreview = document.querySelector("[data-image-preview]");
@@ -52,6 +70,128 @@ function assetUrl(path) {
   }
 }
 
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (character) =>
+    ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;",
+    })[character],
+  );
+}
+
+function escapeAttribute(value) {
+  return escapeHtml(value).replace(/`/g, "&#96;");
+}
+
+function buildCustomerMail(order) {
+  const template =
+    adminState.emailTemplates.find((item) => item.id === "order-received")?.body ||
+    "Hallo {naam},\n\nBedankt voor je bestelverzoek {bestelnummer}.";
+  return template
+    .replaceAll("{naam}", order.customer.name)
+    .replaceAll("{bestelnummer}", order.id)
+    .replaceAll("{totaal}", money(order.total))
+    .replaceAll("{tracktrace}", order.trackTrace || "-")
+    .replaceAll("{cadeauboncode}", order.giftCardCode || "-")
+    .replaceAll("{waarde}", money(order.giftCardAmount || 0));
+}
+
+function appendStatusHistory(order, type, from, to) {
+  return {
+    ...order,
+    statusHistory: [
+      ...(order.statusHistory || []),
+      {
+        at: new Date().toISOString(),
+        type,
+        from: from || "-",
+        to,
+      },
+    ],
+  };
+}
+
+function downloadJson(filename, data) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+function printOrder(orderId, type) {
+  const order = adminState.orders.find((item) => item.id === orderId);
+  if (!order) {
+    return;
+  }
+
+  const products = order.items
+    .map(
+      (item) => `
+        <tr>
+          <td>${escapeHtml(item.name)}</td>
+          <td>${item.quantity}</td>
+          <td>${money(item.price)}</td>
+          ${type === "order" ? `<td>${money(item.price * item.quantity)}</td>` : ""}
+        </tr>
+      `,
+    )
+    .join("");
+  const html = `
+    <!doctype html>
+    <html lang="nl">
+      <head>
+        <meta charset="utf-8">
+        <title>${type === "order" ? "Bestelling" : "Pakbon"} ${order.id}</title>
+        <style>
+          body { font-family: Arial, sans-serif; color: #342216; padding: 28px; }
+          h1 { margin-bottom: 4px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+          th, td { border-bottom: 1px solid #dcc8b7; padding: 10px; text-align: left; }
+          .muted { color: #806a59; }
+        </style>
+      </head>
+      <body>
+        <h1>${type === "order" ? "Bestelling" : "Pakbon"} ${order.id}</h1>
+        <p class="muted">${new Date(order.createdAt).toLocaleString("nl-NL")}</p>
+        <p><strong>Klant:</strong> ${escapeHtml(order.customer.name)}<br>
+        <strong>E-mail:</strong> ${escapeHtml(order.customer.email)}<br>
+        <strong>Telefoon:</strong> ${escapeHtml(order.customer.phone || "-")}</p>
+        <p><strong>Status:</strong> ${escapeHtml(order.status)}<br>
+        <strong>Betaalstatus:</strong> ${escapeHtml(order.paymentStatus || "Nog niet betaald")}<br>
+        <strong>Verzending:</strong> ${escapeHtml(order.shippingMethod || "-")}<br>
+        <strong>Track & trace:</strong> ${escapeHtml(order.trackTrace || "-")}</p>
+        <table>
+          <thead>
+            <tr>
+              <th>Product</th>
+              <th>Aantal</th>
+              <th>Prijs</th>
+              ${type === "order" ? "<th>Totaal</th>" : ""}
+            </tr>
+          </thead>
+          <tbody>${products}</tbody>
+        </table>
+        ${type === "order" ? `<h2>Totaal: ${money(order.total)}</h2>` : ""}
+        <p><strong>Opmerking:</strong><br>${escapeHtml(order.notes || "-")}</p>
+      </body>
+    </html>
+  `;
+  const printWindow = window.open("", "_blank");
+  if (!printWindow) {
+    return;
+  }
+  printWindow.document.write(html);
+  printWindow.document.close();
+  printWindow.focus();
+  printWindow.print();
+}
+
 function refreshData() {
   adminState.products = TinyStore.getProducts();
   adminState.categories = TinyStore.getCategories();
@@ -59,6 +199,9 @@ function refreshData() {
   adminState.giftCards = TinyStore.getGiftCards();
   adminState.orders = TinyStore.getOrders();
   adminState.customers = TinyStore.getCustomers();
+  adminState.settings = TinyStore.getSettings();
+  adminState.reviews = TinyStore.getReviews();
+  adminState.emailTemplates = TinyStore.getEmailTemplates();
 }
 
 function setView(viewName) {
@@ -144,16 +287,30 @@ function renderProducts() {
   document.querySelector("[data-product-count]").textContent =
     `${adminState.products.length} producten`;
   document.querySelector("[data-product-table]").innerHTML = adminState.products
-    .map(
-      (product) => `
+    .map((product) => {
+      const quantity = stockQuantity(product);
+      const stockStatus = product.soldOut
+        ? "Uitverkocht"
+        : quantity > 0
+          ? `${quantity} op voorraad`
+          : product.madeToOrder
+            ? "Op bestelling"
+            : "Geen voorraad";
+      const tags = [
+        product.featured ? "Uitgelicht" : "",
+        product.bestseller ? "Bestseller" : "",
+        product.madeToOrder ? "Op bestelling" : "",
+        product.soldOut ? "Uitverkocht" : "",
+      ].filter(Boolean);
+      return `
         <tr>
           <td>
             <strong>${product.name}</strong>
-            <span class="muted">${product.stock}</span>
+            <span class="muted">${tags.length ? tags.join(" / ") : product.stock}</span>
           </td>
           <td>${categoryName(product.categoryId)}</td>
           <td>${money(product.price)}</td>
-          <td><strong>${stockQuantity(product)}</strong><span class="muted">op voorraad</span></td>
+          <td><strong>${stockStatus}</strong><span class="muted">${product.leadTime || ""}</span></td>
           <td><span class="status-pill">${product.active ? "Zichtbaar" : "Verborgen"}</span></td>
           <td>
             <div class="table-actions">
@@ -162,8 +319,8 @@ function renderProducts() {
             </div>
           </td>
         </tr>
-      `,
-    )
+      `;
+    })
     .join("");
 }
 
@@ -286,7 +443,7 @@ function renderOrders() {
           <td>${money(order.total)}</td>
           <td>
             <select data-order-status="${order.id}">
-              ${["Nieuw", "Betaald", "In productie", "Verzonden", "Afgerond"]
+              ${orderStatuses
                 .map(
                   (status) =>
                     `<option ${status === order.status ? "selected" : ""}>${status}</option>`,
@@ -314,13 +471,16 @@ function renderOrderDetail(orderId) {
     return;
   }
 
+  adminState.selectedOrderId = orderId;
   const itemSubtotal = order.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const itemCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
   const createdAt = new Date(order.createdAt);
-  const statusOptions = ["Nieuw", "Betaald", "In productie", "Verzonden", "Afgerond"];
   const shippingText = order.freeShipping
     ? `Gratis via ${order.discountCode || "kortingscode"}`
-    : "Wordt afgestemd";
+    : order.shippingMethod || "Wordt afgestemd";
+  const paymentStatus = order.paymentStatus || "Nog niet betaald";
+  const history = order.statusHistory || [];
+  const mailBody = buildCustomerMail(order);
 
   detail.classList.add("is-open");
   detail.innerHTML = `
@@ -334,7 +494,13 @@ function renderOrderDetail(orderId) {
           year: "numeric",
         })} om ${createdAt.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })}</p>
       </div>
-      <span class="status-pill">${order.status}</span>
+      <div class="detail-actions">
+        <a class="row-button" href="mailto:${order.customer.email}?subject=${encodeURIComponent(
+          `Bestelling ${order.id}`,
+        )}&body=${encodeURIComponent(mailBody)}">Mail klant</a>
+        <button class="row-button" type="button" data-print-order="${order.id}">Print bestelling</button>
+        <button class="row-button" type="button" data-print-packing-slip="${order.id}">Pakbon</button>
+      </div>
     </div>
 
     <div class="order-detail-grid">
@@ -351,12 +517,40 @@ function renderOrderDetail(orderId) {
         <h3>Status en inhoud</h3>
         <dl class="detail-list">
           <div><dt>Status</dt><dd>${order.status}</dd></div>
+          <div><dt>Betaalstatus</dt><dd>${paymentStatus}</dd></div>
           <div><dt>Productregels</dt><dd>${order.items.length}</dd></div>
           <div><dt>Aantal items</dt><dd>${itemCount}</dd></div>
-          <div><dt>Volgende stap</dt><dd>${statusOptions.includes(order.status) ? "Controleer betaling, voorraad en levertijd." : "Controleer de bestelling handmatig."}</dd></div>
+          <div><dt>Volgende stap</dt><dd>${order.status === "Nieuw" ? "Stem levertijd en betaling af." : "Werk status, betaling en verzending bij."}</dd></div>
         </dl>
       </section>
     </div>
+
+    <section class="detail-card">
+      <h3>Beheeracties</h3>
+      <div class="order-admin-grid">
+        <label>
+          Betaalstatus
+          <select data-payment-status="${order.id}">
+            ${paymentStatuses
+              .map(
+                (status) =>
+                  `<option ${status === paymentStatus ? "selected" : ""}>${status}</option>`,
+              )
+              .join("")}
+          </select>
+        </label>
+        <label>Verzendmethode <input data-order-shipping-method="${order.id}" value="${escapeAttribute(
+          order.shippingMethod || "",
+        )}" /></label>
+        <label>Track & trace <input data-order-track-trace="${order.id}" value="${escapeAttribute(
+          order.trackTrace || "",
+        )}" /></label>
+        <label class="wide-field">Interne notitie <textarea rows="3" data-order-admin-notes="${order.id}">${escapeHtml(
+          order.adminNotes || "",
+        )}</textarea></label>
+      </div>
+      <button class="primary-button" type="button" data-save-order-admin="${order.id}">Ordergegevens opslaan</button>
+    </section>
 
     <section class="detail-card order-products-card">
       <div class="detail-card-heading">
@@ -372,6 +566,7 @@ function renderOrderDetail(orderId) {
               : "";
             return `
               <article class="order-line-card">
+                ${item.image ? `<img class="order-line-image" src="${item.image}" alt="">` : ""}
                 <div>
                   <strong>${item.name}</strong>
                   <span>${item.quantity} x ${money(item.price)} per stuk</span>
@@ -392,6 +587,7 @@ function renderOrderDetail(orderId) {
           <div><dt>Subtotaal</dt><dd>${money(itemSubtotal)}</dd></div>
           <div><dt>Korting</dt><dd>${order.discountCode || "-"} ${order.discountAmount ? `(-${money(order.discountAmount)})` : ""}</dd></div>
           <div><dt>Verzending</dt><dd>${shippingText}</dd></div>
+          <div><dt>Track & trace</dt><dd>${order.trackTrace || "-"}</dd></div>
           <div><dt>Cadeaubon</dt><dd>${order.giftCardCode || "-"} ${order.giftCardAmount ? `(-${money(order.giftCardAmount)})` : ""}</dd></div>
           <div class="total-row"><dt>Totaal</dt><dd>${money(order.total)}</dd></div>
         </dl>
@@ -400,9 +596,80 @@ function renderOrderDetail(orderId) {
       <section class="detail-card">
         <h3>Opmerking</h3>
         <p class="order-note">${order.notes || "Geen opmerking ingevuld."}</p>
+        <h3>Interne notitie</h3>
+        <p class="order-note">${order.adminNotes || "Geen interne notitie."}</p>
       </section>
     </div>
+
+    <section class="detail-card">
+      <h3>Statusgeschiedenis</h3>
+      <div class="history-list">
+        ${
+          history.length
+            ? history
+                .map(
+                  (entry) => `
+                    <article>
+                      <strong>${entry.type === "payment" ? "Betaalstatus" : "Orderstatus"}</strong>
+                      <span>${new Date(entry.at).toLocaleString("nl-NL")}</span>
+                      <p>${entry.from || "-"} naar ${entry.to}</p>
+                    </article>
+                  `,
+                )
+                .join("")
+            : '<p class="muted">Nog geen statusgeschiedenis.</p>'
+        }
+      </div>
+    </section>
   `;
+}
+
+function renderReviews() {
+  const table = document.querySelector("[data-review-table]");
+  table.innerHTML =
+    adminState.reviews
+      .map(
+        (review) => `
+          <tr>
+            <td>
+              <strong>${escapeHtml(review.name)}</strong>
+              <span class="muted">${escapeHtml(review.product || "")}</span>
+            </td>
+            <td>${escapeHtml(review.text)}</td>
+            <td><span class="status-pill">${review.visible ? "Zichtbaar" : "Verborgen"}</span></td>
+            <td>
+              <div class="table-actions">
+                <button class="row-button" type="button" data-edit-review="${review.id}">Bewerk</button>
+                <button class="row-button" type="button" data-toggle-review="${review.id}">${review.visible ? "Verberg" : "Toon"}</button>
+                <button class="row-button" type="button" data-delete-review="${review.id}">Verwijder</button>
+              </div>
+            </td>
+          </tr>
+        `,
+      )
+      .join("") || '<tr><td colspan="4">Nog geen reviews toegevoegd.</td></tr>';
+}
+
+function renderEmailTemplates() {
+  document.querySelector("[data-email-template-list]").innerHTML = adminState.emailTemplates
+    .map(
+      (template) => `
+        <article class="template-card" data-template-card="${template.id}">
+          <label>Titel <input data-template-field="title" value="${escapeAttribute(template.title)}" /></label>
+          <label>Onderwerp <input data-template-field="subject" value="${escapeAttribute(template.subject)}" /></label>
+          <label>Tekst <textarea rows="7" data-template-field="body">${escapeHtml(template.body)}</textarea></label>
+        </article>
+      `,
+    )
+    .join("");
+}
+
+function renderSettings() {
+  Object.entries(adminState.settings).forEach(([key, value]) => {
+    if (settingsForm.elements[key]) {
+      settingsForm.elements[key].value = value ?? "";
+    }
+  });
 }
 
 function renderAll() {
@@ -412,8 +679,14 @@ function renderAll() {
   renderCategories();
   renderDiscounts();
   renderGiftCards();
+  renderReviews();
+  renderEmailTemplates();
+  renderSettings();
   renderCustomers();
   renderOrders();
+  if (adminState.selectedOrderId) {
+    renderOrderDetail(adminState.selectedOrderId);
+  }
 }
 
 navButtons.forEach((button) => {
@@ -434,12 +707,30 @@ productForm.addEventListener("submit", (event) => {
     badge: data.get("badge").trim(),
     image: data.get("image").trim(),
     description: data.get("description").trim(),
+    longDescription: data.get("longDescription").trim(),
+    material: data.get("material").trim(),
+    size: data.get("size").trim(),
+    leadTime: data.get("leadTime").trim(),
+    washCare: data.get("washCare").trim(),
+    extraImages: data
+      .get("extraImages")
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean),
+    featured: data.get("featured") === "on",
+    bestseller: data.get("bestseller") === "on",
+    madeToOrder: data.get("madeToOrder") === "on",
+    soldOut: data.get("soldOut") === "on",
     active: data.get("active") === "on",
   };
   const products = adminState.products.filter((item) => item.id !== id);
   TinyStore.saveProducts([product, ...products]);
   productForm.reset();
   productForm.elements.active.checked = true;
+  productForm.elements.featured.checked = false;
+  productForm.elements.bestseller.checked = false;
+  productForm.elements.madeToOrder.checked = false;
+  productForm.elements.soldOut.checked = false;
   productForm.querySelector("[data-cancel-product]").hidden = true;
   setImagePreview("");
   renderAll();
@@ -449,6 +740,10 @@ document.querySelector("[data-cancel-product]").addEventListener("click", () => 
   productForm.reset();
   productForm.elements.id.value = "";
   productForm.elements.active.checked = true;
+  productForm.elements.featured.checked = false;
+  productForm.elements.bestseller.checked = false;
+  productForm.elements.madeToOrder.checked = false;
+  productForm.elements.soldOut.checked = false;
   setImagePreview("");
   document.querySelector("[data-cancel-product]").hidden = true;
 });
@@ -481,6 +776,13 @@ document.addEventListener("click", (event) => {
   const toggleGiftCard = event.target.closest("[data-toggle-gift-card]");
   const deleteGiftCard = event.target.closest("[data-delete-gift-card]");
   const orderDetail = event.target.closest("[data-order-detail]");
+  const editReview = event.target.closest("[data-edit-review]");
+  const toggleReview = event.target.closest("[data-toggle-review]");
+  const deleteReview = event.target.closest("[data-delete-review]");
+  const saveOrderAdmin = event.target.closest("[data-save-order-admin]");
+  const printOrderButton = event.target.closest("[data-print-order]");
+  const printPackingSlipButton = event.target.closest("[data-print-packing-slip]");
+  const exportButton = event.target.closest("[data-export-key]");
 
   if (editProduct) {
     const product = adminState.products.find((item) => item.id === editProduct.dataset.editProduct);
@@ -496,6 +798,18 @@ document.addEventListener("click", (event) => {
     productForm.elements.badge.value = product.badge;
     productForm.elements.image.value = product.image;
     productForm.elements.description.value = product.description;
+    productForm.elements.longDescription.value = product.longDescription || "";
+    productForm.elements.material.value = product.material || "";
+    productForm.elements.size.value = product.size || "";
+    productForm.elements.leadTime.value = product.leadTime || "";
+    productForm.elements.washCare.value = product.washCare || "";
+    productForm.elements.extraImages.value = Array.isArray(product.extraImages)
+      ? product.extraImages.join("\n")
+      : "";
+    productForm.elements.featured.checked = Boolean(product.featured);
+    productForm.elements.bestseller.checked = Boolean(product.bestseller);
+    productForm.elements.madeToOrder.checked = Boolean(product.madeToOrder);
+    productForm.elements.soldOut.checked = Boolean(product.soldOut);
     productForm.elements.active.checked = product.active;
     setImagePreview(product.image);
     productForm.querySelector("[data-cancel-product]").hidden = false;
@@ -503,6 +817,9 @@ document.addEventListener("click", (event) => {
   }
 
   if (deleteProduct) {
+    if (!confirm("Weet je zeker dat je dit product wilt verwijderen?")) {
+      return;
+    }
     TinyStore.saveProducts(
       adminState.products.filter((product) => product.id !== deleteProduct.dataset.deleteProduct),
     );
@@ -510,6 +827,9 @@ document.addEventListener("click", (event) => {
   }
 
   if (deleteCategory) {
+    if (!confirm("Weet je zeker dat je deze categorie wilt verwijderen?")) {
+      return;
+    }
     TinyStore.saveCategories(
       adminState.categories.filter((category) => category.id !== deleteCategory.dataset.deleteCategory),
     );
@@ -527,6 +847,9 @@ document.addEventListener("click", (event) => {
   }
 
   if (deleteDiscount) {
+    if (!confirm("Weet je zeker dat je deze kortingscode wilt verwijderen?")) {
+      return;
+    }
     TinyStore.saveDiscounts(
       adminState.discounts.filter((discount) => discount.id !== deleteDiscount.dataset.deleteDiscount),
     );
@@ -563,6 +886,9 @@ document.addEventListener("click", (event) => {
   }
 
   if (deleteGiftCard) {
+    if (!confirm("Weet je zeker dat je deze cadeaubon wilt verwijderen?")) {
+      return;
+    }
     TinyStore.saveGiftCards(
       adminState.giftCards.filter((giftCard) => giftCard.id !== deleteGiftCard.dataset.deleteGiftCard),
     );
@@ -571,6 +897,70 @@ document.addEventListener("click", (event) => {
 
   if (orderDetail) {
     renderOrderDetail(orderDetail.dataset.orderDetail);
+  }
+
+  if (editReview) {
+    const review = adminState.reviews.find((item) => item.id === editReview.dataset.editReview);
+    if (!review) return;
+    reviewForm.elements.id.value = review.id;
+    reviewForm.elements.name.value = review.name;
+    reviewForm.elements.text.value = review.text;
+    reviewForm.elements.product.value = review.product || "";
+    reviewForm.elements.rating.value = review.rating || 5;
+    reviewForm.elements.visible.checked = Boolean(review.visible);
+    document.querySelector("[data-review-form-title]").textContent = "Review bewerken";
+    reviewForm.querySelector("[data-cancel-review]").hidden = false;
+    setView("reviews");
+  }
+
+  if (toggleReview) {
+    TinyStore.saveReviews(
+      adminState.reviews.map((review) =>
+        review.id === toggleReview.dataset.toggleReview
+          ? { ...review, visible: !review.visible }
+          : review,
+      ),
+    );
+    renderAll();
+  }
+
+  if (deleteReview) {
+    if (!confirm("Weet je zeker dat je deze review wilt verwijderen?")) {
+      return;
+    }
+    TinyStore.saveReviews(adminState.reviews.filter((review) => review.id !== deleteReview.dataset.deleteReview));
+    renderAll();
+  }
+
+  if (saveOrderAdmin) {
+    const orderId = saveOrderAdmin.dataset.saveOrderAdmin;
+    TinyStore.saveOrders(
+      adminState.orders.map((order) =>
+        order.id === orderId
+          ? {
+              ...order,
+              shippingMethod: document.querySelector(`[data-order-shipping-method="${orderId}"]`).value.trim(),
+              trackTrace: document.querySelector(`[data-order-track-trace="${orderId}"]`).value.trim(),
+              adminNotes: document.querySelector(`[data-order-admin-notes="${orderId}"]`).value.trim(),
+            }
+          : order,
+      ),
+    );
+    renderAll();
+  }
+
+  if (printOrderButton) {
+    printOrder(printOrderButton.dataset.printOrder, "order");
+  }
+
+  if (printPackingSlipButton) {
+    printOrder(printPackingSlipButton.dataset.printPackingSlip, "packing");
+  }
+
+  if (exportButton) {
+    const backup = TinyStore.getBackupData();
+    const key = exportButton.dataset.exportKey;
+    downloadJson(`tiny-doll-${key}.json`, backup[key]);
   }
 });
 
@@ -643,6 +1033,104 @@ giftCardForm.querySelector("[data-cancel-gift-card]").addEventListener("click", 
   giftCardForm.querySelector("[data-cancel-gift-card]").hidden = true;
 });
 
+reviewForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const data = new FormData(reviewForm);
+  const existingId = data.get("id");
+  const review = {
+    id: existingId || `review-${Date.now()}`,
+    name: data.get("name").trim(),
+    text: data.get("text").trim(),
+    product: data.get("product").trim(),
+    rating: Number(data.get("rating")) || 5,
+    visible: data.get("visible") === "on",
+    createdAt:
+      adminState.reviews.find((item) => item.id === existingId)?.createdAt || new Date().toISOString(),
+  };
+  TinyStore.saveReviews([
+    review,
+    ...adminState.reviews.filter((item) => item.id !== review.id && item.id !== existingId),
+  ]);
+  reviewForm.reset();
+  reviewForm.elements.visible.checked = true;
+  reviewForm.elements.rating.value = 5;
+  document.querySelector("[data-review-form-title]").textContent = "Review toevoegen";
+  reviewForm.querySelector("[data-cancel-review]").hidden = true;
+  renderAll();
+});
+
+reviewForm.querySelector("[data-cancel-review]").addEventListener("click", () => {
+  reviewForm.reset();
+  reviewForm.elements.id.value = "";
+  reviewForm.elements.visible.checked = true;
+  reviewForm.elements.rating.value = 5;
+  document.querySelector("[data-review-form-title]").textContent = "Review toevoegen";
+  reviewForm.querySelector("[data-cancel-review]").hidden = true;
+});
+
+settingsForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const data = new FormData(settingsForm);
+  TinyStore.saveSettings({
+    shopName: data.get("shopName").trim(),
+    email: data.get("email").trim(),
+    phone: data.get("phone").trim(),
+    instagramUrl: data.get("instagramUrl").trim(),
+    shippingNl: Number(data.get("shippingNl")) || 0,
+    shippingBe: Number(data.get("shippingBe")) || 0,
+    freeShippingFrom: Number(data.get("freeShippingFrom")) || 0,
+    giftWrapPrice: Number(data.get("giftWrapPrice")) || 0,
+    stockLeadTime: data.get("stockLeadTime").trim(),
+    customLeadTime: data.get("customLeadTime").trim(),
+    orderRequestText: data.get("orderRequestText").trim(),
+    orderSuccessText: data.get("orderSuccessText").trim(),
+    contactText: data.get("contactText").trim(),
+  });
+  document.querySelector("[data-settings-message]").textContent = "Instellingen opgeslagen.";
+  renderAll();
+});
+
+document.querySelector("[data-save-email-templates]").addEventListener("click", () => {
+  const templates = [...document.querySelectorAll("[data-template-card]")].map((card) => ({
+    id: card.dataset.templateCard,
+    title: card.querySelector('[data-template-field="title"]').value.trim(),
+    subject: card.querySelector('[data-template-field="subject"]').value.trim(),
+    body: card.querySelector('[data-template-field="body"]').value.trim(),
+  }));
+  TinyStore.saveEmailTemplates(templates);
+  document.querySelector("[data-email-template-message]").textContent = "Mailteksten opgeslagen.";
+  renderAll();
+});
+
+document.querySelector("[data-download-backup]").addEventListener("click", () => {
+  downloadJson(`tiny-doll-backup-${new Date().toISOString().slice(0, 10)}.json`, TinyStore.getBackupData());
+});
+
+document.querySelector("[data-import-backup]").addEventListener("change", (event) => {
+  const file = event.target.files[0];
+  if (!file) {
+    return;
+  }
+
+  if (!confirm("Weet je zeker dat je deze back-up wilt importeren? Bestaande beheerdata wordt overschreven.")) {
+    event.target.value = "";
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.addEventListener("load", () => {
+    try {
+      TinyStore.importBackupData(JSON.parse(reader.result));
+      document.querySelector("[data-backup-message]").textContent = "Back-up geimporteerd.";
+      renderAll();
+    } catch (error) {
+      document.querySelector("[data-backup-message]").textContent = error.message;
+    }
+    event.target.value = "";
+  });
+  reader.readAsText(file);
+});
+
 document.querySelector("[data-customer-search]").addEventListener("input", (event) => {
   adminState.customerSearch = event.target.value;
   renderCustomers();
@@ -655,17 +1143,35 @@ document.querySelector("[data-order-status-filter]").addEventListener("change", 
 
 document.addEventListener("change", (event) => {
   const statusSelect = event.target.closest("[data-order-status]");
-  if (!statusSelect) {
+  const paymentSelect = event.target.closest("[data-payment-status]");
+  if (!statusSelect && !paymentSelect) {
     return;
   }
 
-  TinyStore.saveOrders(
-    adminState.orders.map((order) =>
-      order.id === statusSelect.dataset.orderStatus
-        ? { ...order, status: statusSelect.value }
-        : order,
-    ),
-  );
+  if (statusSelect) {
+    TinyStore.saveOrders(
+      adminState.orders.map((order) =>
+        order.id === statusSelect.dataset.orderStatus
+          ? appendStatusHistory({ ...order, status: statusSelect.value }, "order", order.status, statusSelect.value)
+          : order,
+      ),
+    );
+  }
+
+  if (paymentSelect) {
+    TinyStore.saveOrders(
+      adminState.orders.map((order) =>
+        order.id === paymentSelect.dataset.paymentStatus
+          ? appendStatusHistory(
+              { ...order, paymentStatus: paymentSelect.value },
+              "payment",
+              order.paymentStatus || "Nog niet betaald",
+              paymentSelect.value,
+            )
+          : order,
+      ),
+    );
+  }
   renderAll();
 });
 

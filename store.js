@@ -7,6 +7,9 @@ const TinyStore = (() => {
     orders: "tiny-doll-orders",
     customers: "tiny-doll-customers",
     visits: "tiny-doll-visits",
+    settings: "tiny-doll-settings",
+    reviews: "tiny-doll-reviews",
+    emailTemplates: "tiny-doll-email-templates",
   };
 
   const defaultCategories = [
@@ -89,88 +92,11 @@ const TinyStore = (() => {
     },
   ];
 
-  const defaultGiftCards = [
-    {
-      id: "cadeau25",
-      code: "CADEAU25",
-      initialValue: 25,
-      balance: 25,
-      recipient: "Voorbeeld klant",
-      email: "cadeau@example.nl",
-      expiresAt: "2027-06-20",
-      active: true,
-      createdAt: "2026-06-20T10:00:00",
-    },
-  ];
+  const defaultGiftCards = [];
 
-  const defaultCustomers = [
-    {
-      id: "klant-anne",
-      name: "Anne de Vries",
-      email: "anne@example.nl",
-      phone: "06 12345678",
-      orderCount: 2,
-      totalSpent: 86,
-      lastOrderAt: "2026-06-18",
-    },
-    {
-      id: "klant-mila",
-      name: "Mila Janssen",
-      email: "mila@example.nl",
-      phone: "06 87654321",
-      orderCount: 1,
-      totalSpent: 31,
-      lastOrderAt: "2026-06-10",
-    },
-  ];
+  const defaultCustomers = [];
 
-  const defaultOrders = [
-    {
-      id: "TD-20260618-142",
-      createdAt: "2026-06-18T14:20:00",
-      status: "Nieuw",
-      customer: { name: "Anne de Vries", email: "anne@example.nl", phone: "06 12345678" },
-      items: [
-        { productId: "linnen-set", name: "Linnen broekset", price: 24.5, quantity: 2 },
-        { productId: "strik-haarband", name: "Strik haarband", price: 8.5, quantity: 1 },
-      ],
-      discountCode: "ATELIER5",
-      discountAmount: 5,
-      giftCardCode: "",
-      giftCardAmount: 0,
-      total: 52.5,
-      notes: "Graag passend voor pop van 36 cm.",
-    },
-    {
-      id: "TD-20260610-084",
-      createdAt: "2026-06-10T10:05:00",
-      status: "Verzonden",
-      customer: { name: "Mila Janssen", email: "mila@example.nl", phone: "06 87654321" },
-      items: [
-        { productId: "linnen-top-broek", name: "Top met broek", price: 22.5, quantity: 1 },
-        { productId: "strik-haarband", name: "Strik haarband", price: 8.5, quantity: 1 },
-      ],
-      discountCode: "",
-      discountAmount: 0,
-      giftCardCode: "",
-      giftCardAmount: 0,
-      total: 31,
-      notes: "",
-    },
-    {
-      id: "TD-20260531-211",
-      createdAt: "2026-05-31T16:45:00",
-      status: "Betaald",
-      customer: { name: "Anne de Vries", email: "anne@example.nl", phone: "06 12345678" },
-      items: [{ productId: "romper-ruches", name: "Romper met ruches", price: 19.5, quantity: 2 }],
-      discountCode: "",
-      discountAmount: 0,
-      giftCardCode: "",
-      giftCardAmount: 0,
-      total: 39,
-      notes: "Naturel kleur graag.",
-    },
-  ];
+  const defaultOrders = [];
 
   const defaultVisits = [
     { date: "2026-06-14", count: 12 },
@@ -180,6 +106,52 @@ const TinyStore = (() => {
     { date: "2026-06-18", count: 27 },
     { date: "2026-06-19", count: 25 },
     { date: "2026-06-20", count: 32 },
+  ];
+
+  const defaultSettings = {
+    shopName: "Tiny Doll Atelier",
+    email: "ddytuber@gmail.com",
+    phone: "",
+    instagramUrl: "https://www.instagram.com/tinydoll.atelier/",
+    shippingNl: 4.95,
+    shippingBe: 8.95,
+    freeShippingFrom: 75,
+    giftWrapPrice: 2.95,
+    stockLeadTime: "1 tot 3 werkdagen",
+    customLeadTime: "3 tot 10 werkdagen",
+    orderRequestText:
+      "Je plaatst eerst een bestelverzoek. Daarna ontvang je een persoonlijke bevestiging met levertijd, eventuele keuzes en betaalinformatie.",
+    orderSuccessText: "Je bestelverzoek is opgeslagen. Je mailprogramma opent nu zodat je het verzoek kunt verzenden.",
+    contactText: "Heb je een vraag over een setje, maatwerk of een bestelling? Stuur gerust een bericht.",
+  };
+
+  const defaultReviews = [];
+
+  const defaultEmailTemplates = [
+    {
+      id: "order-received",
+      title: "Bestelverzoek ontvangen",
+      subject: "Je bestelverzoek bij Tiny Doll Atelier",
+      body: "Hallo {naam},\n\nBedankt voor je bestelverzoek {bestelnummer}. Ik kijk de beschikbaarheid en levertijd na en stuur je daarna de betaalinformatie.\n\nLiefs,\nTiny Doll Atelier",
+    },
+    {
+      id: "payment-request",
+      title: "Betaalverzoek",
+      subject: "Betaalinformatie voor {bestelnummer}",
+      body: "Hallo {naam},\n\nJe bestelling {bestelnummer} is afgestemd. Het totaalbedrag is {totaal}. Na betaling ga ik ermee aan de slag.\n\nLiefs,\nTiny Doll Atelier",
+    },
+    {
+      id: "shipped",
+      title: "Verzonden",
+      subject: "Je bestelling {bestelnummer} is verzonden",
+      body: "Hallo {naam},\n\nJe bestelling is verzonden. Track & trace: {tracktrace}\n\nVeel plezier ermee!\n\nLiefs,\nTiny Doll Atelier",
+    },
+    {
+      id: "gift-card-send",
+      title: "Cadeaubon versturen",
+      subject: "Je cadeaubon van Tiny Doll Atelier",
+      body: "Hallo {naam},\n\nHierbij ontvang je de cadeauboncode: {cadeauboncode}\nWaarde: {waarde}\nGeldig tot: {geldig_tot}\n\nLiefs,\nTiny Doll Atelier",
+    },
   ];
 
   function clone(value) {
@@ -257,7 +229,12 @@ const TinyStore = (() => {
   }
 
   function getGiftCards() {
-    return read(keys.giftCards, defaultGiftCards);
+    const giftCards = read(keys.giftCards, defaultGiftCards);
+    const cleaned = giftCards.filter((giftCard) => !String(giftCard.email || "").endsWith("@example.nl"));
+    if (cleaned.length !== giftCards.length) {
+      saveGiftCards(cleaned);
+    }
+    return cleaned;
   }
 
   function saveGiftCards(giftCards) {
@@ -265,7 +242,12 @@ const TinyStore = (() => {
   }
 
   function getOrders() {
-    return read(keys.orders, defaultOrders);
+    const orders = read(keys.orders, defaultOrders);
+    const cleaned = orders.filter((order) => !String(order.customer?.email || "").endsWith("@example.nl"));
+    if (cleaned.length !== orders.length) {
+      saveOrders(cleaned);
+    }
+    return cleaned;
   }
 
   function saveOrders(orders) {
@@ -273,7 +255,12 @@ const TinyStore = (() => {
   }
 
   function getCustomers() {
-    return read(keys.customers, defaultCustomers);
+    const customers = read(keys.customers, defaultCustomers);
+    const cleaned = customers.filter((customer) => !String(customer.email || "").endsWith("@example.nl"));
+    if (cleaned.length !== customers.length) {
+      saveCustomers(cleaned);
+    }
+    return cleaned;
   }
 
   function saveCustomers(customers) {
@@ -286,6 +273,83 @@ const TinyStore = (() => {
 
   function saveVisits(visits) {
     return write(keys.visits, visits);
+  }
+
+  function getSettings() {
+    return { ...defaultSettings, ...read(keys.settings, defaultSettings) };
+  }
+
+  function saveSettings(settings) {
+    return write(keys.settings, { ...defaultSettings, ...settings });
+  }
+
+  function getReviews() {
+    return read(keys.reviews, defaultReviews);
+  }
+
+  function saveReviews(reviews) {
+    return write(keys.reviews, reviews);
+  }
+
+  function getEmailTemplates() {
+    return read(keys.emailTemplates, defaultEmailTemplates);
+  }
+
+  function saveEmailTemplates(templates) {
+    return write(keys.emailTemplates, templates);
+  }
+
+  function getBackupData() {
+    return {
+      exportedAt: new Date().toISOString(),
+      version: 1,
+      storage: "localStorage",
+      products: getProducts(),
+      categories: getCategories(),
+      discounts: getDiscounts(),
+      giftCards: getGiftCards(),
+      orders: getOrders(),
+      customers: getCustomers(),
+      visits: getVisits(),
+      settings: getSettings(),
+      reviews: getReviews(),
+      emailTemplates: getEmailTemplates(),
+    };
+  }
+
+  function importBackupData(data) {
+    if (!data || typeof data !== "object") {
+      throw new Error("Ongeldig backupbestand.");
+    }
+
+    const collectionKeys = [
+      "products",
+      "categories",
+      "discounts",
+      "giftCards",
+      "orders",
+      "customers",
+      "visits",
+      "reviews",
+      "emailTemplates",
+    ];
+    collectionKeys.forEach((collectionKey) => {
+      if (collectionKey in data && !Array.isArray(data[collectionKey])) {
+        throw new Error(`Ongeldige data voor ${collectionKey}.`);
+      }
+    });
+
+    if (data.products) saveProducts(data.products);
+    if (data.categories) saveCategories(data.categories);
+    if (data.discounts) saveDiscounts(data.discounts);
+    if (data.giftCards) saveGiftCards(data.giftCards);
+    if (data.orders) saveOrders(data.orders);
+    if (data.customers) saveCustomers(data.customers);
+    if (data.visits) saveVisits(data.visits);
+    if (data.settings && typeof data.settings === "object") saveSettings(data.settings);
+    if (data.reviews) saveReviews(data.reviews);
+    if (data.emailTemplates) saveEmailTemplates(data.emailTemplates);
+    return getBackupData();
   }
 
   function recordVisit() {
@@ -365,6 +429,7 @@ const TinyStore = (() => {
       )}`,
       createdAt: new Date().toISOString(),
       status: "Nieuw",
+      paymentStatus: "Nog niet betaald",
       customer,
       items,
       discountCode: discount ? discount.code : "",
@@ -375,6 +440,17 @@ const TinyStore = (() => {
       giftCardAmount: Number(giftCardAmount.toFixed(2)),
       total: Number((afterDiscount - giftCardAmount).toFixed(2)),
       notes,
+      adminNotes: "",
+      trackTrace: "",
+      shippingMethod: "Wordt afgestemd",
+      statusHistory: [
+        {
+          at: new Date().toISOString(),
+          type: "order",
+          from: "",
+          to: "Nieuw",
+        },
+      ],
     };
 
     saveOrders([order, ...getOrders()]);
@@ -499,6 +575,16 @@ const TinyStore = (() => {
     saveOrders,
     getCustomers,
     saveCustomers,
+    getVisits,
+    saveVisits,
+    getSettings,
+    saveSettings,
+    getReviews,
+    saveReviews,
+    getEmailTemplates,
+    saveEmailTemplates,
+    getBackupData,
+    importBackupData,
     recordVisit,
     createOrder,
     createGiftCardOrder,

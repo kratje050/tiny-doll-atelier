@@ -6,13 +6,15 @@ const state = {
   cart: JSON.parse(localStorage.getItem("poppenatelier-cart") || "{}"),
   products: TinyStore.getProducts().filter((product) => product.active),
   categories: TinyStore.getCategories(),
+  settings: TinyStore.getSettings(),
+  reviews: TinyStore.getReviews(),
   checkoutVisible: false,
   giftWrap: false,
   giftMessage: "",
   selectedProductId: "",
 };
 
-const GIFT_WRAP_PRICE = 2.95;
+const GIFT_WRAP_PRICE = Number(state.settings.giftWrapPrice || 2.95);
 const DEFAULT_WASH_CARE =
   "Was met de hand of op een fijnwasprogramma. Niet in de droger. Laat liggend drogen voor het mooiste resultaat.";
 const PRODUCT_DETAILS = {
@@ -103,8 +105,15 @@ function getProductDetails(product) {
     size: product.size || PRODUCT_DETAILS[product.id]?.size || product.badge || "34 cm",
     contents: product.contents || PRODUCT_DETAILS[product.id]?.contents || "Handgemaakt kledingstuk",
     material: product.material || PRODUCT_DETAILS[product.id]?.material || "Katoen/mousseline",
-    leadTime: product.leadTime || PRODUCT_DETAILS[product.id]?.leadTime || "3 tot 7 werkdagen",
-    stockStatus: product.stockStatus || PRODUCT_DETAILS[product.id]?.stockStatus || stockLabel(product),
+    leadTime:
+      product.leadTime ||
+      PRODUCT_DETAILS[product.id]?.leadTime ||
+      (product.madeToOrder ? state.settings.customLeadTime : state.settings.stockLeadTime),
+    stockStatus: product.soldOut
+      ? "Uitverkocht"
+      : stockQuantity(product) <= 0 && product.madeToOrder
+        ? "Op bestelling mogelijk"
+        : product.stockStatus || PRODUCT_DETAILS[product.id]?.stockStatus || stockLabel(product),
     washCare: product.washCare || PRODUCT_DETAILS[product.id]?.washCare || DEFAULT_WASH_CARE,
     options: product.options || PRODUCT_DETAILS[product.id]?.options || "Maatwerk in overleg mogelijk",
   };
@@ -192,9 +201,72 @@ function renderProducts() {
     card.querySelector(".product-price").textContent = formatMoney(product.price);
     card.querySelector(".product-stock").textContent = details.stockStatus;
     card.querySelector(".view-button").addEventListener("click", () => openProductModal(product.id));
-    card.querySelector(".add-button").addEventListener("click", () => addToCart(product.id));
+    const addButton = card.querySelector(".add-button");
+    const canOrder = !product.soldOut && (stockQuantity(product) > 0 || product.madeToOrder);
+    addButton.disabled = !canOrder;
+    addButton.textContent = canOrder ? "In winkelmand" : "Uitverkocht";
+    addButton.addEventListener("click", () => addToCart(product.id));
     grid.append(card);
   });
+}
+
+function applySettings() {
+  document.querySelectorAll('a[href^="mailto:"], a[href*="ddytuber@gmail.com"]').forEach((link) => {
+    if (link.href.startsWith("mailto:")) {
+      link.href = `mailto:${state.settings.email}`;
+    }
+  });
+
+  document.querySelectorAll("[data-public-email]").forEach((element) => {
+    element.textContent = state.settings.email;
+  });
+
+  document.querySelectorAll('a[href*="instagram.com"]').forEach((link) => {
+    if (state.settings.instagramUrl) {
+      link.href = state.settings.instagramUrl;
+    }
+  });
+
+  document.querySelector("[data-stock-lead-time]")?.replaceChildren(
+    document.createTextNode(`Product op voorraad: ${state.settings.stockLeadTime}`),
+  );
+  document.querySelector("[data-custom-lead-time]")?.replaceChildren(
+    document.createTextNode(`Maatwerk of op aanvraag: ${state.settings.customLeadTime}`),
+  );
+  document.querySelector("[data-shipping-nl]")?.replaceChildren(
+    document.createTextNode(`Nederland: ${formatMoney(state.settings.shippingNl)}`),
+  );
+  document.querySelector("[data-shipping-be]")?.replaceChildren(
+    document.createTextNode(`Belgie: ${formatMoney(state.settings.shippingBe)}`),
+  );
+  document.querySelector("[data-free-shipping]")?.replaceChildren(
+    document.createTextNode(`Gratis verzending vanaf: ${formatMoney(state.settings.freeShippingFrom)}`),
+  );
+
+  const giftWrapLabel = document.querySelector('[data-gift-wrap]')?.closest("label");
+  if (giftWrapLabel) {
+    giftWrapLabel.lastChild.textContent = ` Cadeauverpakking toevoegen voor ${formatMoney(GIFT_WRAP_PRICE)}`;
+  }
+}
+
+function renderReviews() {
+  const reviewGrid = document.querySelector("[data-review-grid]");
+  if (!reviewGrid) {
+    return;
+  }
+
+  const visibleReviews = state.reviews.filter((review) => review.visible);
+  reviewGrid.innerHTML =
+    visibleReviews
+      .map(
+        (review) => `
+          <article>
+            "${escapeHtml(review.text)}"
+            <span>${escapeHtml(review.name)}${review.product ? ` - ${escapeHtml(review.product)}` : ""}</span>
+          </article>
+        `,
+      )
+      .join("") || "<article>Nog geen reviews geplaatst.</article>";
 }
 
 function openProductModal(productId) {
@@ -212,6 +284,7 @@ function openProductModal(productId) {
   productModal.querySelector("[data-modal-price]").textContent = formatMoney(product.price);
   productModal.querySelector("[data-modal-description]").textContent = product.description;
   productModal.querySelector("[data-modal-details]").innerHTML = [
+    product.longDescription ? ["Extra details", product.longDescription] : null,
     ["Geschikte popmaat", details.size],
     ["Wat zit erbij", details.contents],
     ["Materiaal", details.material],
@@ -219,10 +292,13 @@ function openProductModal(productId) {
     ["Voorraadstatus", details.stockStatus],
     ["Keuzeopties", details.options],
   ]
+    .filter(Boolean)
     .map(([label, value]) => `<div><dt>${label}</dt><dd>${escapeHtml(value)}</dd></div>`)
     .join("");
   productModal.classList.add("is-open");
   productModal.setAttribute("aria-hidden", "false");
+  modalAddButton.disabled = Boolean(product.soldOut) || (stockQuantity(product) <= 0 && !product.madeToOrder);
+  modalAddButton.textContent = modalAddButton.disabled ? "Uitverkocht" : "Toevoegen aan winkelmand";
   document.body.classList.add("modal-open");
 }
 
@@ -233,6 +309,11 @@ function closeProductModal() {
 }
 
 function addToCart(productId) {
+  const product = state.products.find((item) => item.id === productId);
+  if (!product || product.soldOut || (stockQuantity(product) <= 0 && !product.madeToOrder)) {
+    return;
+  }
+
   state.cart[productId] = (state.cart[productId] || 0) + 1;
   saveCart();
   renderCart();
@@ -554,7 +635,7 @@ checkoutForm.addEventListener("submit", (event) => {
   saveCart();
   renderCart();
 
-  const mail = `mailto:ddytuber@gmail.com?subject=${encodeURIComponent(
+  const mail = `mailto:${state.settings.email}?subject=${encodeURIComponent(
     `Bestelverzoek ${order.id}`,
   )}&body=${encodeURIComponent(buildMailBody(order))}`;
   window.location.href = mail;
@@ -602,7 +683,7 @@ giftCardOrderForm.addEventListener("submit", (event) => {
     "",
     "Groetjes,",
   ].join("\n");
-  window.location.href = `mailto:ddytuber@gmail.com?subject=${encodeURIComponent(
+  window.location.href = `mailto:${state.settings.email}?subject=${encodeURIComponent(
     `Cadeaubonaanvraag ${order.id}`,
   )}&body=${encodeURIComponent(body)}`;
   giftCardOrderForm.reset();
@@ -630,5 +711,7 @@ document.addEventListener("keydown", (event) => {
 });
 
 renderFilters();
+applySettings();
+renderReviews();
 renderProducts();
 renderCart();

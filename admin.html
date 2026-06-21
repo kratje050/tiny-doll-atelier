@@ -19,8 +19,12 @@
         <button type="button" data-view-button="categories">Categorieen</button>
         <button type="button" data-view-button="discounts">Kortingscodes</button>
         <button type="button" data-view-button="giftcards">Cadeaubonnen</button>
+        <button type="button" data-view-button="reviews">Reviews</button>
+        <button type="button" data-view-button="emailtemplates">E-mailteksten</button>
         <button type="button" data-view-button="customers">Klanten</button>
         <button type="button" data-view-button="orders">Bestellingen</button>
+        <button type="button" data-view-button="settings">Instellingen</button>
+        <button type="button" data-view-button="backup">Back-up</button>
       </nav>
       <a class="store-link" href="/">Bekijk webshop</a>
       <button class="store-link logout-button" type="button" data-admin-logout>Uitloggen</button>
@@ -85,6 +89,16 @@
               <img alt="Voorbeeld van productafbeelding" />
             </figure>
             <label>Omschrijving <textarea name="description" rows="4" required></textarea></label>
+            <label>Lange omschrijving <textarea name="longDescription" rows="4"></textarea></label>
+            <label>Materiaal <input name="material" placeholder="Bijv. katoen/mousseline" /></label>
+            <label>Popmaat <input name="size" placeholder="Bijv. 32 tot 36 cm" /></label>
+            <label>Levertijd <input name="leadTime" placeholder="Bijv. 1 tot 3 werkdagen" /></label>
+            <label>Wasadvies <textarea name="washCare" rows="3"></textarea></label>
+            <label>Extra afbeeldingen <textarea name="extraImages" rows="3" placeholder="1 afbeelding per regel"></textarea></label>
+            <label class="check-row"><input name="featured" type="checkbox" /> Uitgelicht</label>
+            <label class="check-row"><input name="bestseller" type="checkbox" /> Bestseller</label>
+            <label class="check-row"><input name="madeToOrder" type="checkbox" /> Op bestelling mogelijk</label>
+            <label class="check-row"><input name="soldOut" type="checkbox" /> Uitverkocht</label>
             <label class="check-row"><input name="active" type="checkbox" checked /> Zichtbaar in webshop</label>
             <button class="primary-button" type="submit">Product opslaan</button>
           </form>
@@ -244,6 +258,54 @@
         </section>
       </section>
 
+      <section class="admin-view" data-view="reviews">
+        <div class="work-grid compact">
+          <form class="panel form-panel" data-review-form>
+            <div class="panel-heading">
+              <h2 data-review-form-title>Review toevoegen</h2>
+              <button class="ghost-button" type="button" data-cancel-review hidden>Annuleren</button>
+            </div>
+            <input name="id" type="hidden" />
+            <label>Naam <input name="name" required /></label>
+            <label>Review <textarea name="text" rows="4" required></textarea></label>
+            <label>Product of onderwerp <input name="product" /></label>
+            <label>Beoordeling <input name="rating" type="number" min="1" max="5" step="1" value="5" /></label>
+            <label class="check-row"><input name="visible" type="checkbox" checked /> Zichtbaar op webshop</label>
+            <button class="primary-button" type="submit">Review opslaan</button>
+          </form>
+          <section class="panel table-panel">
+            <div class="panel-heading">
+              <h2>Reviews</h2>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Klant</th>
+                    <th>Review</th>
+                    <th>Status</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody data-review-table></tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section class="admin-view" data-view="emailtemplates">
+        <section class="panel form-panel">
+          <div class="panel-heading">
+            <h2>E-mailteksten</h2>
+            <span class="muted">Gebruik {naam}, {bestelnummer}, {totaal}, {tracktrace}, {cadeauboncode}, {waarde}</span>
+          </div>
+          <div class="template-list" data-email-template-list></div>
+          <p class="form-note" data-email-template-message></p>
+          <button class="primary-button" type="button" data-save-email-templates>Mailteksten opslaan</button>
+        </section>
+      </section>
+
       <section class="admin-view" data-view="orders">
         <section class="panel table-panel">
           <div class="panel-heading">
@@ -251,10 +313,13 @@
             <select data-order-status-filter>
               <option value="alles">Alle statussen</option>
               <option>Nieuw</option>
+              <option>Afgestemd</option>
+              <option>In afwachting van betaling</option>
               <option>Betaald</option>
               <option>In productie</option>
               <option>Verzonden</option>
               <option>Afgerond</option>
+              <option>Geannuleerd</option>
             </select>
           </div>
           <div class="table-wrap">
@@ -274,6 +339,64 @@
           </div>
           <div class="order-detail" data-order-detail-panel></div>
         </section>
+      </section>
+
+      <section class="admin-view" data-view="settings">
+        <form class="panel form-panel settings-panel" data-settings-form>
+          <div class="panel-heading">
+            <h2>Webshop instellingen</h2>
+          </div>
+          <div class="settings-grid">
+            <label>Webshopnaam <input name="shopName" required /></label>
+            <label>E-mail <input name="email" type="email" required /></label>
+            <label>WhatsApp/telefoon <input name="phone" /></label>
+            <label>Instagramlink <input name="instagramUrl" type="url" /></label>
+            <label>Verzendkosten Nederland <input name="shippingNl" type="number" min="0" step="0.01" /></label>
+            <label>Verzendkosten Belgie <input name="shippingBe" type="number" min="0" step="0.01" /></label>
+            <label>Gratis verzending vanaf <input name="freeShippingFrom" type="number" min="0" step="0.01" /></label>
+            <label>Cadeauverpakking prijs <input name="giftWrapPrice" type="number" min="0" step="0.01" /></label>
+            <label>Standaard levertijd voorraad <input name="stockLeadTime" /></label>
+            <label>Standaard levertijd maatwerk <input name="customLeadTime" /></label>
+          </div>
+          <label>Tekst bij bestellen <textarea name="orderRequestText" rows="3"></textarea></label>
+          <label>Succesmelding bestelverzoek <textarea name="orderSuccessText" rows="3"></textarea></label>
+          <label>Contacttekst <textarea name="contactText" rows="3"></textarea></label>
+          <p class="form-note" data-settings-message></p>
+          <button class="primary-button" type="submit">Instellingen opslaan</button>
+        </form>
+      </section>
+
+      <section class="admin-view" data-view="backup">
+        <div class="work-grid">
+          <section class="panel form-panel">
+            <div class="panel-heading">
+              <h2>Volledige back-up</h2>
+            </div>
+            <p class="muted">Alle beheerdata staat gratis in de browseropslag. Download daarom regelmatig een back-up.</p>
+            <button class="primary-button" type="button" data-download-backup>Alles downloaden</button>
+            <label>
+              Back-up importeren
+              <input name="backupFile" type="file" accept="application/json" data-import-backup />
+            </label>
+            <p class="form-note" data-backup-message></p>
+          </section>
+          <section class="panel table-panel">
+            <div class="panel-heading">
+              <h2>Los exporteren</h2>
+            </div>
+            <div class="export-grid">
+              <button class="row-button" type="button" data-export-key="products">Producten</button>
+              <button class="row-button" type="button" data-export-key="categories">Categorieen</button>
+              <button class="row-button" type="button" data-export-key="discounts">Kortingscodes</button>
+              <button class="row-button" type="button" data-export-key="giftCards">Cadeaubonnen</button>
+              <button class="row-button" type="button" data-export-key="orders">Bestellingen</button>
+              <button class="row-button" type="button" data-export-key="customers">Klanten</button>
+              <button class="row-button" type="button" data-export-key="settings">Instellingen</button>
+              <button class="row-button" type="button" data-export-key="reviews">Reviews</button>
+              <button class="row-button" type="button" data-export-key="emailTemplates">E-mailteksten</button>
+            </div>
+          </section>
+        </div>
       </section>
     </main>
 
