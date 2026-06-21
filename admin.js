@@ -184,10 +184,17 @@ function renderDiscounts() {
   document.querySelector("[data-discount-table]").innerHTML = adminState.discounts
     .map((discount) => {
       const value = discount.type === "percent" ? `${discount.value}%` : money(discount.value);
+      const shippingRules = [
+        discount.freeShipping ? "Gratis verzending" : "",
+        Number(discount.freeShippingFrom) > 0
+          ? `Gratis vanaf ${money(discount.freeShippingFrom)}`
+          : "",
+      ].filter(Boolean);
       return `
         <tr>
           <td><strong>${discount.code}</strong></td>
           <td>${value}</td>
+          <td>${shippingRules.length ? shippingRules.join("<br>") : "-"}</td>
           <td>${discount.uses}</td>
           <td><span class="status-pill">${discount.active ? "Actief" : "Uit"}</span></td>
           <td>
@@ -310,6 +317,9 @@ function renderOrderDetail(orderId) {
   const itemCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
   const createdAt = new Date(order.createdAt);
   const statusOptions = ["Nieuw", "Betaald", "In productie", "Verzonden", "Afgerond"];
+  const shippingText = order.freeShipping
+    ? `Gratis via ${order.discountCode || "kortingscode"}`
+    : "Wordt afgestemd";
 
   detail.classList.add("is-open");
   detail.innerHTML = `
@@ -380,6 +390,7 @@ function renderOrderDetail(orderId) {
         <dl class="detail-list">
           <div><dt>Subtotaal</dt><dd>${money(itemSubtotal)}</dd></div>
           <div><dt>Korting</dt><dd>${order.discountCode || "-"} ${order.discountAmount ? `(-${money(order.discountAmount)})` : ""}</dd></div>
+          <div><dt>Verzending</dt><dd>${shippingText}</dd></div>
           <div><dt>Cadeaubon</dt><dd>${order.giftCardCode || "-"} ${order.giftCardAmount ? `(-${money(order.giftCardAmount)})` : ""}</dd></div>
           <div class="total-row"><dt>Totaal</dt><dd>${money(order.total)}</dd></div>
         </dl>
@@ -559,6 +570,8 @@ discountForm.addEventListener("submit", (event) => {
     code,
     type: data.get("type"),
     value: Number(data.get("value")),
+    freeShipping: data.get("freeShipping") === "on",
+    freeShippingFrom: Number(data.get("freeShippingFrom")) || 0,
     active: data.get("active") === "on",
     uses: 0,
   };

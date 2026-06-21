@@ -67,8 +67,26 @@ const TinyStore = (() => {
   ];
 
   const defaultDiscounts = [
-    { id: "welkom10", code: "WELKOM10", type: "percent", value: 10, active: true, uses: 0 },
-    { id: "atelier5", code: "ATELIER5", type: "fixed", value: 5, active: true, uses: 1 },
+    {
+      id: "welkom10",
+      code: "WELKOM10",
+      type: "percent",
+      value: 10,
+      freeShipping: false,
+      freeShippingFrom: 0,
+      active: true,
+      uses: 0,
+    },
+    {
+      id: "atelier5",
+      code: "ATELIER5",
+      type: "fixed",
+      value: 5,
+      freeShipping: false,
+      freeShippingFrom: 0,
+      active: true,
+      uses: 1,
+    },
   ];
 
   const defaultGiftCards = [
@@ -328,6 +346,10 @@ const TinyStore = (() => {
       : 0;
     const safeDiscount = Math.min(subtotal, discountAmount);
     const afterDiscount = subtotal - safeDiscount;
+    const freeShippingFrom = Number(discount?.freeShippingFrom || 0);
+    const freeShippingByCode = Boolean(
+      discount && (discount.freeShipping || (freeShippingFrom > 0 && subtotal >= freeShippingFrom)),
+    );
     const today = new Date().toISOString().slice(0, 10);
     const giftCard = giftCards.find(
       (item) =>
@@ -347,6 +369,8 @@ const TinyStore = (() => {
       items,
       discountCode: discount ? discount.code : "",
       discountAmount: Number(safeDiscount.toFixed(2)),
+      freeShipping: freeShippingByCode,
+      freeShippingFrom: discount ? freeShippingFrom : 0,
       giftCardCode: giftCard ? giftCard.code : "",
       giftCardAmount: Number(giftCardAmount.toFixed(2)),
       total: Number((afterDiscount - giftCardAmount).toFixed(2)),

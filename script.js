@@ -410,6 +410,9 @@ function buildMailBody(order) {
     order.giftCardCode
       ? `Cadeaubon: ${order.giftCardCode} (-${formatMoney(order.giftCardAmount)})`
       : "Cadeaubon: -",
+    order.freeShipping
+      ? `Verzending: gratis via kortingscode ${order.discountCode || ""}`.trim()
+      : "Verzending: wordt afgestemd in de bevestiging",
     `Totaal: ${formatMoney(order.total)}`,
     "",
     "KLANTGEGEVENS",
