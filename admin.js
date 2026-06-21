@@ -229,6 +229,7 @@ function renderGiftCards() {
           <td><span class="status-pill">${status}</span></td>
           <td>
             <div class="table-actions">
+              <button class="row-button" type="button" data-edit-gift-card="${giftCard.id}">Bewerk</button>
               <button class="row-button" type="button" data-toggle-gift-card="${giftCard.id}">
                 ${giftCard.active ? "Zet uit" : "Zet aan"}
               </button>
@@ -476,6 +477,7 @@ document.addEventListener("click", (event) => {
   const deleteCategory = event.target.closest("[data-delete-category]");
   const toggleDiscount = event.target.closest("[data-toggle-discount]");
   const deleteDiscount = event.target.closest("[data-delete-discount]");
+  const editGiftCard = event.target.closest("[data-edit-gift-card]");
   const toggleGiftCard = event.target.closest("[data-toggle-gift-card]");
   const deleteGiftCard = event.target.closest("[data-delete-gift-card]");
   const orderDetail = event.target.closest("[data-order-detail]");
@@ -529,6 +531,25 @@ document.addEventListener("click", (event) => {
       adminState.discounts.filter((discount) => discount.id !== deleteDiscount.dataset.deleteDiscount),
     );
     renderAll();
+  }
+
+  if (editGiftCard) {
+    const giftCard = adminState.giftCards.find((item) => item.id === editGiftCard.dataset.editGiftCard);
+    if (!giftCard) {
+      return;
+    }
+
+    giftCardForm.elements.id.value = giftCard.id;
+    giftCardForm.elements.code.value = giftCard.code;
+    giftCardForm.elements.initialValue.value = giftCard.initialValue;
+    giftCardForm.elements.balance.value = giftCard.balance;
+    giftCardForm.elements.recipient.value = giftCard.recipient || "";
+    giftCardForm.elements.email.value = giftCard.email || "";
+    giftCardForm.elements.expiresAt.value = giftCard.expiresAt || "";
+    giftCardForm.elements.active.checked = giftCard.active;
+    document.querySelector("[data-gift-card-form-title]").textContent = "Cadeaubon bewerken";
+    giftCardForm.querySelector("[data-cancel-gift-card]").hidden = false;
+    setView("giftcards");
   }
 
   if (toggleGiftCard) {
@@ -587,11 +608,13 @@ discountForm.addEventListener("submit", (event) => {
 giftCardForm.addEventListener("submit", (event) => {
   event.preventDefault();
   const data = new FormData(giftCardForm);
+  const existingId = data.get("id");
+  const existingGiftCard = adminState.giftCards.find((item) => item.id === existingId);
   const code = data.get("code").trim().toUpperCase();
   const initialValue = Number(data.get("initialValue"));
   const balance = data.get("balance") === "" ? initialValue : Number(data.get("balance"));
   const giftCard = {
-    id: TinyStore.slugify(code),
+    id: existingId || TinyStore.slugify(code),
     code,
     initialValue,
     balance,
@@ -599,15 +622,25 @@ giftCardForm.addEventListener("submit", (event) => {
     email: data.get("email").trim(),
     expiresAt: data.get("expiresAt"),
     active: data.get("active") === "on",
-    createdAt: new Date().toISOString(),
+    createdAt: existingGiftCard?.createdAt || new Date().toISOString(),
   };
   TinyStore.saveGiftCards([
     giftCard,
-    ...adminState.giftCards.filter((item) => item.id !== giftCard.id),
+    ...adminState.giftCards.filter((item) => item.id !== giftCard.id && item.id !== existingId),
   ]);
   giftCardForm.reset();
   giftCardForm.elements.active.checked = true;
+  document.querySelector("[data-gift-card-form-title]").textContent = "Cadeaubon aanmaken";
+  giftCardForm.querySelector("[data-cancel-gift-card]").hidden = true;
   renderAll();
+});
+
+giftCardForm.querySelector("[data-cancel-gift-card]").addEventListener("click", () => {
+  giftCardForm.reset();
+  giftCardForm.elements.id.value = "";
+  giftCardForm.elements.active.checked = true;
+  document.querySelector("[data-gift-card-form-title]").textContent = "Cadeaubon aanmaken";
+  giftCardForm.querySelector("[data-cancel-gift-card]").hidden = true;
 });
 
 document.querySelector("[data-customer-search]").addEventListener("input", (event) => {
