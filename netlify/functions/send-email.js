@@ -59,6 +59,20 @@ function isEmail(value) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || ""));
 }
 
+function getEmailAddress(value) {
+  const match = String(value || "").match(/<([^>]+)>/);
+  return (match ? match[1] : value).trim().toLowerCase();
+}
+
+function isPublicMailbox(value) {
+  const email = getEmailAddress(value);
+  return /@(gmail|googlemail|hotmail|outlook|live|yahoo)\./i.test(email);
+}
+
+function safeProviderMessage(value) {
+  return clean(value || "De mailprovider kon het bericht niet verzenden.", 300);
+}
+
 function getIp(event) {
   return (
     event.headers["x-nf-client-connection-ip"] ||
@@ -149,6 +163,12 @@ async function sendWithResend({ to, subject, text, replyTo }) {
     throw new Error("E-mail is nog niet geconfigureerd.");
   }
 
+  if (isPublicMailbox(process.env.EMAIL_FROM)) {
+    throw new Error(
+      "Resend accepteert geen Gmail/Hotmail/Outlook als afzender. Gebruik een geverifieerd domein als EMAIL_FROM, bijvoorbeeld Tiny Doll Atelier <mail@jouwdomein.nl>.",
+    );
+  }
+
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: {
@@ -165,7 +185,14 @@ async function sendWithResend({ to, subject, text, replyTo }) {
   });
 
   if (!response.ok) {
-    throw new Error("De mailprovider kon het bericht niet verzenden.");
+    const errorText = await response.text();
+    let providerMessage = errorText;
+    try {
+      providerMessage = JSON.parse(errorText).message || errorText;
+    } catch {
+      providerMessage = errorText;
+    }
+    throw new Error(`Mailprovider melding: ${safeProviderMessage(providerMessage)}`);
   }
 }
 
@@ -217,7 +244,11 @@ exports.handler = async (event) => {
     await sendWithResend(adminMail);
     return json(200, { ok: true, message: "Je bericht is verzonden." });
   } catch (error) {
-    return json(400, {
+    const statusCode =
+      error.message.includes("Resend accepteert") || error.message.includes("Mailprovider melding")
+        ? 503
+        : 400;
+    return json(statusCode, {
       ok: false,
       message: error.message || "Verzenden is mislukt.",
     });
