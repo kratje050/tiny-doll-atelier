@@ -113,8 +113,8 @@ const TinyStore = (() => {
     email: "ddytuber@gmail.com",
     phone: "",
     instagramUrl: "https://www.instagram.com/tinydoll.atelier/",
-    shippingNl: 4.95,
-    shippingBe: 8.95,
+    shippingNl: 6.95,
+    shippingBe: 0,
     freeShippingFrom: 75,
     giftWrapPrice: 2.95,
     stockLeadTime: "1 tot 3 werkdagen",
@@ -183,8 +183,8 @@ const TinyStore = (() => {
     customCard6Title: "Verwachte levertijd",
     customCard6Text: "Meestal 3 tot 10 werkdagen, afhankelijk van stof en wensen",
     orderRequestText:
-      "Je plaatst eerst een bestelverzoek. Daarna ontvang je een persoonlijke bevestiging met levertijd, eventuele keuzes en betaalinformatie.",
-    orderSuccessText: "Je bestelverzoek is opgeslagen. Je mailprogramma opent nu zodat je het verzoek kunt verzenden.",
+      "Je plaatst eerst een bestelverzoek. Daarna ontvang je van ons een persoonlijke bevestiging met levertijd, eventuele keuzes en betaalinformatie. Je bestelling is pas definitief nadat alles is afgestemd en betaald.",
+    orderSuccessText: "Bedankt, je bestelverzoek is verzonden. We nemen zo snel mogelijk contact met je op.",
     contactText: "Heb je een vraag over een setje, maatwerk of een bestelling? Stuur gerust een bericht.",
   };
 

@@ -29,7 +29,7 @@
       </button>
       <button class="cart-button" type="button" data-open-cart>
         <span class="cart-dot" data-cart-count>0</span>
-        Winkelmand
+        Aanvraag
       </button>
     </header>
 
@@ -51,7 +51,7 @@
           <a href="#over-ons" data-menu-link>Over ons</a>
           <a href="#veelgestelde-vragen" data-menu-link>Veelgestelde vragen</a>
           <a href="#contact" data-menu-link>Contact</a>
-          <button type="button" data-open-cart data-menu-link>Winkelmandje</button>
+          <button type="button" data-open-cart data-menu-link>Aanvraag bekijken</button>
         </div>
       </nav>
     </aside>
@@ -128,6 +128,8 @@
             Kies een stijl, geef de popmaat door en stem samen stof, kleur en details af. Setjes
             kunnen persoonlijk worden samengesteld voordat de bestelling definitief wordt.
           </p>
+          <p class="service-action-text">Stuur je wensen door, dan denken we persoonlijk met je mee.</p>
+          <a class="primary-action service-action" href="#contact">Maatwerk aanvragen</a>
         </div>
         <div class="service-list" aria-label="Maatwerk opties">
           <article><strong data-custom-card-title="1">Popmaat</strong><span data-custom-card-text="1">32 cm, 34 cm, 36 cm of eigen maat</span></article>
@@ -153,6 +155,12 @@
             betaalinformatie. De cadeauboncode wordt pas na betaling aangemaakt en per e-mail
             verstuurd.
           </p>
+          <ol class="step-list">
+            <li>Je vraagt een cadeaubon aan</li>
+            <li>Je ontvangt betaalinformatie</li>
+            <li>Na betaling maken wij de cadeauboncode aan</li>
+            <li>De ontvanger krijgt de cadeaubon per e-mail</li>
+          </ol>
         </div>
         <form class="gift-card-form" data-gift-card-order-form>
           <label class="honeypot-field">Laat dit veld leeg <input name="website" autocomplete="off" tabindex="-1" /></label>
@@ -184,8 +192,15 @@
             bevestiging met levertijd, eventuele keuzes en betaalinformatie. Je bestelling is pas
             definitief nadat alles is afgestemd en betaald.
           </p>
+          <ol class="step-list">
+            <li>Kies je favoriete setje</li>
+            <li>Voeg het toe aan je aanvraag</li>
+            <li>Verstuur je bestelverzoek</li>
+            <li>Je ontvangt van ons levertijd, keuzes en betaalinformatie</li>
+            <li>Na betaling maken of verzenden we je bestelling</li>
+          </ol>
         </div>
-        <button class="primary-action" type="button" data-open-cart>Open winkelmand</button>
+        <button class="primary-action" type="button" data-open-cart>Open aanvraag</button>
       </section>
 
       <section class="content-band reviews-band" aria-labelledby="reviews-title">
@@ -196,7 +211,7 @@
           </div>
         </div>
         <div class="review-grid" data-review-grid>
-          <article>Nog geen reviews geplaatst.</article>
+          <article>Binnenkort delen we hier lieve reacties van klanten.</article>
         </div>
       </section>
 
@@ -225,8 +240,8 @@
           <ul class="check-list">
             <li data-stock-lead-time>Product op voorraad: 1 tot 3 werkdagen</li>
             <li data-custom-lead-time>Maatwerk of op aanvraag: 3 tot 10 werkdagen</li>
-            <li data-shipping-nl>Nederland: wordt afgestemd</li>
-            <li data-shipping-be>Belgie: wordt afgestemd</li>
+            <li data-shipping-nl>Nederland: &euro; 6,95</li>
+            <li data-shipping-be>Belgie: in overleg</li>
             <li data-free-shipping>Gratis verzending vanaf: wordt afgestemd</li>
           </ul>
           <p data-shipping-after-text>Na je bestelling ontvang je een bevestiging met verdere informatie.</p>
@@ -249,6 +264,14 @@
         <div>
           <p class="eyebrow">Formulier</p>
           <h2 id="retourformulier-title">Retourformulier</h2>
+          <p class="section-note">
+            Vul dit formulier in als je een retour of annulering wilt aanmelden. We nemen zo snel
+            mogelijk contact met je op.
+          </p>
+          <p class="section-note">
+            Let op: maatwerkproducten kunnen mogelijk niet retour als ze speciaal volgens
+            persoonlijke wensen zijn gemaakt.
+          </p>
         </div>
         <form class="site-form" data-return-form>
           <label class="honeypot-field">Laat dit veld leeg <input name="website" autocomplete="off" tabindex="-1" /></label>
@@ -312,13 +335,19 @@
           <p class="eyebrow">Privacyverklaring</p>
           <h2 id="privacy-title">Hoe we met gegevens omgaan</h2>
           <p>
-            Tiny Doll Atelier gebruikt klantgegevens alleen voor contact over bestellingen, het
-            verwerken van bestelverzoeken, verzending, klantenservice en administratie. We bewaren
-            alleen wat nodig is om je vraag of bestelling goed te behandelen.
+            Tiny Doll Atelier verwerkt gegevens zoals naam, e-mailadres, telefoonnummer,
+            adresgegevens, bestelgegevens en berichten die via formulieren worden verstuurd.
+            We gebruiken deze gegevens voor contact, bestelverzoeken, verzending, klantenservice,
+            cadeaubonnen, retouren en administratie.
           </p>
           <p>
-            Gegevens worden niet verkocht. Wil je iets laten aanpassen of verwijderen? Neem contact
-            op via <span data-public-email>ddytuber@gmail.com</span>.
+            Gegevens worden niet verkocht en niet langer bewaard dan nodig is om je vraag,
+            bestelling of administratie goed te behandelen. De website draait via Netlify en
+            e-mails worden verzonden via Gmail SMTP.
+          </p>
+          <p>
+            Wil je gegevens inzien, aanpassen of laten verwijderen? Neem contact op via
+            <span data-public-email>ddytuber@gmail.com</span>.
           </p>
         </div>
       </section>
@@ -327,16 +356,26 @@
         <div class="text-panel wide-text">
           <p class="eyebrow">Voorwaarden</p>
           <h2 id="voorwaarden-title">Algemene voorwaarden</h2>
-          <ul class="check-list">
-            <li>Bestellen gaat via een bestelverzoek. De bestelling is definitief na afstemming en betaling.</li>
-            <li>Betalen gebeurt volgens de betaalinformatie die je persoonlijk ontvangt.</li>
-            <li>Levering hangt af van voorraad, maatwerk en afgesproken levertijd.</li>
-            <li>Maatwerk wordt vooraf afgestemd op maat, stof, kleur en afwerking.</li>
-            <li>Retourneren kan voor standaardproducten binnen 14 dagen na aanmelding.</li>
-            <li>Klachten lossen we graag zorgvuldig en persoonlijk op.</li>
-            <li>Aansprakelijkheid is beperkt tot het bedrag van de betreffende bestelling.</li>
-            <li>Contact kan via <span data-public-email>ddytuber@gmail.com</span>.</li>
-          </ul>
+          <div class="terms-list">
+            <h3>1. Bestellen</h3>
+            <p>Bestellen gaat via een bestelverzoek. Een bestelling is pas definitief nadat de aanvraag is bevestigd en de betaling is voldaan.</p>
+            <h3>2. Betalen</h3>
+            <p>Betalen gebeurt volgens de betaalinformatie die je persoonlijk ontvangt.</p>
+            <h3>3. Levering</h3>
+            <p>Levering hangt af van voorraad, maatwerk en de afgesproken levertijd.</p>
+            <h3>4. Maatwerk</h3>
+            <p>Maatwerk wordt vooraf afgestemd op maat, stof, kleur en afwerking.</p>
+            <h3>5. Retourneren</h3>
+            <p>Retourneren kan voor standaardproducten binnen 14 dagen na aanmelding. Maatwerkproducten kunnen mogelijk niet retour als ze speciaal volgens persoonlijke wensen zijn gemaakt.</p>
+            <h3>6. Cadeaubonnen</h3>
+            <p>Cadeaubonnen worden na betaling aangemaakt en per e-mail verstuurd. De cadeaubon is te gebruiken voor producten van Tiny Doll Atelier. De geldigheidsdatum staat op de cadeaubon vermeld.</p>
+            <h3>7. Klachten</h3>
+            <p>Klachten lossen we graag zorgvuldig en persoonlijk op.</p>
+            <h3>8. Aansprakelijkheid</h3>
+            <p>Aansprakelijkheid is beperkt tot het bedrag van de betreffende bestelling.</p>
+            <h3>9. Contact</h3>
+            <p>Contact kan via <span data-public-email>ddytuber@gmail.com</span>.</p>
+          </div>
         </div>
       </section>
     </main>
@@ -365,15 +404,15 @@
       </nav>
     </footer>
 
-    <aside class="cart-panel" data-cart-panel aria-label="Winkelmand" aria-hidden="true">
+    <aside class="cart-panel" data-cart-panel aria-label="Aanvraag" aria-hidden="true">
       <div class="cart-backdrop" data-close-cart></div>
       <div class="cart-drawer" role="dialog" aria-modal="true" aria-labelledby="cart-title">
         <div class="cart-top">
           <div>
             <p class="eyebrow">Besteloverzicht</p>
-            <h2 id="cart-title">Winkelmand</h2>
+            <h2 id="cart-title">Aanvraag</h2>
           </div>
-          <button class="icon-button" type="button" data-close-cart aria-label="Winkelmand sluiten">
+          <button class="icon-button" type="button" data-close-cart aria-label="Aanvraag sluiten">
             x
           </button>
         </div>
@@ -384,13 +423,14 @@
         </div>
         <div class="cart-actions">
           <button class="primary-action" type="button" data-show-checkout>Gegevens invullen</button>
-          <button class="secondary-action" type="button" data-clear-cart>Winkelmand leegmaken</button>
+          <button class="secondary-action" type="button" data-clear-cart>Aanvraag leegmaken</button>
         </div>
         <form class="checkout-form" data-checkout-form hidden>
           <label class="honeypot-field">Laat dit veld leeg <input name="website" autocomplete="off" tabindex="-1" /></label>
           <p class="checkout-note">
-            Je plaatst eerst een bestelverzoek. Je bestelling is pas definitief nadat alles is
-            afgestemd en betaald.
+            Je plaatst eerst een bestelverzoek. Daarna ontvang je van ons een persoonlijke
+            bevestiging met levertijd, eventuele keuzes en betaalinformatie. Je bestelling is pas
+            definitief nadat alles is afgestemd en betaald.
           </p>
           <label class="check-row">
             <input name="giftWrap" type="checkbox" data-gift-wrap />
@@ -431,7 +471,7 @@
             Wasadvies: was met de hand of op een fijnwasprogramma. Niet in de droger. Laat liggend
             drogen voor het mooiste resultaat.
           </p>
-          <button class="primary-action" type="button" data-modal-add>Toevoegen aan winkelmand</button>
+          <button class="primary-action" type="button" data-modal-add>Toevoegen aan aanvraag</button>
         </div>
       </article>
     </aside>
@@ -451,6 +491,7 @@
             <div><dt>Inhoud</dt><dd class="product-contents"></dd></div>
             <div><dt>Materiaal</dt><dd class="product-material"></dd></div>
             <div><dt>Levertijd</dt><dd class="product-leadtime"></dd></div>
+            <div><dt>Pop</dt><dd class="product-doll-note"></dd></div>
           </dl>
           <div class="product-meta">
             <strong class="product-price"></strong>
@@ -458,7 +499,7 @@
           </div>
           <div class="product-actions">
             <button class="secondary-action view-button" type="button">Bekijk product</button>
-            <button class="add-button" type="button">Toevoegen aan winkelmand</button>
+            <button class="add-button" type="button">Toevoegen aan aanvraag</button>
           </div>
         </div>
       </article>

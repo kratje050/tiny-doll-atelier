@@ -357,7 +357,7 @@ function renderProducts() {
     .map((product) => {
       const quantity = stockQuantity(product);
       const stockStatus = product.soldOut
-        ? "Uitverkocht"
+        ? "Tijdelijk uitverkocht"
         : quantity > 0
           ? `${quantity} op voorraad`
           : product.madeToOrder
@@ -367,7 +367,7 @@ function renderProducts() {
         product.featured ? "Uitgelicht" : "",
         product.bestseller ? "Bestseller" : "",
         product.madeToOrder ? "Op bestelling" : "",
-        product.soldOut ? "Uitverkocht" : "",
+        product.soldOut ? "Tijdelijk uitverkocht" : "",
       ].filter(Boolean);
       return `
         <tr>
@@ -644,8 +644,6 @@ function renderOrderDetail(orderId) {
     : order.shippingMethod || "Wordt afgestemd";
   const paymentStatus = order.paymentStatus || "Nog niet betaald";
   const history = order.statusHistory || [];
-  const mailBody = buildCustomerMail(order);
-
   detail.classList.add("is-open");
   detail.innerHTML = `
     <div class="order-detail-header">
@@ -659,9 +657,6 @@ function renderOrderDetail(orderId) {
         })} om ${createdAt.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })}</p>
       </div>
       <div class="detail-actions">
-        <a class="row-button" href="mailto:${order.customer.email}?subject=${encodeURIComponent(
-          `Bestelling ${order.id}`,
-        )}&body=${encodeURIComponent(mailBody)}">Mail klant</a>
         <button class="row-button" type="button" data-print-order="${order.id}">Print bestelling</button>
         <button class="row-button" type="button" data-print-packing-slip="${order.id}">Pakbon</button>
       </div>
@@ -672,7 +667,7 @@ function renderOrderDetail(orderId) {
         <h3>Klantgegevens</h3>
         <dl class="detail-list">
           <div><dt>Naam</dt><dd>${order.customer.name}</dd></div>
-          <div><dt>E-mail</dt><dd><a href="mailto:${order.customer.email}">${order.customer.email}</a></dd></div>
+          <div><dt>E-mail</dt><dd>${order.customer.email}</dd></div>
           <div><dt>Telefoon</dt><dd>${order.customer.phone || "-"}</dd></div>
         </dl>
       </section>

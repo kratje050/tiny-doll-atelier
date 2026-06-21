@@ -102,6 +102,22 @@ function stockLabel(product) {
   return `Nog ${quantity} op voorraad${extra}`;
 }
 
+function dollNotice(product) {
+  const text = [
+    product.includesDoll,
+    product.contents,
+    product.description,
+    product.longDescription,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+
+  return /inclusief\s+pop|pop\s+inbegrepen/.test(text)
+    ? "Inclusief pop"
+    : "Pop niet inbegrepen, tenzij anders vermeld";
+}
+
 function getProductDetails(product) {
   return {
     size: product.size || PRODUCT_DETAILS[product.id]?.size || product.badge || "34 cm",
@@ -112,7 +128,7 @@ function getProductDetails(product) {
       PRODUCT_DETAILS[product.id]?.leadTime ||
       (product.madeToOrder ? state.settings.customLeadTime : state.settings.stockLeadTime),
     stockStatus: product.soldOut
-      ? "Uitverkocht"
+      ? "Tijdelijk uitverkocht"
       : stockQuantity(product) <= 0 && product.madeToOrder
         ? "Op bestelling mogelijk"
         : product.stockStatus || PRODUCT_DETAILS[product.id]?.stockStatus || stockLabel(product),
@@ -200,13 +216,14 @@ function renderProducts() {
     card.querySelector(".product-contents").textContent = details.contents;
     card.querySelector(".product-material").textContent = details.material;
     card.querySelector(".product-leadtime").textContent = details.leadTime;
+    card.querySelector(".product-doll-note").textContent = dollNotice(product);
     card.querySelector(".product-price").textContent = formatMoney(product.price);
     card.querySelector(".product-stock").textContent = details.stockStatus;
     card.querySelector(".view-button").addEventListener("click", () => openProductModal(product.id));
     const addButton = card.querySelector(".add-button");
     const canOrder = !product.soldOut && (stockQuantity(product) > 0 || product.madeToOrder);
     addButton.disabled = !canOrder;
-    addButton.textContent = canOrder ? "In winkelmand" : "Uitverkocht";
+    addButton.textContent = canOrder ? "Toevoegen aan aanvraag" : "Tijdelijk uitverkocht";
     addButton.addEventListener("click", () => addToCart(product.id));
     grid.append(card);
   });
@@ -223,12 +240,6 @@ function applySettings() {
       element.parentElement.hidden = !visible;
     });
   };
-
-  document.querySelectorAll('a[href^="mailto:"], a[href*="ddytuber@gmail.com"]').forEach((link) => {
-    if (link.href.startsWith("mailto:")) {
-      link.href = `mailto:${state.settings.email}`;
-    }
-  });
 
   document.querySelectorAll("[data-public-email]").forEach((element) => {
     element.textContent = state.settings.email;
@@ -250,7 +261,7 @@ function applySettings() {
     document.createTextNode(`Nederland: ${formatMoney(state.settings.shippingNl)}`),
   );
   document.querySelector("[data-shipping-be]")?.replaceChildren(
-    document.createTextNode(`Belgie: ${formatMoney(state.settings.shippingBe)}`),
+    document.createTextNode("Belgie: in overleg"),
   );
   document.querySelector("[data-free-shipping]")?.replaceChildren(
     document.createTextNode(`Gratis verzending vanaf: ${formatMoney(state.settings.freeShippingFrom)}`),
@@ -384,7 +395,7 @@ function renderReviews() {
           </article>
         `,
       )
-      .join("") || "<article>Nog geen reviews geplaatst.</article>";
+      .join("") || "<article>Binnenkort delen we hier lieve reacties van klanten.</article>";
 }
 
 function openProductModal(productId) {
@@ -408,6 +419,7 @@ function openProductModal(productId) {
     ["Materiaal", details.material],
     ["Levertijd", details.leadTime],
     ["Voorraadstatus", details.stockStatus],
+    ["Pop", dollNotice(product)],
     ["Keuzeopties", details.options],
   ]
     .filter(Boolean)
@@ -416,7 +428,7 @@ function openProductModal(productId) {
   productModal.classList.add("is-open");
   productModal.setAttribute("aria-hidden", "false");
   modalAddButton.disabled = Boolean(product.soldOut) || (stockQuantity(product) <= 0 && !product.madeToOrder);
-  modalAddButton.textContent = modalAddButton.disabled ? "Uitverkocht" : "Toevoegen aan winkelmand";
+  modalAddButton.textContent = modalAddButton.disabled ? "Tijdelijk uitverkocht" : "Toevoegen aan aanvraag";
   document.body.classList.add("modal-open");
 }
 
@@ -494,7 +506,7 @@ function renderCart() {
   cartItems.innerHTML = "";
 
   if (!entries.length) {
-    cartItems.innerHTML = '<p class="cart-empty">Je winkelmand is nog leeg.</p>';
+    cartItems.innerHTML = '<p class="cart-empty">Je aanvraag is nog leeg.</p>';
   }
 
   entries.forEach(({ product, quantity }) => {
@@ -760,7 +772,7 @@ checkoutForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const entries = cartEntries();
   if (!entries.length) {
-    orderMessage.textContent = "Je winkelmand is nog leeg.";
+    orderMessage.textContent = "Je aanvraag is nog leeg.";
     return;
   }
 
