@@ -10,11 +10,25 @@ function getSecret() {
 }
 
 function isConfigured() {
-  return Boolean(process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD && process.env.ADMIN_SESSION_SECRET);
+  return Boolean(getAllowedEmails().length && process.env.ADMIN_PASSWORD && process.env.ADMIN_SESSION_SECRET);
 }
 
 function normalizeEmail(value = "") {
   return String(value).trim().toLowerCase();
+}
+
+function getAllowedEmails() {
+  const emails = [process.env.ADMIN_EMAIL || "", process.env.ADMIN_EMAILS || ""]
+    .join(",")
+    .split(",")
+    .map(normalizeEmail)
+    .filter(Boolean);
+
+  return [...new Set(emails)];
+}
+
+function emailIsAllowed(email) {
+  return getAllowedEmails().some((allowedEmail) => safeEquals(email, allowedEmail));
 }
 
 function safeEquals(left = "", right = "") {
@@ -153,7 +167,7 @@ exports.handler = async (event) => {
     const params = new URLSearchParams(event.body || "");
     const email = normalizeEmail(params.get("email"));
     const password = params.get("password") || "";
-    const emailMatches = safeEquals(email, normalizeEmail(process.env.ADMIN_EMAIL));
+    const emailMatches = emailIsAllowed(email);
     const passwordMatches = safeEquals(password, process.env.ADMIN_PASSWORD);
 
     if (isConfigured() && emailMatches && passwordMatches) {
