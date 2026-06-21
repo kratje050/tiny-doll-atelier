@@ -366,11 +366,28 @@
             <label>Standaard levertijd voorraad <input name="stockLeadTime" /></label>
             <label>Standaard levertijd maatwerk <input name="customLeadTime" /></label>
           </div>
+          <div class="visibility-grid">
+            <label class="check-row"><input name="showShippingNl" type="checkbox" /> Toon verzendkosten Nederland</label>
+            <label class="check-row"><input name="showShippingBe" type="checkbox" /> Toon verzendkosten Belgie</label>
+            <label class="check-row"><input name="showFreeShipping" type="checkbox" /> Toon gratis verzending vanaf</label>
+            <label class="check-row"><input name="showStockLeadTime" type="checkbox" /> Toon levertijd voorraad</label>
+            <label class="check-row"><input name="showCustomLeadTime" type="checkbox" /> Toon levertijd maatwerk</label>
+            <label class="check-row"><input name="showGiftWrapOption" type="checkbox" /> Toon cadeauverpakking in winkelmand</label>
+          </div>
           <label>Tekst bij bestellen <textarea name="orderRequestText" rows="3"></textarea></label>
+          <label class="check-row"><input name="showOrderRequestText" type="checkbox" /> Toon tekst bij bestellen</label>
           <label>Succesmelding bestelverzoek <textarea name="orderSuccessText" rows="3"></textarea></label>
           <label>Contacttekst <textarea name="contactText" rows="3"></textarea></label>
+          <label class="check-row"><input name="showContactText" type="checkbox" /> Toon contacttekst</label>
           <div class="settings-block">
             <h3>Homepage hero</h3>
+            <div class="visibility-grid">
+              <label class="check-row"><input name="showHeroLabel" type="checkbox" /> Toon label</label>
+              <label class="check-row"><input name="showHeroTitle" type="checkbox" /> Toon titel</label>
+              <label class="check-row"><input name="showHeroText" type="checkbox" /> Toon intro tekst</label>
+              <label class="check-row"><input name="showHeroPrimaryButton" type="checkbox" /> Toon knop 1</label>
+              <label class="check-row"><input name="showHeroSecondaryButton" type="checkbox" /> Toon knop 2</label>
+            </div>
             <div class="settings-grid">
               <label>Label <input name="heroLabel" /></label>
               <label>Titel <input name="heroTitle" /></label>
@@ -381,6 +398,12 @@
           </div>
           <div class="settings-block">
             <h3>Over ons</h3>
+            <div class="visibility-grid">
+              <label class="check-row"><input name="showAboutLabel" type="checkbox" /> Toon label</label>
+              <label class="check-row"><input name="showAboutTitle" type="checkbox" /> Toon titel</label>
+              <label class="check-row"><input name="showAboutText1" type="checkbox" /> Toon tekst 1</label>
+              <label class="check-row"><input name="showAboutText2" type="checkbox" /> Toon tekst 2</label>
+            </div>
             <div class="settings-grid">
               <label>Label <input name="aboutLabel" /></label>
               <label>Titel <input name="aboutTitle" /></label>
@@ -390,6 +413,18 @@
           </div>
           <div class="settings-block">
             <h3>Maatwerk sectie</h3>
+            <div class="visibility-grid">
+              <label class="check-row"><input name="showCustomSectionLabel" type="checkbox" /> Toon label</label>
+              <label class="check-row"><input name="showCustomSectionTitle" type="checkbox" /> Toon titel</label>
+              <label class="check-row"><input name="showCustomSectionText" type="checkbox" /> Toon uitlegtekst</label>
+              <label class="check-row"><input name="showCustomNote" type="checkbox" /> Toon onderste notitie</label>
+              <label class="check-row"><input name="showCustomCard1" type="checkbox" /> Toon blok 1</label>
+              <label class="check-row"><input name="showCustomCard2" type="checkbox" /> Toon blok 2</label>
+              <label class="check-row"><input name="showCustomCard3" type="checkbox" /> Toon blok 3</label>
+              <label class="check-row"><input name="showCustomCard4" type="checkbox" /> Toon blok 4</label>
+              <label class="check-row"><input name="showCustomCard5" type="checkbox" /> Toon blok 5</label>
+              <label class="check-row"><input name="showCustomCard6" type="checkbox" /> Toon blok 6</label>
+            </div>
             <div class="settings-grid">
               <label>Label boven titel <input name="customSectionLabel" /></label>
               <label>Titel <input name="customSectionTitle" /></label>
@@ -413,6 +448,19 @@
           </div>
           <div class="settings-block">
             <h3>Verzenden en retourneren</h3>
+            <div class="visibility-grid">
+              <label class="check-row"><input name="showShippingLabel" type="checkbox" /> Toon verzenden label</label>
+              <label class="check-row"><input name="showShippingTitle" type="checkbox" /> Toon verzenden titel</label>
+              <label class="check-row"><input name="showShippingText" type="checkbox" /> Toon verzenden tekst</label>
+              <label class="check-row"><input name="showShippingAfterText" type="checkbox" /> Toon tekst onder verzendregels</label>
+              <label class="check-row"><input name="showReturnLabel" type="checkbox" /> Toon retour label</label>
+              <label class="check-row"><input name="showReturnTitle" type="checkbox" /> Toon retour titel</label>
+              <label class="check-row"><input name="showReturnButton" type="checkbox" /> Toon retour knop</label>
+              <label class="check-row"><input name="showReturnLine1" type="checkbox" /> Toon retour regel 1</label>
+              <label class="check-row"><input name="showReturnLine2" type="checkbox" /> Toon retour regel 2</label>
+              <label class="check-row"><input name="showReturnLine3" type="checkbox" /> Toon retour regel 3</label>
+              <label class="check-row"><input name="showReturnLine4" type="checkbox" /> Toon retour regel 4</label>
+            </div>
             <div class="settings-grid">
               <label>Verzenden label <input name="shippingLabel" /></label>
               <label>Verzenden titel <input name="shippingTitle" /></label>
@@ -431,6 +479,17 @@
           </div>
           <div class="settings-block">
             <h3>Veelgestelde vragen</h3>
+            <div class="visibility-grid">
+              <label class="check-row"><input name="showFaqLabel" type="checkbox" /> Toon label</label>
+              <label class="check-row"><input name="showFaqTitle" type="checkbox" /> Toon titel</label>
+              <label class="check-row"><input name="showFaq1" type="checkbox" /> Toon vraag 1</label>
+              <label class="check-row"><input name="showFaq2" type="checkbox" /> Toon vraag 2</label>
+              <label class="check-row"><input name="showFaq3" type="checkbox" /> Toon vraag 3</label>
+              <label class="check-row"><input name="showFaq4" type="checkbox" /> Toon vraag 4</label>
+              <label class="check-row"><input name="showFaq5" type="checkbox" /> Toon vraag 5</label>
+              <label class="check-row"><input name="showFaq6" type="checkbox" /> Toon vraag 6</label>
+              <label class="check-row"><input name="showFaq7" type="checkbox" /> Toon vraag 7</label>
+            </div>
             <div class="settings-grid">
               <label>Label <input name="faqLabel" /></label>
               <label>Titel <input name="faqTitle" /></label>

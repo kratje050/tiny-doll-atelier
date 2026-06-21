@@ -188,6 +188,58 @@ const TinyStore = (() => {
     contactText: "Heb je een vraag over een setje, maatwerk of een bestelling? Stuur gerust een bericht.",
   };
 
+  const visibilityDefaults = Object.fromEntries(
+    [
+      "showStockLeadTime",
+      "showCustomLeadTime",
+      "showShippingNl",
+      "showShippingBe",
+      "showFreeShipping",
+      "showGiftWrapOption",
+      "showHeroLabel",
+      "showHeroTitle",
+      "showHeroText",
+      "showHeroPrimaryButton",
+      "showHeroSecondaryButton",
+      "showAboutLabel",
+      "showAboutTitle",
+      "showAboutText1",
+      "showAboutText2",
+      "showCustomSectionLabel",
+      "showCustomSectionTitle",
+      "showCustomSectionText",
+      "showCustomNote",
+      "showCustomCard1",
+      "showCustomCard2",
+      "showCustomCard3",
+      "showCustomCard4",
+      "showCustomCard5",
+      "showCustomCard6",
+      "showShippingLabel",
+      "showShippingTitle",
+      "showShippingText",
+      "showShippingAfterText",
+      "showReturnLabel",
+      "showReturnTitle",
+      "showReturnButton",
+      "showReturnLine1",
+      "showReturnLine2",
+      "showReturnLine3",
+      "showReturnLine4",
+      "showFaqLabel",
+      "showFaqTitle",
+      "showFaq1",
+      "showFaq2",
+      "showFaq3",
+      "showFaq4",
+      "showFaq5",
+      "showFaq6",
+      "showFaq7",
+      "showOrderRequestText",
+      "showContactText",
+    ].map((key) => [key, true]),
+  );
+
   const defaultReviews = [];
 
   const defaultEmailTemplates = [
@@ -381,11 +433,11 @@ const TinyStore = (() => {
   }
 
   function getSettings() {
-    return { ...defaultSettings, ...read(keys.settings, defaultSettings) };
+    return { ...defaultSettings, ...visibilityDefaults, ...read(keys.settings, defaultSettings) };
   }
 
   function saveSettings(settings) {
-    return write(keys.settings, { ...defaultSettings, ...settings });
+    return write(keys.settings, { ...defaultSettings, ...visibilityDefaults, ...settings });
   }
 
   function getReviews() {

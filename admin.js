@@ -30,6 +30,55 @@ const orderStatuses = [
   "Geannuleerd",
 ];
 const paymentStatuses = ["Nog niet betaald", "Betaalverzoek gestuurd", "Betaald", "Terugbetaald"];
+const settingVisibilityKeys = [
+  "showStockLeadTime",
+  "showCustomLeadTime",
+  "showShippingNl",
+  "showShippingBe",
+  "showFreeShipping",
+  "showGiftWrapOption",
+  "showHeroLabel",
+  "showHeroTitle",
+  "showHeroText",
+  "showHeroPrimaryButton",
+  "showHeroSecondaryButton",
+  "showAboutLabel",
+  "showAboutTitle",
+  "showAboutText1",
+  "showAboutText2",
+  "showCustomSectionLabel",
+  "showCustomSectionTitle",
+  "showCustomSectionText",
+  "showCustomNote",
+  "showCustomCard1",
+  "showCustomCard2",
+  "showCustomCard3",
+  "showCustomCard4",
+  "showCustomCard5",
+  "showCustomCard6",
+  "showShippingLabel",
+  "showShippingTitle",
+  "showShippingText",
+  "showShippingAfterText",
+  "showReturnLabel",
+  "showReturnTitle",
+  "showReturnButton",
+  "showReturnLine1",
+  "showReturnLine2",
+  "showReturnLine3",
+  "showReturnLine4",
+  "showFaqLabel",
+  "showFaqTitle",
+  "showFaq1",
+  "showFaq2",
+  "showFaq3",
+  "showFaq4",
+  "showFaq5",
+  "showFaq6",
+  "showFaq7",
+  "showOrderRequestText",
+  "showContactText",
+];
 const views = document.querySelectorAll("[data-view]");
 const navButtons = document.querySelectorAll("[data-view-button]");
 const productForm = document.querySelector("[data-product-form]");
@@ -765,7 +814,11 @@ function renderEmailTemplates() {
 function renderSettings() {
   Object.entries(adminState.settings).forEach(([key, value]) => {
     if (settingsForm.elements[key]) {
-      settingsForm.elements[key].value = value ?? "";
+      if (settingsForm.elements[key].type === "checkbox") {
+        settingsForm.elements[key].checked = Boolean(value);
+      } else {
+        settingsForm.elements[key].value = value ?? "";
+      }
     }
   });
 }
@@ -1194,6 +1247,7 @@ settingsForm.addEventListener("submit", (event) => {
   event.preventDefault();
   const data = new FormData(settingsForm);
   TinyStore.saveSettings({
+    ...Object.fromEntries(settingVisibilityKeys.map((key) => [key, data.get(key) === "on"])),
     shopName: data.get("shopName").trim(),
     email: data.get("email").trim(),
     phone: data.get("phone").trim(),

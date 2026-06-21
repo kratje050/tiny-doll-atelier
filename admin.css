@@ -523,10 +523,19 @@ td strong {
 
 .settings-grid,
 .order-admin-grid,
-.export-grid {
+.export-grid,
+.visibility-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
+}
+
+.visibility-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  padding: 12px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  background: rgba(239, 227, 214, 0.34);
 }
 
 .customer-layout {
@@ -839,6 +848,7 @@ td strong {
   .settings-grid,
   .order-admin-grid,
   .export-grid,
+  .visibility-grid,
   .form-actions {
     grid-template-columns: 1fr;
   }

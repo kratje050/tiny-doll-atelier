@@ -213,6 +213,17 @@ function renderProducts() {
 }
 
 function applySettings() {
+  const setVisible = (selector, visible) => {
+    document.querySelectorAll(selector).forEach((element) => {
+      element.hidden = !visible;
+    });
+  };
+  const setParentVisible = (selector, visible) => {
+    document.querySelectorAll(selector).forEach((element) => {
+      element.parentElement.hidden = !visible;
+    });
+  };
+
   document.querySelectorAll('a[href^="mailto:"], a[href*="ddytuber@gmail.com"]').forEach((link) => {
     if (link.href.startsWith("mailto:")) {
       link.href = `mailto:${state.settings.email}`;
@@ -244,6 +255,19 @@ function applySettings() {
   document.querySelector("[data-free-shipping]")?.replaceChildren(
     document.createTextNode(`Gratis verzending vanaf: ${formatMoney(state.settings.freeShippingFrom)}`),
   );
+  document.querySelector("[data-order-request-text]")?.replaceChildren(
+    document.createTextNode(state.settings.orderRequestText),
+  );
+  document.querySelector("[data-contact-text]")?.replaceChildren(
+    document.createTextNode(state.settings.contactText),
+  );
+  setVisible("[data-stock-lead-time]", state.settings.showStockLeadTime);
+  setVisible("[data-custom-lead-time]", state.settings.showCustomLeadTime);
+  setVisible("[data-shipping-nl]", state.settings.showShippingNl);
+  setVisible("[data-shipping-be]", state.settings.showShippingBe);
+  setVisible("[data-free-shipping]", state.settings.showFreeShipping);
+  setVisible("[data-order-request-text]", state.settings.showOrderRequestText);
+  setVisible("[data-contact-text]", state.settings.showContactText);
 
   document.querySelector("[data-hero-label]")?.replaceChildren(document.createTextNode(state.settings.heroLabel));
   document.querySelector("[data-hero-title]")?.replaceChildren(document.createTextNode(state.settings.heroTitle));
@@ -254,10 +278,19 @@ function applySettings() {
   document.querySelector("[data-hero-secondary-button]")?.replaceChildren(
     document.createTextNode(state.settings.heroSecondaryButton),
   );
+  setVisible("[data-hero-label]", state.settings.showHeroLabel);
+  setVisible("[data-hero-title]", state.settings.showHeroTitle);
+  setVisible("[data-hero-text]", state.settings.showHeroText);
+  setVisible("[data-hero-primary-button]", state.settings.showHeroPrimaryButton);
+  setVisible("[data-hero-secondary-button]", state.settings.showHeroSecondaryButton);
   document.querySelector("[data-about-label]")?.replaceChildren(document.createTextNode(state.settings.aboutLabel));
   document.querySelector("[data-about-title]")?.replaceChildren(document.createTextNode(state.settings.aboutTitle));
   document.querySelector("[data-about-text-1]")?.replaceChildren(document.createTextNode(state.settings.aboutText1));
   document.querySelector("[data-about-text-2]")?.replaceChildren(document.createTextNode(state.settings.aboutText2));
+  setVisible("[data-about-label]", state.settings.showAboutLabel);
+  setVisible("[data-about-title]", state.settings.showAboutTitle);
+  setVisible("[data-about-text-1]", state.settings.showAboutText1);
+  setVisible("[data-about-text-2]", state.settings.showAboutText2);
 
   document.querySelector("[data-custom-section-label]")?.replaceChildren(
     document.createTextNode(state.settings.customSectionLabel),
@@ -280,6 +313,13 @@ function applySettings() {
       document.createTextNode(state.settings[`customCard${index}Text`]),
     );
   }
+  setVisible("[data-custom-section-label]", state.settings.showCustomSectionLabel);
+  setVisible("[data-custom-section-title]", state.settings.showCustomSectionTitle);
+  setVisible("[data-custom-section-text]", state.settings.showCustomSectionText);
+  setVisible("[data-custom-note]", state.settings.showCustomNote);
+  for (let index = 1; index <= 6; index += 1) {
+    setParentVisible(`[data-custom-card-title="${index}"]`, state.settings[`showCustomCard${index}`]);
+  }
 
   document.querySelector("[data-shipping-label]")?.replaceChildren(document.createTextNode(state.settings.shippingLabel));
   document.querySelector("[data-shipping-title]")?.replaceChildren(document.createTextNode(state.settings.shippingTitle));
@@ -287,6 +327,10 @@ function applySettings() {
   document.querySelector("[data-shipping-after-text]")?.replaceChildren(
     document.createTextNode(state.settings.shippingAfterText),
   );
+  setVisible("[data-shipping-label]", state.settings.showShippingLabel);
+  setVisible("[data-shipping-title]", state.settings.showShippingTitle);
+  setVisible("[data-shipping-text]", state.settings.showShippingText);
+  setVisible("[data-shipping-after-text]", state.settings.showShippingAfterText);
   document.querySelector("[data-return-label]")?.replaceChildren(document.createTextNode(state.settings.returnLabel));
   document.querySelector("[data-return-title]")?.replaceChildren(document.createTextNode(state.settings.returnTitle));
   document.querySelector("[data-return-button-text]")?.replaceChildren(
@@ -296,7 +340,11 @@ function applySettings() {
     document.querySelector(`[data-return-line="${index}"]`)?.replaceChildren(
       document.createTextNode(state.settings[`returnLine${index}`]),
     );
+    setVisible(`[data-return-line="${index}"]`, state.settings[`showReturnLine${index}`]);
   }
+  setVisible("[data-return-label]", state.settings.showReturnLabel);
+  setVisible("[data-return-title]", state.settings.showReturnTitle);
+  setVisible("[data-return-button-text]", state.settings.showReturnButton);
 
   document.querySelector("[data-faq-label]")?.replaceChildren(document.createTextNode(state.settings.faqLabel));
   document.querySelector("[data-faq-title]")?.replaceChildren(document.createTextNode(state.settings.faqTitle));
@@ -307,11 +355,15 @@ function applySettings() {
     document.querySelector(`[data-faq-answer="${index}"]`)?.replaceChildren(
       document.createTextNode(state.settings[`faq${index}Answer`]),
     );
+    setParentVisible(`[data-faq-question="${index}"]`, state.settings[`showFaq${index}`]);
   }
+  setVisible("[data-faq-label]", state.settings.showFaqLabel);
+  setVisible("[data-faq-title]", state.settings.showFaqTitle);
 
   const giftWrapLabel = document.querySelector('[data-gift-wrap]')?.closest("label");
   if (giftWrapLabel) {
     giftWrapLabel.lastChild.textContent = ` Cadeauverpakking toevoegen voor ${formatMoney(GIFT_WRAP_PRICE)}`;
+    giftWrapLabel.hidden = !state.settings.showGiftWrapOption;
   }
 }
 
