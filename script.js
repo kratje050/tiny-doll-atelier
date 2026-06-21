@@ -366,30 +366,64 @@ function closeCart() {
   document.body.classList.remove("cart-open");
 }
 
+function absoluteAssetUrl(path) {
+  if (!path) {
+    return "";
+  }
+
+  try {
+    return new URL(path, window.location.origin).href;
+  } catch {
+    return path;
+  }
+}
+
 function buildMailBody(order) {
-  const lines = order.items.map(
-    (item) => `- ${item.quantity}x ${item.name} (${formatMoney(item.price)} per stuk)`,
-  );
+  const productLines = order.items.flatMap((item, index) => {
+    const itemTotal = item.price * item.quantity;
+    const lines = [
+      `${index + 1}. ${item.name}`,
+      `   Aantal: ${item.quantity}`,
+      `   Prijs per stuk: ${formatMoney(item.price)}`,
+      `   Subtotaal: ${formatMoney(itemTotal)}`,
+    ];
+
+    if (item.image) {
+      lines.push(`   Afbeelding: ${absoluteAssetUrl(item.image)}`);
+    }
+
+    return [...lines, ""];
+  });
 
   return [
     "Hallo,",
     "",
-    "Ik wil graag deze poppenkleertjes bestellen:",
-    ...lines,
+    "Ik wil graag een bestelverzoek plaatsen via Tiny Doll Atelier.",
     "",
-    order.discountCode ? `Kortingscode: ${order.discountCode}` : "",
-    order.giftCardCode ? `Cadeaubon: ${order.giftCardCode} (-${formatMoney(order.giftCardAmount)})` : "",
+    "BESTELVERZOEK",
+    `Nummer: ${order.id}`,
+    "",
+    "PRODUCTEN",
+    ...productLines,
+    "KOSTEN",
+    order.discountCode ? `Kortingscode: ${order.discountCode}` : "Kortingscode: -",
+    order.giftCardCode
+      ? `Cadeaubon: ${order.giftCardCode} (-${formatMoney(order.giftCardAmount)})`
+      : "Cadeaubon: -",
     `Totaal: ${formatMoney(order.total)}`,
     "",
+    "KLANTGEGEVENS",
     `Naam: ${order.customer.name}`,
     `E-mail: ${order.customer.email}`,
     `Telefoon: ${order.customer.phone || "-"}`,
+    "",
+    "OPMERKING",
     `Opmerking: ${order.notes || "-"}`,
     "",
+    "Let op: dit is een bestelverzoek. De bestelling is pas definitief nadat levertijd, eventuele keuzes en betaling zijn afgestemd.",
+    "",
     "Groetjes,",
-  ]
-    .filter(Boolean)
-    .join("\n");
+  ].join("\n");
 }
 
 filterTabs.addEventListener("click", (event) => {
@@ -482,6 +516,7 @@ checkoutForm.addEventListener("submit", (event) => {
     name: product.name,
     price: product.price,
     quantity,
+    image: product.image,
   }));
 
   if (state.giftWrap) {
