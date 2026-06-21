@@ -623,17 +623,4 @@ document.addEventListener("change", (event) => {
   renderAll();
 });
 
-document.querySelector("[data-reset-demo]").addEventListener("click", () => {
-  [
-    "tiny-doll-products",
-    "tiny-doll-categories",
-    "tiny-doll-discounts",
-    "tiny-doll-gift-cards",
-    "tiny-doll-orders",
-    "tiny-doll-customers",
-    "tiny-doll-visits",
-  ].forEach((key) => localStorage.removeItem(key));
-  renderAll();
-});
-
 renderAll();
