@@ -398,6 +398,41 @@ function renderReviews() {
       .join("") || "<article>Binnenkort delen we hier lieve reacties van klanten.</article>";
 }
 
+function productImages(product) {
+  return [
+    product.image,
+    ...(Array.isArray(product.extraImages) ? product.extraImages : []),
+  ].filter(Boolean);
+}
+
+function renderProductGallery(product) {
+  const gallery = productModal.querySelector("[data-modal-gallery]");
+  const modalImage = productModal.querySelector("[data-modal-image]");
+  const images = productImages(product);
+  gallery.replaceChildren();
+  gallery.hidden = images.length <= 1;
+
+  images.forEach((src, index) => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = index === 0 ? "is-active" : "";
+    button.setAttribute("aria-label", `Bekijk productafbeelding ${index + 1}`);
+
+    const image = document.createElement("img");
+    image.src = src;
+    image.alt = "";
+    button.append(image);
+
+    button.addEventListener("click", () => {
+      modalImage.src = src;
+      gallery.querySelectorAll("button").forEach((item) => item.classList.remove("is-active"));
+      button.classList.add("is-active");
+    });
+
+    gallery.append(button);
+  });
+}
+
 function openProductModal(productId) {
   const product = state.products.find((item) => item.id === productId);
   if (!product) {
@@ -412,6 +447,7 @@ function openProductModal(productId) {
   productModal.querySelector("[data-modal-title]").textContent = product.name;
   productModal.querySelector("[data-modal-price]").textContent = formatMoney(product.price);
   productModal.querySelector("[data-modal-description]").textContent = product.description;
+  renderProductGallery(product);
   productModal.querySelector("[data-modal-details]").innerHTML = [
     product.longDescription ? ["Extra details", product.longDescription] : null,
     ["Geschikte popmaat", details.size],

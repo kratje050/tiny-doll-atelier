@@ -95,6 +95,19 @@
             <label>Levertijd <input name="leadTime" placeholder="Bijv. 1 tot 3 werkdagen" /></label>
             <label>Wasadvies <textarea name="washCare" rows="3"></textarea></label>
             <label>Extra afbeeldingen <textarea name="extraImages" rows="3" placeholder="1 afbeelding per regel"></textarea></label>
+            <div class="upload-box">
+              <input
+                id="product-extra-image-upload"
+                name="extraImageUpload"
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                multiple
+                data-extra-image-upload
+              />
+              <label class="upload-button" for="product-extra-image-upload">Extra afbeeldingen uploaden</label>
+              <span data-extra-upload-name>Geen extra bestanden gekozen</span>
+            </div>
+            <div class="extra-image-preview" data-extra-image-preview hidden></div>
             <label class="check-row"><input name="featured" type="checkbox" /> Uitgelicht</label>
             <label class="check-row"><input name="bestseller" type="checkbox" /> Bestseller</label>
             <label class="check-row"><input name="madeToOrder" type="checkbox" /> Op bestelling mogelijk</label>

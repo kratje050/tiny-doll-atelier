@@ -365,6 +365,21 @@ textarea {
   object-fit: cover;
 }
 
+.extra-image-preview {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.extra-image-preview img {
+  width: 100%;
+  aspect-ratio: 1;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--soft);
+  object-fit: cover;
+}
+
 .check-row {
   display: flex;
   align-items: center;

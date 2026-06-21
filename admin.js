@@ -88,8 +88,11 @@ const giftCardForm = document.querySelector("[data-gift-card-form]");
 const reviewForm = document.querySelector("[data-review-form]");
 const settingsForm = document.querySelector("[data-settings-form]");
 const productUpload = document.querySelector("[data-product-upload]");
+const extraImageUpload = document.querySelector("[data-extra-image-upload]");
 const uploadName = document.querySelector("[data-upload-name]");
+const extraUploadName = document.querySelector("[data-extra-upload-name]");
 const imagePreview = document.querySelector("[data-image-preview]");
+const extraImagePreview = document.querySelector("[data-extra-image-preview]");
 
 logoutButton.addEventListener("click", () => {
   window.location.href = "/admin/logout";
@@ -347,6 +350,36 @@ function setImagePreview(src, label = "") {
   imagePreview.hidden = false;
   imagePreview.querySelector("img").src = src;
   uploadName.textContent = label || (src.startsWith("data:image") ? "Geuploade afbeelding" : src);
+}
+
+function extraImageList() {
+  return productForm.elements.extraImages.value
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
+function setExtraImagePreview(images = extraImageList(), label = "") {
+  extraImagePreview.innerHTML = "";
+  extraImagePreview.hidden = !images.length;
+  extraUploadName.textContent =
+    label || (images.length ? `${images.length} extra afbeelding${images.length === 1 ? "" : "en"}` : "Geen extra bestanden gekozen");
+
+  images.slice(0, 12).forEach((src) => {
+    const image = document.createElement("img");
+    image.src = src;
+    image.alt = "Extra productafbeelding";
+    extraImagePreview.append(image);
+  });
+}
+
+function readFileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.addEventListener("load", () => resolve(reader.result));
+    reader.addEventListener("error", () => reject(reader.error));
+    reader.readAsDataURL(file);
+  });
 }
 
 function renderProducts() {
@@ -896,6 +929,7 @@ productForm.addEventListener("submit", (event) => {
   productForm.elements.soldOut.checked = false;
   productForm.querySelector("[data-cancel-product]").hidden = true;
   setImagePreview("");
+  setExtraImagePreview([]);
   renderAll();
 });
 
@@ -908,6 +942,7 @@ document.querySelector("[data-cancel-product]").addEventListener("click", () => 
   productForm.elements.madeToOrder.checked = false;
   productForm.elements.soldOut.checked = false;
   setImagePreview("");
+  setExtraImagePreview([]);
   document.querySelector("[data-cancel-product]").hidden = true;
 });
 
@@ -925,8 +960,26 @@ productUpload.addEventListener("change", () => {
   reader.readAsDataURL(file);
 });
 
+extraImageUpload.addEventListener("change", async () => {
+  const files = Array.from(extraImageUpload.files || []);
+  if (!files.length) {
+    return;
+  }
+
+  extraUploadName.textContent = `${files.length} bestand${files.length === 1 ? "" : "en"} laden...`;
+  const uploadedImages = await Promise.all(files.map(readFileAsDataUrl));
+  const images = [...extraImageList(), ...uploadedImages];
+  productForm.elements.extraImages.value = images.join("\n");
+  setExtraImagePreview(images, `${files.length} extra afbeelding${files.length === 1 ? "" : "en"} toegevoegd`);
+  extraImageUpload.value = "";
+});
+
 productForm.elements.image.addEventListener("input", (event) => {
   setImagePreview(event.target.value.trim());
+});
+
+productForm.elements.extraImages.addEventListener("input", () => {
+  setExtraImagePreview();
 });
 
 document.addEventListener("click", (event) => {
@@ -978,6 +1031,7 @@ document.addEventListener("click", (event) => {
     productForm.elements.soldOut.checked = Boolean(product.soldOut);
     productForm.elements.active.checked = product.active;
     setImagePreview(product.image);
+    setExtraImagePreview(Array.isArray(product.extraImages) ? product.extraImages : []);
     productForm.querySelector("[data-cancel-product]").hidden = false;
     setView("products");
   }
