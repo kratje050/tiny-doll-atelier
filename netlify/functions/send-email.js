@@ -644,11 +644,13 @@ exports.handler = async (event) => {
       type,
       audience: "admin",
     });
+    const mailsToSend = type === "gift-card-issued" ? [customerMail] : [customerMail, adminMail];
 
     const provider = clean(process.env.EMAIL_PROVIDER || (process.env.SMTP_HOST ? "smtp" : "resend"), 40).toLowerCase();
     if (provider === "smtp" || provider === "gmail") {
-      await sendWithSmtp(customerMail);
-      await sendWithSmtp(adminMail);
+      for (const mail of mailsToSend) {
+        await sendWithSmtp(mail);
+      }
       return json(200, { ok: true, message: "Je bericht is verzonden." });
     }
 
@@ -659,8 +661,9 @@ exports.handler = async (event) => {
       });
     }
 
-    await sendWithResend(customerMail);
-    await sendWithResend(adminMail);
+    for (const mail of mailsToSend) {
+      await sendWithResend(mail);
+    }
     return json(200, { ok: true, message: "Je bericht is verzonden." });
   } catch (error) {
     const statusCode =
