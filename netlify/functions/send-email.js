@@ -1,3 +1,5 @@
+const tls = require("node:tls");
+
 const allowedTypes = new Set(["order", "gift-card", "return", "contact"]);
 const rateLimits = new Map();
 
@@ -71,6 +73,33 @@ function isPublicMailbox(value) {
 
 function safeProviderMessage(value) {
   return clean(value || "De mailprovider kon het bericht niet verzenden.", 300);
+}
+
+function encodeHeader(value) {
+  const text = String(value || "");
+  return /^[\x00-\x7F]*$/.test(text) ? text : `=?UTF-8?B?${Buffer.from(text).toString("base64")}?=`;
+}
+
+function normalizeLineBreaks(value) {
+  return String(value || "").replace(/\r?\n/g, "\r\n");
+}
+
+function dotStuff(value) {
+  return normalizeLineBreaks(value).replace(/^\./gm, "..");
+}
+
+function composeEmail({ from, to, subject, text, replyTo }) {
+  const headers = [
+    `From: ${from}`,
+    `To: ${to}`,
+    `Reply-To: ${replyTo}`,
+    `Subject: ${encodeHeader(subject)}`,
+    "MIME-Version: 1.0",
+    "Content-Type: text/plain; charset=utf-8",
+    "Content-Transfer-Encoding: 8bit",
+    `Date: ${new Date().toUTCString()}`,
+  ];
+  return `${headers.join("\r\n")}\r\n\r\n${dotStuff(text)}`;
 }
 
 function getIp(event) {
@@ -196,6 +225,93 @@ async function sendWithResend({ to, subject, text, replyTo }) {
   }
 }
 
+function createSmtpClient({ host, port }) {
+  const socket = tls.connect({
+    host,
+    port,
+    servername: host,
+  });
+  socket.setEncoding("utf8");
+
+  let buffer = "";
+  const waitForResponse = () =>
+    new Promise((resolve, reject) => {
+      const onData = (chunk) => {
+        buffer += chunk;
+        const lines = buffer.split(/\r?\n/).filter(Boolean);
+        const lastLine = lines[lines.length - 1] || "";
+        if (/^\d{3} /.test(lastLine)) {
+          socket.off("data", onData);
+          socket.off("error", onError);
+          const response = buffer;
+          buffer = "";
+          const code = Number(lastLine.slice(0, 3));
+          resolve({ code, response });
+        }
+      };
+      const onError = (error) => {
+        socket.off("data", onData);
+        reject(error);
+      };
+      socket.on("data", onData);
+      socket.once("error", onError);
+    });
+
+  const command = async (line, expectedCodes = []) => {
+    socket.write(`${line}\r\n`);
+    const result = await waitForResponse();
+    if (expectedCodes.length && !expectedCodes.includes(result.code)) {
+      throw new Error(`SMTP melding: ${safeProviderMessage(result.response)}`);
+    }
+    return result;
+  };
+
+  const close = () => {
+    socket.end();
+  };
+
+  return { command, close, waitForResponse };
+}
+
+async function sendWithSmtp({ to, subject, text, replyTo }) {
+  const host = process.env.SMTP_HOST || "smtp.gmail.com";
+  const port = Number(process.env.SMTP_PORT || 465);
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
+  const from = process.env.EMAIL_FROM || user;
+
+  if (!user || !pass || !from) {
+    throw new Error(
+      "Gmail SMTP is nog niet compleet ingesteld. Vul SMTP_USER, SMTP_PASS en EMAIL_FROM in bij Netlify.",
+    );
+  }
+
+  if (port !== 465) {
+    throw new Error("Gebruik voor Gmail SMTP poort 465 met beveiligde verbinding.");
+  }
+
+  const client = createSmtpClient({ host, port });
+  try {
+    const greeting = await client.waitForResponse();
+    if (greeting.code !== 220) {
+      throw new Error(`SMTP melding: ${safeProviderMessage(greeting.response)}`);
+    }
+
+    await client.command("EHLO tiny-doll-atelier.netlify.app", [250]);
+    await client.command(
+      `AUTH PLAIN ${Buffer.from(`\u0000${user}\u0000${pass}`).toString("base64")}`,
+      [235],
+    );
+    await client.command(`MAIL FROM:<${getEmailAddress(from)}>`, [250]);
+    await client.command(`RCPT TO:<${to}>`, [250, 251]);
+    await client.command("DATA", [354]);
+    await client.command(`${composeEmail({ from, to, subject, text, replyTo })}\r\n.`, [250]);
+    await client.command("QUIT", [221]);
+  } finally {
+    client.close();
+  }
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod !== "POST") {
     return json(405, { ok: false, message: "Alleen POST is toegestaan." });
@@ -232,7 +348,13 @@ exports.handler = async (event) => {
       replyTo: values.email,
     };
 
-    const provider = clean(process.env.EMAIL_PROVIDER || "resend", 40).toLowerCase();
+    const provider = clean(process.env.EMAIL_PROVIDER || (process.env.SMTP_HOST ? "smtp" : "resend"), 40).toLowerCase();
+    if (provider === "smtp" || provider === "gmail") {
+      await sendWithSmtp(customerMail);
+      await sendWithSmtp(adminMail);
+      return json(200, { ok: true, message: "Je bericht is verzonden." });
+    }
+
     if (provider !== "resend") {
       return json(503, {
         ok: false,
@@ -246,6 +368,8 @@ exports.handler = async (event) => {
   } catch (error) {
     const statusCode =
       error.message.includes("Resend accepteert") || error.message.includes("Mailprovider melding")
+      || error.message.includes("SMTP melding")
+      || error.message.includes("Gmail SMTP")
         ? 503
         : 400;
     return json(statusCode, {

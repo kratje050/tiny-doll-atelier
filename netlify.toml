@@ -2,7 +2,7 @@
 publish = "."
 
 [build.environment]
-SECRETS_SCAN_OMIT_KEYS = "ADMIN_EMAILS,ADMIN_EMAIL"
+SECRETS_SCAN_OMIT_KEYS = "ADMIN_EMAILS,ADMIN_EMAIL,EMAIL_FROM,SMTP_USER"
 
 [functions]
 directory = "netlify/functions"
