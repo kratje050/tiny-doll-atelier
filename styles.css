@@ -31,7 +31,8 @@ body {
   color: var(--ink);
 }
 
-body.cart-open {
+body.cart-open,
+body.menu-open {
   overflow: hidden;
 }
 
@@ -66,7 +67,7 @@ button {
   top: 0;
   z-index: 20;
   display: grid;
-  grid-template-columns: minmax(190px, 1fr) auto auto;
+  grid-template-columns: minmax(190px, 1fr) auto auto auto;
   align-items: center;
   gap: 20px;
   padding: 14px clamp(16px, 4vw, 56px);
@@ -131,6 +132,7 @@ button {
 }
 
 .cart-button,
+.menu-button,
 .primary-action,
 .secondary-action,
 .add-button,
@@ -149,6 +151,112 @@ button {
   background: var(--ink);
   color: #fff;
   white-space: nowrap;
+}
+
+.menu-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 86px;
+  border: 1px solid var(--line);
+  background: rgba(255, 250, 244, 0.84);
+  color: var(--sage-dark);
+  font-size: 0.82rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+}
+
+.menu-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  pointer-events: none;
+}
+
+.menu-overlay.is-open {
+  pointer-events: auto;
+}
+
+.menu-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(52, 34, 22, 0);
+  transition: background 240ms ease;
+}
+
+.menu-overlay.is-open .menu-backdrop {
+  background: rgba(52, 34, 22, 0.34);
+}
+
+.menu-panel {
+  position: relative;
+  display: grid;
+  width: min(100%, 560px);
+  min-height: 100%;
+  margin-left: auto;
+  align-content: start;
+  gap: clamp(24px, 5vw, 44px);
+  padding: clamp(24px, 6vw, 52px);
+  background:
+    linear-gradient(145deg, rgba(255, 250, 244, 0.98), rgba(239, 227, 214, 0.98)),
+    radial-gradient(circle at 16% 12%, rgba(201, 167, 142, 0.24), transparent 32%);
+  box-shadow: -24px 0 70px rgba(52, 34, 22, 0.18);
+  transform: translateX(100%);
+  transition: transform 300ms ease;
+}
+
+.menu-overlay.is-open .menu-panel {
+  transform: translateX(0);
+}
+
+.menu-panel::before {
+  content: "";
+  position: absolute;
+  inset: 16px;
+  border: 1px solid rgba(220, 200, 183, 0.78);
+  border-radius: 8px;
+  pointer-events: none;
+}
+
+.menu-panel-top {
+  position: relative;
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.menu-panel-top h2 {
+  font-size: clamp(2.6rem, 10vw, 5.5rem);
+}
+
+.menu-links {
+  position: relative;
+  display: grid;
+  gap: 8px;
+}
+
+.menu-links a,
+.menu-links button {
+  display: flex;
+  min-height: 58px;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(220, 200, 183, 0.74);
+  background: transparent;
+  color: var(--ink);
+  font-size: clamp(1.35rem, 5vw, 2.2rem);
+  font-weight: 900;
+  letter-spacing: 0;
+  text-align: left;
+}
+
+.menu-links a::after,
+.menu-links button::after {
+  content: ">";
+  color: var(--sage-dark);
+  font-size: 1rem;
 }
 
 .cart-dot {
@@ -260,17 +368,34 @@ h3 {
 
 .hero-image {
   position: relative;
-  min-height: 390px;
+  min-height: 470px;
   margin: 0;
   overflow: hidden;
   border-radius: 8px;
   box-shadow: var(--shadow);
 }
 
+.hero-image-large::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 58%, rgba(52, 34, 22, 0.12));
+  pointer-events: none;
+}
+
 .hero-image img {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center;
+}
+
+.honeypot-field {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
 }
 
 .shop-band,
@@ -1067,30 +1192,12 @@ h3 {
 
 @media (max-width: 980px) {
   .site-header {
-    grid-template-columns: 1fr auto;
+    grid-template-columns: 1fr auto auto;
     gap: 12px;
   }
 
   .top-nav {
-    grid-column: 1 / -1;
-    justify-content: start;
-    gap: 8px;
-    overflow-x: auto;
-    padding: 2px 0 4px;
-    scrollbar-width: none;
-  }
-
-  .top-nav::-webkit-scrollbar {
     display: none;
-  }
-
-  .top-nav a {
-    flex: 0 0 auto;
-    padding: 9px 13px;
-    background: #fff;
-    color: var(--sage-dark);
-    box-shadow: inset 0 0 0 1px var(--line);
-    font-weight: 800;
   }
 
   .hero-shell,

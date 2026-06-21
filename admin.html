@@ -235,27 +235,35 @@
       </section>
 
       <section class="admin-view" data-view="customers">
-        <section class="panel table-panel">
-          <div class="panel-heading">
-            <h2>Klanten</h2>
-            <input class="search-input" data-customer-search placeholder="Zoek klant" />
-          </div>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Naam</th>
-                  <th>E-mail</th>
-                  <th>Telefoon</th>
-                  <th>Bestellingen</th>
-                  <th>Omzet</th>
-                  <th>Laatste bestelling</th>
-                </tr>
-              </thead>
-              <tbody data-customer-table></tbody>
-            </table>
-          </div>
-        </section>
+        <div class="customer-layout">
+          <section class="panel table-panel">
+            <div class="panel-heading">
+              <h2>Klanten</h2>
+              <input class="search-input" data-customer-search placeholder="Zoek klant, e-mail, plaats..." />
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Klant</th>
+                    <th>Contact</th>
+                    <th>Adres</th>
+                    <th>Bestellingen</th>
+                    <th>Omzet</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody data-customer-table></tbody>
+              </table>
+            </div>
+          </section>
+          <section class="panel form-panel customer-detail-panel" data-customer-detail>
+            <div class="panel-heading">
+              <h2>Klantdetail</h2>
+            </div>
+            <p class="muted">Klik op bewerk bij een klant om gegevens en notities aan te passen.</p>
+          </section>
+        </div>
       </section>
 
       <section class="admin-view" data-view="reviews">

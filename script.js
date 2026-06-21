@@ -58,6 +58,8 @@ const filterTabs = document.querySelector("[data-filter-tabs]");
 const productSearch = document.querySelector("[data-product-search]");
 const resultCount = document.querySelector("[data-result-count]");
 const cartPanel = document.querySelector("[data-cart-panel]");
+const menuOverlay = document.querySelector("[data-menu-overlay]");
+const openMenuButton = document.querySelector("[data-open-menu]");
 const cartItems = document.querySelector("[data-cart-items]");
 const cartTotal = document.querySelector("[data-cart-total]");
 const cartCount = document.querySelector("[data-cart-count]");
@@ -459,6 +461,52 @@ function absoluteAssetUrl(path) {
   }
 }
 
+function openMenu() {
+  menuOverlay.classList.add("is-open");
+  menuOverlay.setAttribute("aria-hidden", "false");
+  openMenuButton.setAttribute("aria-expanded", "true");
+  document.body.classList.add("menu-open");
+}
+
+function closeMenu() {
+  menuOverlay.classList.remove("is-open");
+  menuOverlay.setAttribute("aria-hidden", "true");
+  openMenuButton.setAttribute("aria-expanded", "false");
+  document.body.classList.remove("menu-open");
+}
+
+async function sendEmail(payload) {
+  const response = await fetch("/.netlify/functions/send-email", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      webshopNaam: state.settings.shopName,
+      ...payload,
+    }),
+  });
+  const data = await response.json().catch(() => ({ message: "Verzenden is mislukt." }));
+  if (!response.ok || !data.ok) {
+    throw new Error(data.message || "Verzenden is mislukt.");
+  }
+  return data;
+}
+
+function orderSummary(order) {
+  return order.items
+    .map((item) => {
+      const lines = [
+        `${item.quantity}x ${item.name}`,
+        `Prijs per stuk: ${formatMoney(item.price)}`,
+        `Regeltotaal: ${formatMoney(item.price * item.quantity)}`,
+      ];
+      if (item.image) {
+        lines.push(`Afbeelding: ${absoluteAssetUrl(item.image)}`);
+      }
+      return lines.join("\n");
+    })
+    .join("\n\n");
+}
+
 function buildMailBody(order) {
   const productLines = order.items.flatMap((item, index) => {
     const itemTotal = item.price * item.quantity;
@@ -527,11 +575,19 @@ productSearch.addEventListener("input", (event) => {
 });
 
 document.querySelectorAll("[data-open-cart]").forEach((button) => {
-  button.addEventListener("click", openCart);
+  button.addEventListener("click", () => {
+    closeMenu();
+    openCart();
+  });
 });
 
 document.querySelectorAll("[data-close-cart]").forEach((button) => {
   button.addEventListener("click", closeCart);
+});
+
+openMenuButton.addEventListener("click", openMenu);
+document.querySelectorAll("[data-close-menu], [data-menu-link]").forEach((element) => {
+  element.addEventListener("click", closeMenu);
 });
 
 document.querySelector("[data-clear-cart]").addEventListener("click", clearCart);
@@ -584,7 +640,7 @@ modalAddButton.addEventListener("click", () => {
   }
 });
 
-checkoutForm.addEventListener("submit", (event) => {
+checkoutForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const entries = cartEntries();
   if (!entries.length) {
@@ -593,6 +649,9 @@ checkoutForm.addEventListener("submit", (event) => {
   }
 
   const formData = new FormData(checkoutForm);
+  if (formData.get("website")) {
+    return;
+  }
   state.giftWrap = formData.get("giftWrap") === "on";
   state.giftMessage = formData.get("giftMessage").trim();
   const orderItems = entries.map(({ product, quantity }) => ({
@@ -617,6 +676,10 @@ checkoutForm.addEventListener("submit", (event) => {
       name: formData.get("name").trim(),
       email: formData.get("email").trim(),
       phone: formData.get("phone").trim(),
+      address: formData.get("address").trim(),
+      postalCode: formData.get("postalCode").trim(),
+      city: formData.get("city").trim(),
+      country: formData.get("country").trim(),
     },
     discountCode: formData.get("discountCode").trim(),
     giftCardCode: formData.get("giftCardCode").trim(),
@@ -626,24 +689,43 @@ checkoutForm.addEventListener("submit", (event) => {
     items: orderItems,
   });
 
-  orderMessage.textContent = `Bestelling ${order.id} is opgeslagen in beheer.`;
-  state.cart = {};
-  state.checkoutVisible = false;
-  state.giftWrap = false;
-  state.giftMessage = "";
-  checkoutForm.reset();
-  saveCart();
-  renderCart();
-
-  const mail = `mailto:${state.settings.email}?subject=${encodeURIComponent(
-    `Bestelverzoek ${order.id}`,
-  )}&body=${encodeURIComponent(buildMailBody(order))}`;
-  window.location.href = mail;
+  try {
+    orderMessage.textContent = "Je bestelverzoek wordt verzonden...";
+    await sendEmail({
+      type: "order",
+      website: formData.get("website"),
+      orderId: order.id,
+      name: order.customer.name,
+      email: order.customer.email,
+      phone: order.customer.phone,
+      address: order.customer.address,
+      postalCode: order.customer.postalCode,
+      city: order.customer.city,
+      country: order.customer.country,
+      total: formatMoney(order.total),
+      orderSummary: orderSummary(order),
+      notes: order.notes,
+    });
+    orderMessage.textContent =
+      "Bedankt, je bestelverzoek is verzonden. We nemen zo snel mogelijk contact met je op.";
+    state.cart = {};
+    state.checkoutVisible = false;
+    state.giftWrap = false;
+    state.giftMessage = "";
+    checkoutForm.reset();
+    saveCart();
+    renderCart();
+  } catch (error) {
+    orderMessage.textContent = error.message;
+  }
 });
 
-giftCardOrderForm.addEventListener("submit", (event) => {
+giftCardOrderForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const formData = new FormData(giftCardOrderForm);
+  if (formData.get("website")) {
+    return;
+  }
   const result = TinyStore.createGiftCardOrder({
     amount: Number(formData.get("amount")),
     recipient: formData.get("recipient").trim(),
@@ -661,52 +743,83 @@ giftCardOrderForm.addEventListener("submit", (event) => {
   const recipientEmail = formData.get("recipientEmail").trim();
   const message = formData.get("message").trim();
 
-  giftCardMessage.textContent =
-    "Je cadeaubonaanvraag is klaargezet. Na betaling maken we de cadeauboncode aan en sturen we die per e-mail.";
-  const body = [
-    "Hallo,",
-    "",
-    "Er is een cadeaubonaanvraag geplaatst via Tiny Doll Atelier.",
-    "",
-    "CADEAUBONAANVRAAG",
-    `Bestelnummer: ${order.id}`,
-    `Waarde: ${formatMoney(amount)}`,
-    `Aanvrager: ${order.customer.name}`,
-    `E-mail aanvrager: ${order.customer.email}`,
-    `Ontvanger: ${recipient || "-"}`,
-    `E-mail ontvanger: ${recipientEmail || order.customer.email}`,
-    "",
-    "BERICHT",
-    message || "-",
-    "",
-    "Let op: maak de cadeauboncode pas aan en verstuur deze pas nadat betaling is ontvangen.",
-    "",
-    "Groetjes,",
-  ].join("\n");
-  window.location.href = `mailto:${state.settings.email}?subject=${encodeURIComponent(
-    `Cadeaubonaanvraag ${order.id}`,
-  )}&body=${encodeURIComponent(body)}`;
-  giftCardOrderForm.reset();
+  try {
+    giftCardMessage.textContent = "Je cadeaubonaanvraag wordt verzonden...";
+    await sendEmail({
+      type: "gift-card",
+      website: formData.get("website"),
+      orderId: order.id,
+      name: order.customer.name,
+      email: order.customer.email,
+      amount: formatMoney(amount),
+      recipient,
+      recipientEmail: recipientEmail || order.customer.email,
+      message,
+    });
+    giftCardMessage.textContent =
+      "Bedankt, je cadeaubonaanvraag is verzonden. Na bevestiging en betaling maken we de code aan.";
+    giftCardOrderForm.reset();
+  } catch (error) {
+    giftCardMessage.textContent = error.message;
+  }
 });
 
-returnForm.addEventListener("submit", (event) => {
+returnForm.addEventListener("submit", async (event) => {
   event.preventDefault();
-  returnForm.reset();
-  document.querySelector("[data-return-message]").textContent =
-    "Bedankt voor je bericht. We nemen zo snel mogelijk contact met je op over je retour of annulering.";
+  const formData = new FormData(returnForm);
+  if (formData.get("website")) {
+    return;
+  }
+  const messageElement = document.querySelector("[data-return-message]");
+  try {
+    messageElement.textContent = "Je retourmelding wordt verzonden...";
+    await sendEmail({
+      type: "return",
+      website: formData.get("website"),
+      name: formData.get("name").trim(),
+      email: formData.get("email").trim(),
+      orderNumber: formData.get("orderNumber").trim(),
+      product: formData.get("product").trim(),
+      reason: formData.get("reason").trim(),
+      message: formData.get("message").trim(),
+    });
+    returnForm.reset();
+    messageElement.textContent =
+      "Bedankt, je retour of annulering is aangemeld. We nemen zo snel mogelijk contact met je op.";
+  } catch (error) {
+    messageElement.textContent = error.message;
+  }
 });
 
-contactForm.addEventListener("submit", (event) => {
+contactForm.addEventListener("submit", async (event) => {
   event.preventDefault();
-  contactForm.reset();
-  document.querySelector("[data-contact-message]").textContent =
-    "Bedankt voor je bericht. We reageren zo snel mogelijk.";
+  const formData = new FormData(contactForm);
+  if (formData.get("website")) {
+    return;
+  }
+  const messageElement = document.querySelector("[data-contact-message]");
+  try {
+    messageElement.textContent = "Je bericht wordt verzonden...";
+    await sendEmail({
+      type: "contact",
+      website: formData.get("website"),
+      name: formData.get("name").trim(),
+      email: formData.get("email").trim(),
+      subject: formData.get("subject").trim(),
+      message: formData.get("message").trim(),
+    });
+    contactForm.reset();
+    messageElement.textContent = "Bedankt, je bericht is verzonden. We reageren zo snel mogelijk.";
+  } catch (error) {
+    messageElement.textContent = error.message;
+  }
 });
 
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
     closeCart();
     closeProductModal();
+    closeMenu();
   }
 });
 

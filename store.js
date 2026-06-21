@@ -152,6 +152,48 @@ const TinyStore = (() => {
       subject: "Je cadeaubon van Tiny Doll Atelier",
       body: "Hallo {naam},\n\nHierbij ontvang je de cadeauboncode: {cadeauboncode}\nWaarde: {waarde}\nGeldig tot: {geldig_tot}\n\nLiefs,\nTiny Doll Atelier",
     },
+    {
+      id: "gift-card-request-customer",
+      title: "Cadeaubonaanvraag klant",
+      subject: "Je cadeaubonaanvraag bij Tiny Doll Atelier",
+      body: "Hallo {naam},\n\nBedankt voor je cadeaubonaanvraag. De cadeaubon wordt definitief na bevestiging en betaling.\n\nLiefs,\nTiny Doll Atelier",
+    },
+    {
+      id: "gift-card-request-admin",
+      title: "Cadeaubonaanvraag beheerder",
+      subject: "Nieuwe cadeaubonaanvraag",
+      body: "Nieuwe cadeaubonaanvraag ontvangen van {naam} ({email}).\nBedrag: {bedrag}\nOntvanger: {ontvangerNaam}",
+    },
+    {
+      id: "return-customer",
+      title: "Retourbevestiging klant",
+      subject: "Je retour of annulering is aangemeld",
+      body: "Hallo {naam},\n\nWe hebben je retour of annulering ontvangen en nemen zo snel mogelijk contact op.\n\nLiefs,\nTiny Doll Atelier",
+    },
+    {
+      id: "return-admin",
+      title: "Retourmelding beheerder",
+      subject: "Nieuwe retouraanmelding",
+      body: "Nieuwe retouraanmelding ontvangen van {naam} ({email}).\nOrdernummer: {ordernummer}\nProduct: {product}",
+    },
+    {
+      id: "contact-customer",
+      title: "Contactbevestiging klant",
+      subject: "We hebben je bericht ontvangen",
+      body: "Hallo {naam},\n\nBedankt voor je bericht. We reageren zo snel mogelijk.\n\nLiefs,\nTiny Doll Atelier",
+    },
+    {
+      id: "contact-admin",
+      title: "Contactmelding beheerder",
+      subject: "Nieuw contactbericht",
+      body: "Nieuw contactbericht ontvangen van {naam} ({email}).\nOnderwerp: {onderwerp}\nBericht: {bericht}",
+    },
+    {
+      id: "order-admin",
+      title: "Bestelverzoek beheerder",
+      subject: "Nieuw bestelverzoek {ordernummer}",
+      body: "Nieuw bestelverzoek ontvangen.\n\nKlant: {naam}\nE-mail: {email}\nTotaal: {totaal}\n\n{bestelling}",
+    },
   ];
 
   function clone(value) {
@@ -292,7 +334,17 @@ const TinyStore = (() => {
   }
 
   function getEmailTemplates() {
-    return read(keys.emailTemplates, defaultEmailTemplates);
+    const savedTemplates = read(keys.emailTemplates, defaultEmailTemplates);
+    const mergedTemplates = [
+      ...savedTemplates,
+      ...defaultEmailTemplates.filter(
+        (template) => !savedTemplates.some((savedTemplate) => savedTemplate.id === template.id),
+      ),
+    ];
+    if (mergedTemplates.length !== savedTemplates.length) {
+      saveEmailTemplates(mergedTemplates);
+    }
+    return mergedTemplates;
   }
 
   function saveEmailTemplates(templates) {
@@ -378,6 +430,11 @@ const TinyStore = (() => {
     if (existing) {
       existing.name = customer.name;
       existing.phone = customer.phone;
+      existing.address = customer.address || existing.address || "";
+      existing.postalCode = customer.postalCode || existing.postalCode || "";
+      existing.city = customer.city || existing.city || "";
+      existing.country = customer.country || existing.country || "";
+      existing.notes = existing.notes || "";
       existing.orderCount += 1;
       existing.totalSpent = Number((existing.totalSpent + total).toFixed(2));
       existing.lastOrderAt = date.slice(0, 10);
@@ -387,6 +444,11 @@ const TinyStore = (() => {
         name: customer.name,
         email: customer.email,
         phone: customer.phone,
+        address: customer.address || "",
+        postalCode: customer.postalCode || "",
+        city: customer.city || "",
+        country: customer.country || "",
+        notes: "",
         orderCount: 1,
         totalSpent: total,
         lastOrderAt: date.slice(0, 10),

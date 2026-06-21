@@ -12,6 +12,7 @@ const adminState = {
   emailTemplates: TinyStore.getEmailTemplates(),
   editingProductId: "",
   editingReviewId: "",
+  editingCustomerId: "",
   selectedOrderId: "",
   orderFilter: "alles",
   customerSearch: "",
@@ -402,7 +403,16 @@ function renderGiftCards() {
 function renderCustomers() {
   const query = adminState.customerSearch.toLowerCase();
   const customers = adminState.customers.filter((customer) =>
-    [customer.name, customer.email, customer.phone].some((value) =>
+    [
+      customer.name,
+      customer.email,
+      customer.phone,
+      customer.address,
+      customer.postalCode,
+      customer.city,
+      customer.country,
+      customer.notes,
+    ].some((value) =>
       String(value).toLowerCase().includes(query),
     ),
   );
@@ -410,16 +420,104 @@ function renderCustomers() {
     .map(
       (customer) => `
         <tr>
-          <td><strong>${customer.name}</strong></td>
-          <td>${customer.email}</td>
-          <td>${customer.phone || "-"}</td>
-          <td>${customer.orderCount}</td>
+          <td>
+            <strong>${escapeHtml(customer.name)}</strong>
+            <span class="muted">Laatste: ${escapeHtml(customer.lastOrderAt || "-")}</span>
+          </td>
+          <td>
+            ${escapeHtml(customer.email)}
+            <span class="muted">${escapeHtml(customer.phone || "-")}</span>
+          </td>
+          <td>
+            ${escapeHtml(customer.address || "-")}
+            <span class="muted">${escapeHtml([customer.postalCode, customer.city, customer.country].filter(Boolean).join(" ") || "-")}</span>
+          </td>
+          <td>${customer.orderCount || 0}</td>
           <td>${money(customer.totalSpent)}</td>
-          <td>${customer.lastOrderAt}</td>
+          <td>
+            <div class="table-actions">
+              <button class="row-button" type="button" data-edit-customer="${customer.id}">Bewerk</button>
+              <button class="row-button" type="button" data-delete-customer="${customer.id}">Verwijder</button>
+            </div>
+          </td>
         </tr>
       `,
     )
-    .join("");
+    .join("") || '<tr><td colspan="6">Nog geen klanten gevonden.</td></tr>';
+
+  if (adminState.editingCustomerId) {
+    renderCustomerDetail(adminState.editingCustomerId);
+  }
+}
+
+function customerOrders(customer) {
+  return adminState.orders.filter(
+    (order) => order.customer?.email?.toLowerCase() === customer.email?.toLowerCase(),
+  );
+}
+
+function renderCustomerDetail(customerId) {
+  const customer = adminState.customers.find((item) => item.id === customerId);
+  const panel = document.querySelector("[data-customer-detail]");
+  if (!customer) {
+    adminState.editingCustomerId = "";
+    panel.innerHTML = `
+      <div class="panel-heading"><h2>Klantdetail</h2></div>
+      <p class="muted">Klik op bewerk bij een klant om gegevens en notities aan te passen.</p>
+    `;
+    return;
+  }
+
+  adminState.editingCustomerId = customerId;
+  const orders = customerOrders(customer);
+  panel.innerHTML = `
+    <div class="panel-heading">
+      <h2>Klant bewerken</h2>
+      <button class="ghost-button" type="button" data-cancel-customer>Annuleren</button>
+    </div>
+    <form class="customer-form" data-customer-form>
+      <input name="id" type="hidden" value="${escapeAttribute(customer.id)}" />
+      <div class="settings-grid">
+        <label>Naam <input name="name" value="${escapeAttribute(customer.name)}" required /></label>
+        <label>E-mail <input name="email" type="email" value="${escapeAttribute(customer.email)}" required /></label>
+        <label>Telefoon <input name="phone" value="${escapeAttribute(customer.phone || "")}" /></label>
+        <label>Land <input name="country" value="${escapeAttribute(customer.country || "")}" /></label>
+        <label>Adres <input name="address" value="${escapeAttribute(customer.address || "")}" /></label>
+        <label>Postcode <input name="postalCode" value="${escapeAttribute(customer.postalCode || "")}" /></label>
+        <label>Plaats <input name="city" value="${escapeAttribute(customer.city || "")}" /></label>
+      </div>
+      <label>Interne notities <textarea name="notes" rows="4">${escapeHtml(customer.notes || "")}</textarea></label>
+      <div class="detail-card">
+        <h3>Overzicht</h3>
+        <dl class="detail-list">
+          <div><dt>Aantal bestellingen</dt><dd>${customer.orderCount || 0}</dd></div>
+          <div><dt>Totaal besteed</dt><dd>${money(customer.totalSpent)}</dd></div>
+          <div><dt>Laatste bestelling</dt><dd>${escapeHtml(customer.lastOrderAt || "-")}</dd></div>
+        </dl>
+      </div>
+      <div class="customer-orders">
+        <h3>Eerdere bestellingen</h3>
+        ${
+          orders.length
+            ? orders
+                .map(
+                  (order) => `
+                    <article>
+                      <strong>${escapeHtml(order.id)}</strong>
+                      <span>${new Date(order.createdAt).toLocaleDateString("nl-NL")} - ${money(order.total)} - ${escapeHtml(order.status || "-")}</span>
+                    </article>
+                  `,
+                )
+                .join("")
+            : '<p class="muted">Geen eerdere bestellingen gevonden.</p>'
+        }
+      </div>
+      <div class="form-actions">
+        <button class="primary-button" type="submit">Opslaan</button>
+        <button class="ghost-button" type="button" data-cancel-customer>Annuleren</button>
+      </div>
+    </form>
+  `;
 }
 
 function renderOrders() {
@@ -779,6 +877,9 @@ document.addEventListener("click", (event) => {
   const editReview = event.target.closest("[data-edit-review]");
   const toggleReview = event.target.closest("[data-toggle-review]");
   const deleteReview = event.target.closest("[data-delete-review]");
+  const editCustomer = event.target.closest("[data-edit-customer]");
+  const deleteCustomer = event.target.closest("[data-delete-customer]");
+  const cancelCustomer = event.target.closest("[data-cancel-customer]");
   const saveOrderAdmin = event.target.closest("[data-save-order-admin]");
   const printOrderButton = event.target.closest("[data-print-order]");
   const printPackingSlipButton = event.target.closest("[data-print-packing-slip]");
@@ -897,6 +998,27 @@ document.addEventListener("click", (event) => {
 
   if (orderDetail) {
     renderOrderDetail(orderDetail.dataset.orderDetail);
+  }
+
+  if (editCustomer) {
+    renderCustomerDetail(editCustomer.dataset.editCustomer);
+    setView("customers");
+  }
+
+  if (deleteCustomer) {
+    if (!confirm("Weet je zeker dat je deze klant wilt verwijderen? Bestellingen blijven bestaan.")) {
+      return;
+    }
+    TinyStore.saveCustomers(
+      adminState.customers.filter((customer) => customer.id !== deleteCustomer.dataset.deleteCustomer),
+    );
+    adminState.editingCustomerId = "";
+    renderAll();
+  }
+
+  if (cancelCustomer) {
+    adminState.editingCustomerId = "";
+    renderCustomerDetail("");
   }
 
   if (editReview) {
@@ -1134,6 +1256,35 @@ document.querySelector("[data-import-backup]").addEventListener("change", (event
 document.querySelector("[data-customer-search]").addEventListener("input", (event) => {
   adminState.customerSearch = event.target.value;
   renderCustomers();
+});
+
+document.querySelector("[data-customer-detail]").addEventListener("submit", (event) => {
+  const form = event.target.closest("[data-customer-form]");
+  if (!form) {
+    return;
+  }
+
+  event.preventDefault();
+  const data = new FormData(form);
+  const id = data.get("id");
+  TinyStore.saveCustomers(
+    adminState.customers.map((customer) =>
+      customer.id === id
+        ? {
+            ...customer,
+            name: data.get("name").trim(),
+            email: data.get("email").trim(),
+            phone: data.get("phone").trim(),
+            address: data.get("address").trim(),
+            postalCode: data.get("postalCode").trim(),
+            city: data.get("city").trim(),
+            country: data.get("country").trim(),
+            notes: data.get("notes").trim(),
+          }
+        : customer,
+    ),
+  );
+  renderAll();
 });
 
 document.querySelector("[data-order-status-filter]").addEventListener("change", (event) => {

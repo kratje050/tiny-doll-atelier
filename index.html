@@ -28,11 +28,37 @@
         <a href="#contact">Contact</a>
         <a href="#bestellen">Bestellen</a>
       </nav>
+      <button class="menu-button" type="button" data-open-menu aria-controls="site-menu" aria-expanded="false">
+        MENU
+      </button>
       <button class="cart-button" type="button" data-open-cart>
         <span class="cart-dot" data-cart-count>0</span>
         Winkelmand
       </button>
     </header>
+
+    <aside class="menu-overlay" id="site-menu" data-menu-overlay aria-hidden="true">
+      <div class="menu-backdrop" data-close-menu></div>
+      <nav class="menu-panel" aria-label="Menu">
+        <div class="menu-panel-top">
+          <div>
+            <p class="eyebrow">Tiny Doll Atelier</p>
+            <h2>Menu</h2>
+          </div>
+          <button class="icon-button" type="button" data-close-menu aria-label="Menu sluiten">x</button>
+        </div>
+        <div class="menu-links">
+          <a href="#top" data-menu-link>Home</a>
+          <a href="#collectie" data-menu-link>Collectie</a>
+          <a href="#maatwerk" data-menu-link>Maatwerk</a>
+          <a href="#cadeaubon" data-menu-link>Cadeaubon</a>
+          <a href="#over-ons" data-menu-link>Over ons</a>
+          <a href="#veelgestelde-vragen" data-menu-link>Veelgestelde vragen</a>
+          <a href="#contact" data-menu-link>Contact</a>
+          <button type="button" data-open-cart data-menu-link>Winkelmandje</button>
+        </div>
+      </nav>
+    </aside>
 
     <main>
       <section class="hero-shell">
@@ -48,7 +74,7 @@
             <a class="secondary-action" href="#maatwerk">Vraag maatwerk aan</a>
           </div>
         </div>
-        <figure class="hero-image">
+        <figure class="hero-image hero-image-large">
           <img src="assets/tiny-hero.png" alt="Pop met linnen poppenkleding van Tiny Doll Atelier" />
         </figure>
       </section>
@@ -133,6 +159,7 @@
           </p>
         </div>
         <form class="gift-card-form" data-gift-card-order-form>
+          <label class="honeypot-field">Laat dit veld leeg <input name="website" autocomplete="off" tabindex="-1" /></label>
           <label>
             Bedrag
             <select name="amount">
@@ -228,6 +255,7 @@
           <h2 id="retourformulier-title">Retourformulier</h2>
         </div>
         <form class="site-form" data-return-form>
+          <label class="honeypot-field">Laat dit veld leeg <input name="website" autocomplete="off" tabindex="-1" /></label>
           <label>Naam <input name="name" autocomplete="name" required /></label>
           <label>E-mailadres <input name="email" type="email" autocomplete="email" required /></label>
           <label>Ordernummer <input name="orderNumber" required /></label>
@@ -273,6 +301,7 @@
           </ul>
         </div>
         <form class="site-form" data-contact-form>
+          <label class="honeypot-field">Laat dit veld leeg <input name="website" autocomplete="off" tabindex="-1" /></label>
           <label>Naam <input name="name" autocomplete="name" required /></label>
           <label>E-mailadres <input name="email" type="email" autocomplete="email" required /></label>
           <label>Onderwerp <input name="subject" required /></label>
@@ -362,6 +391,7 @@
           <button class="secondary-action" type="button" data-clear-cart>Winkelmand leegmaken</button>
         </div>
         <form class="checkout-form" data-checkout-form hidden>
+          <label class="honeypot-field">Laat dit veld leeg <input name="website" autocomplete="off" tabindex="-1" /></label>
           <p class="checkout-note">
             Je plaatst eerst een bestelverzoek. Je bestelling is pas definitief nadat alles is
             afgestemd en betaald.
@@ -377,6 +407,10 @@
           <label>Naam <input name="name" autocomplete="name" required /></label>
           <label>E-mail <input name="email" type="email" autocomplete="email" required /></label>
           <label>Telefoon <input name="phone" autocomplete="tel" /></label>
+          <label>Adres <input name="address" autocomplete="street-address" /></label>
+          <label>Postcode <input name="postalCode" autocomplete="postal-code" /></label>
+          <label>Plaats <input name="city" autocomplete="address-level2" /></label>
+          <label>Land <input name="country" autocomplete="country-name" value="Nederland" /></label>
           <label>Kortingscode <input name="discountCode" autocomplete="off" /></label>
           <label>Cadeauboncode <input name="giftCardCode" autocomplete="off" /></label>
           <label>Opmerking <textarea name="notes" rows="3"></textarea></label>
