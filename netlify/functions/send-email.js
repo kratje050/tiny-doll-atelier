@@ -75,6 +75,89 @@ function safeProviderMessage(value) {
   return clean(value || "De mailprovider kon het bericht niet verzenden.", 300);
 }
 
+function escapeHtml(value) {
+  return String(value || "").replace(/[&<>"']/g, (character) =>
+    ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;",
+    })[character],
+  );
+}
+
+function textToHtml(value) {
+  return escapeHtml(value)
+    .split(/\r?\n\r?\n/)
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean)
+    .map((paragraph) => `<p style="margin:0 0 16px;line-height:1.7;">${paragraph.replace(/\r?\n/g, "<br>")}</p>`)
+    .join("");
+}
+
+function renderLineList(value) {
+  const lines = String(value || "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  if (!lines.length) {
+    return "";
+  }
+
+  return lines
+    .map(
+      (line) => `
+        <div style="padding:10px 0;border-bottom:1px solid #eadbd0;color:#342216;font-size:15px;line-height:1.5;">
+          ${escapeHtml(line)}
+        </div>
+      `,
+    )
+    .join("");
+}
+
+function renderSoftBlock(title, value, multiline = false) {
+  if (!value || value === "-") {
+    return "";
+  }
+
+  const body = multiline
+    ? renderLineList(value)
+    : `<div style="color:#5d4636;font-size:15px;line-height:1.7;">${textToHtml(value)}</div>`;
+
+  if (!body) {
+    return "";
+  }
+
+  return `
+    <div style="margin:22px 0 0;padding:18px;border-radius:10px;background:#fff6ed;border:1px solid #eadbd0;">
+      <div style="margin-bottom:10px;color:#6f4328;font-size:13px;letter-spacing:.08em;text-transform:uppercase;font-weight:800;">${escapeHtml(title)}</div>
+      ${body}
+    </div>
+  `;
+}
+
+function renderIntroHtml({ type, audience, values }) {
+  const name = values.naam || "daar";
+  const intros = {
+    customer: {
+      order: `Hallo ${name},\n\nBedankt voor je bestelverzoek. We kijken je bestelling, levertijd en eventuele keuzes zorgvuldig na en sturen daarna de betaalinformatie.`,
+      "gift-card": `Hallo ${name},\n\nBedankt voor je cadeaubonaanvraag. De cadeaubon wordt definitief na bevestiging en betaling. Daarna maken we de code aan en sturen we die per e-mail.`,
+      return: `Hallo ${name},\n\nWe hebben je retour of annulering ontvangen. We bekijken je aanvraag en nemen zo snel mogelijk persoonlijk contact met je op.`,
+      contact: `Hallo ${name},\n\nBedankt voor je bericht. We hebben het goed ontvangen en reageren zo snel mogelijk.`,
+    },
+    admin: {
+      order: `Er is een nieuw bestelverzoek binnengekomen via de webshop. Hieronder staan de gegevens overzichtelijk bij elkaar.`,
+      "gift-card": `Er is een nieuwe cadeaubonaanvraag binnengekomen. Maak de code pas aan nadat de betaling is afgestemd.`,
+      return: `Er is een nieuwe retour- of annuleringsaanvraag binnengekomen via de website.`,
+      contact: `Er is een nieuw contactbericht binnengekomen via de website.`,
+    },
+  };
+
+  return textToHtml(intros[audience]?.[type] || "");
+}
+
 function encodeHeader(value) {
   const text = String(value || "");
   return /^[\x00-\x7F]*$/.test(text) ? text : `=?UTF-8?B?${Buffer.from(text).toString("base64")}?=`;
@@ -88,18 +171,140 @@ function dotStuff(value) {
   return normalizeLineBreaks(value).replace(/^\./gm, "..");
 }
 
-function composeEmail({ from, to, subject, text, replyTo }) {
+function renderEmailHtml({ subject, text, values, type, audience }) {
+  const typeLabels = {
+    order: "Bestelverzoek",
+    "gift-card": "Cadeaubonaanvraag",
+    return: "Retour of annulering",
+    contact: "Contactbericht",
+  };
+  const rowsByType = {
+    order: [
+      ["Ordernummer", values.ordernummer],
+      ["Naam", values.naam],
+      ["E-mail", values.email],
+      ["Telefoon", values.telefoon],
+      ["Adres", values.adres],
+      ["Totaal", values.totaal],
+    ],
+    "gift-card": [
+      ["Naam", values.naam],
+      ["E-mail", values.email],
+      ["Ontvanger", values.ontvangerNaam],
+      ["E-mail ontvanger", values.ontvangerEmail],
+      ["Bedrag", values.bedrag],
+      ["Datum", values.datum],
+    ],
+    return: [
+      ["Naam", values.naam],
+      ["E-mail", values.email],
+      ["Ordernummer", values.ordernummer],
+      ["Product", values.product],
+      ["Reden", values.reden],
+      ["Datum", values.datum],
+    ],
+    contact: [
+      ["Naam", values.naam],
+      ["E-mail", values.email],
+      ["Onderwerp", values.onderwerp],
+      ["Datum", values.datum],
+    ],
+  };
+  const detailRows = (rowsByType[type] || [])
+    .filter(([, value]) => value && value !== "-")
+    .map(
+      ([label, value]) => `
+        <tr>
+          <td style="padding:10px 0;color:#806a59;font-size:14px;font-weight:700;">${escapeHtml(label)}</td>
+          <td style="padding:10px 0;color:#342216;font-size:14px;font-weight:700;text-align:right;">${escapeHtml(value)}</td>
+        </tr>
+      `,
+    )
+    .join("");
+  const badge = audience === "admin" ? "Beheer" : "Bevestiging";
+  const preheader =
+    audience === "admin"
+      ? `Nieuwe melding via ${values.webshopNaam}`
+      : `Bedankt voor je bericht aan ${values.webshopNaam}`;
+  const orderBlock = type === "order" ? renderSoftBlock("Bestelling", values.bestelling, true) : "";
+  const messageTitles = {
+    order: "Opmerking",
+    "gift-card": "Persoonlijk bericht",
+    return: "Toelichting",
+    contact: "Bericht",
+  };
+  const messageBlock = renderSoftBlock(messageTitles[type] || "Bericht", values.bericht);
+
+  return `<!doctype html>
+<html lang="nl">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>${escapeHtml(subject)}</title>
+  </head>
+  <body style="margin:0;background:#fbf6ef;color:#342216;font-family:Arial,'Helvetica Neue',sans-serif;">
+    <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">${escapeHtml(preheader)}</div>
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#fbf6ef;padding:28px 12px;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:680px;background:#fffaf4;border:1px solid #dcc8b7;border-radius:12px;overflow:hidden;box-shadow:0 18px 48px rgba(79,48,28,0.12);">
+            <tr>
+              <td style="background:#6f4328;padding:28px 30px;color:#fff;">
+                <div style="font-size:12px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:#efe3d6;">${escapeHtml(badge)} · ${escapeHtml(typeLabels[type] || "Bericht")}</div>
+                <h1 style="margin:12px 0 0;font-family:Georgia,'Times New Roman',serif;font-size:30px;line-height:1.1;color:#fff;">${escapeHtml(subject)}</h1>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:30px;">
+                <div style="font-size:16px;color:#5d4636;">
+                  ${renderIntroHtml({ type, audience, values })}
+                </div>
+                ${
+                  detailRows
+                    ? `<table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:24px 0;border-top:1px solid #dcc8b7;border-bottom:1px solid #dcc8b7;">${detailRows}</table>`
+                    : ""
+                }
+                ${orderBlock}
+                ${messageBlock}
+                <div style="margin-top:22px;padding:18px;border-radius:10px;background:#efe3d6;color:#6f4328;font-size:14px;line-height:1.6;">
+                  <strong style="display:block;margin-bottom:4px;color:#342216;">${escapeHtml(values.webshopNaam)}</strong>
+                  Handgemaakte poppenkleding in zachte atelierstijl. We reageren zo persoonlijk en zorgvuldig mogelijk.
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:18px 30px;background:#f4eadf;color:#806a59;font-size:12px;line-height:1.5;text-align:center;">
+                Deze e-mail is automatisch verzonden via ${escapeHtml(values.webshopNaam)}.
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`;
+}
+
+function composeEmail({ from, to, subject, text, html, replyTo }) {
+  const boundary = `tiny-doll-${Date.now()}-${Math.random().toString(36).slice(2)}`;
   const headers = [
     `From: ${from}`,
     `To: ${to}`,
     `Reply-To: ${replyTo}`,
     `Subject: ${encodeHeader(subject)}`,
     "MIME-Version: 1.0",
-    "Content-Type: text/plain; charset=utf-8",
-    "Content-Transfer-Encoding: 8bit",
+    html
+      ? `Content-Type: multipart/alternative; boundary="${boundary}"`
+      : "Content-Type: text/plain; charset=utf-8",
+    !html ? "Content-Transfer-Encoding: 8bit" : "",
     `Date: ${new Date().toUTCString()}`,
-  ];
-  return `${headers.join("\r\n")}\r\n\r\n${dotStuff(text)}`;
+  ].filter(Boolean);
+
+  if (!html) {
+    return `${headers.join("\r\n")}\r\n\r\n${dotStuff(text)}`;
+  }
+
+  return `${headers.join("\r\n")}\r\n\r\n--${boundary}\r\nContent-Type: text/plain; charset=utf-8\r\nContent-Transfer-Encoding: 8bit\r\n\r\n${dotStuff(text)}\r\n--${boundary}\r\nContent-Type: text/html; charset=utf-8\r\nContent-Transfer-Encoding: 8bit\r\n\r\n${dotStuff(html)}\r\n--${boundary}--`;
 }
 
 function getIp(event) {
@@ -187,7 +392,7 @@ function normalizePayload(payload) {
   return { type, values };
 }
 
-async function sendWithResend({ to, subject, text, replyTo }) {
+async function sendWithResend({ to, subject, text, html, replyTo }) {
   if (!process.env.RESEND_API_KEY) {
     throw new Error("E-mail is nog niet geconfigureerd.");
   }
@@ -209,6 +414,7 @@ async function sendWithResend({ to, subject, text, replyTo }) {
       to,
       subject,
       text,
+      html,
       reply_to: replyTo,
     }),
   });
@@ -273,7 +479,7 @@ function createSmtpClient({ host, port }) {
   return { command, close, waitForResponse };
 }
 
-async function sendWithSmtp({ to, subject, text, replyTo }) {
+async function sendWithSmtp({ to, subject, text, html, replyTo }) {
   const host = process.env.SMTP_HOST || "smtp.gmail.com";
   const port = Number(process.env.SMTP_PORT || 465);
   const user = process.env.SMTP_USER;
@@ -305,7 +511,7 @@ async function sendWithSmtp({ to, subject, text, replyTo }) {
     await client.command(`MAIL FROM:<${getEmailAddress(from)}>`, [250]);
     await client.command(`RCPT TO:<${to}>`, [250, 251]);
     await client.command("DATA", [354]);
-    await client.command(`${composeEmail({ from, to, subject, text, replyTo })}\r\n.`, [250]);
+    await client.command(`${composeEmail({ from, to, subject, text, html, replyTo })}\r\n.`, [250]);
     await client.command("QUIT", [221]);
   } finally {
     client.close();
@@ -341,12 +547,27 @@ exports.handler = async (event) => {
       text: applyTemplate(template.customerBody, values),
       replyTo: adminEmail,
     };
+    customerMail.html = renderEmailHtml({
+      subject: customerMail.subject,
+      text: customerMail.text,
+      values,
+      type,
+      audience: "customer",
+    });
+
     const adminMail = {
       to: adminEmail,
       subject: applyTemplate(template.adminSubject, values),
       text: applyTemplate(template.adminBody, values),
       replyTo: values.email,
     };
+    adminMail.html = renderEmailHtml({
+      subject: adminMail.subject,
+      text: adminMail.text,
+      values,
+      type,
+      audience: "admin",
+    });
 
     const provider = clean(process.env.EMAIL_PROVIDER || (process.env.SMTP_HOST ? "smtp" : "resend"), 40).toLowerCase();
     if (provider === "smtp" || provider === "gmail") {
