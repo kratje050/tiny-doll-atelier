@@ -30,6 +30,9 @@ const orderStatuses = [
   "Geannuleerd",
 ];
 const paymentStatuses = ["Nog niet betaald", "Betaalverzoek gestuurd", "Betaald", "Terugbetaald"];
+const MAX_PRODUCT_IMAGE_SIZE = 1400;
+const PRODUCT_IMAGE_QUALITY = 0.82;
+const MAX_EXTRA_PRODUCT_IMAGES = 10;
 const settingVisibilityKeys = [
   "showStockLeadTime",
   "showCustomLeadTime",
@@ -373,13 +376,44 @@ function setExtraImagePreview(images = extraImageList(), label = "") {
   });
 }
 
-function readFileAsDataUrl(file) {
+function fileToDataUrl(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.addEventListener("load", () => resolve(reader.result));
     reader.addEventListener("error", () => reject(reader.error));
     reader.readAsDataURL(file);
   });
+}
+
+function loadImage(src) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.addEventListener("load", () => resolve(image));
+    image.addEventListener("error", reject);
+    image.src = src;
+  });
+}
+
+async function resizeImageFile(file) {
+  const dataUrl = await fileToDataUrl(file);
+
+  try {
+    const image = await loadImage(dataUrl);
+    const largestSide = Math.max(image.naturalWidth, image.naturalHeight);
+    const scale = Math.min(1, MAX_PRODUCT_IMAGE_SIZE / largestSide);
+    const width = Math.max(1, Math.round(image.naturalWidth * scale));
+    const height = Math.max(1, Math.round(image.naturalHeight * scale));
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const context = canvas.getContext("2d");
+    context.fillStyle = "#fffaf4";
+    context.fillRect(0, 0, width, height);
+    context.drawImage(image, 0, 0, width, height);
+    return canvas.toDataURL("image/jpeg", PRODUCT_IMAGE_QUALITY);
+  } catch {
+    return dataUrl;
+  }
 }
 
 function renderProducts() {
@@ -946,18 +980,24 @@ document.querySelector("[data-cancel-product]").addEventListener("click", () => 
   document.querySelector("[data-cancel-product]").hidden = true;
 });
 
-productUpload.addEventListener("change", () => {
+productUpload.addEventListener("change", async () => {
   const file = productUpload.files[0];
   if (!file) {
     return;
   }
 
-  const reader = new FileReader();
-  reader.addEventListener("load", () => {
-    productForm.elements.image.value = reader.result;
-    setImagePreview(reader.result, file.name);
-  });
-  reader.readAsDataURL(file);
+  try {
+    uploadName.textContent = "Afbeelding verkleinen...";
+    productUpload.disabled = true;
+    const imageData = await resizeImageFile(file);
+    productForm.elements.image.value = imageData;
+    setImagePreview(imageData, `${file.name} toegevoegd`);
+  } catch {
+    uploadName.textContent = "Afbeelding uploaden is mislukt.";
+  } finally {
+    productUpload.disabled = false;
+    productUpload.value = "";
+  }
 });
 
 extraImageUpload.addEventListener("change", async () => {
@@ -966,12 +1006,37 @@ extraImageUpload.addEventListener("change", async () => {
     return;
   }
 
-  extraUploadName.textContent = `${files.length} bestand${files.length === 1 ? "" : "en"} laden...`;
-  const uploadedImages = await Promise.all(files.map(readFileAsDataUrl));
-  const images = [...extraImageList(), ...uploadedImages];
-  productForm.elements.extraImages.value = images.join("\n");
-  setExtraImagePreview(images, `${files.length} extra afbeelding${files.length === 1 ? "" : "en"} toegevoegd`);
-  extraImageUpload.value = "";
+  const currentImages = extraImageList();
+  const roomLeft = Math.max(0, MAX_EXTRA_PRODUCT_IMAGES - currentImages.length);
+  if (!roomLeft) {
+    extraUploadName.textContent = `Maximaal ${MAX_EXTRA_PRODUCT_IMAGES} extra afbeeldingen per product.`;
+    extraImageUpload.value = "";
+    return;
+  }
+
+  const filesToUpload = files.slice(0, roomLeft);
+  const uploadedImages = [];
+  extraImageUpload.disabled = true;
+
+  try {
+    for (const [index, file] of filesToUpload.entries()) {
+      extraUploadName.textContent = `${index + 1} van ${filesToUpload.length} afbeelding${filesToUpload.length === 1 ? "" : "en"} verkleinen...`;
+      uploadedImages.push(await resizeImageFile(file));
+    }
+
+    const images = [...currentImages, ...uploadedImages];
+    productForm.elements.extraImages.value = images.join("\n");
+    const skipped = files.length > filesToUpload.length ? ` ${files.length - filesToUpload.length} bestand(en) overgeslagen.` : "";
+    setExtraImagePreview(
+      images,
+      `${uploadedImages.length} extra afbeelding${uploadedImages.length === 1 ? "" : "en"} toegevoegd.${skipped}`,
+    );
+  } catch {
+    extraUploadName.textContent = "Extra afbeelding uploaden is mislukt. Probeer een kleinere foto.";
+  } finally {
+    extraImageUpload.disabled = false;
+    extraImageUpload.value = "";
+  }
 });
 
 productForm.elements.image.addEventListener("input", (event) => {
