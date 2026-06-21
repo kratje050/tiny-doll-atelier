@@ -20,9 +20,12 @@
         </span>
       </a>
       <nav class="top-nav" aria-label="Hoofdnavigatie">
+        <a href="#over-ons">Over ons</a>
         <a href="#collectie">Collectie</a>
         <a href="#maatwerk">Maatwerk</a>
         <a href="#cadeaubon">Cadeaubon</a>
+        <a href="#veelgestelde-vragen">FAQ</a>
+        <a href="#contact">Contact</a>
         <a href="#bestellen">Bestellen</a>
       </nav>
       <button class="cart-button" type="button" data-open-cart>
@@ -37,8 +40,8 @@
           <p class="eyebrow">Nieuw in het atelier</p>
           <h1>Zachte linnen setjes voor poppen.</h1>
           <p>
-            Handgemaakte poppenkleding in naturel tinten, met rustige stoffen,
-            fijne strikjes en een warme atelierstijl.
+            Handgemaakte poppenkleding in naturel tinten, met rustige stoffen, fijne strikjes en
+            een warme atelierstijl.
           </p>
           <div class="hero-actions">
             <a class="primary-action" href="#collectie">Bekijk collectie</a>
@@ -48,6 +51,27 @@
         <figure class="hero-image">
           <img src="assets/tiny-hero.png" alt="Pop met linnen poppenkleding van Tiny Doll Atelier" />
         </figure>
+      </section>
+
+      <section class="content-band intro-band" id="over-ons" aria-labelledby="over-ons-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Over ons</p>
+            <h2 id="over-ons-title">Met zorg gemaakt in het atelier</h2>
+          </div>
+        </div>
+        <div class="text-panel wide-text">
+          <p>
+            Tiny Doll Atelier maakt handgemaakte poppenkleding en lieve accessoires in zachte,
+            rustige tinten. Elk setje wordt met zorg samengesteld en kan naar wens worden aangepast.
+            Of je nu zoekt naar een compleet poppensetje, een los kledingstuk of een persoonlijk
+            cadeautje, wij denken graag met je mee.
+          </p>
+          <p>
+            Onze stijl is zacht, tijdloos en met liefde gemaakt. Perfect voor kleine poppenmoeders,
+            verjaardagen, kraamcadeautjes of gewoon zomaar.
+          </p>
+        </div>
       </section>
 
       <section class="shop-band" id="collectie" aria-labelledby="collectie-title">
@@ -79,24 +103,23 @@
           <p class="eyebrow">Maatwerk</p>
           <h2 id="maatwerk-title">Ook op aanvraag</h2>
           <p>
-            Kies een stijl, geef de popmaat door en stem samen stof, kleur en
-            details af.
+            Kies een stijl, geef de popmaat door en stem samen stof, kleur en details af. Setjes
+            kunnen persoonlijk worden samengesteld voordat de bestelling definitief wordt.
           </p>
         </div>
         <div class="service-list" aria-label="Maatwerk opties">
-          <article>
-            <strong>Popmaat</strong>
-            <span>32 cm, 36 cm of eigen maat</span>
-          </article>
-          <article>
-            <strong>Stofkeuze</strong>
-            <span>Linnenlook, katoen, tricot of zachte naturelstof</span>
-          </article>
-          <article>
-            <strong>Afwerking</strong>
-            <span>Strikjes, haarbanden, elastiek, knoopjes of fijne randjes</span>
-          </article>
+          <article><strong>Popmaat</strong><span>32 cm, 34 cm, 36 cm of eigen maat</span></article>
+          <article><strong>Stofkeuze</strong><span>Linnenlook, katoen, mousseline, tricot of zachte naturelstof</span></article>
+          <article><strong>Kleurkeuze</strong><span>Naturel, zand, zachtroze, wit of een rustige tint in overleg</span></article>
+          <article><strong>Afwerking</strong><span>Strikjes, haarbanden, elastiek, knoopjes of fijne randjes</span></article>
+          <article><strong>Extra accessoires</strong><span>Bijpassende haarband, strik, mutsje of klein cadeaudetail</span></article>
+          <article><strong>Verwachte levertijd</strong><span>Meestal 3 tot 10 werkdagen, afhankelijk van stof en wensen</span></article>
         </div>
+        <p class="section-note">
+          Let op: producten die speciaal op verzoek en volgens persoonlijke wensen worden gemaakt,
+          kunnen mogelijk niet retour. Dit wordt altijd vooraf duidelijk met je afgestemd voordat de
+          bestelling definitief wordt.
+        </p>
       </section>
 
       <section class="gift-card-band" id="cadeaubon" aria-labelledby="cadeaubon-title">
@@ -104,40 +127,25 @@
           <p class="eyebrow">Cadeaubon</p>
           <h2 id="cadeaubon-title">Geef atelier-tegoed cadeau</h2>
           <p>
-            Bestel een cadeaubon voor poppenkleding. Na betaling kun je in beheer
-            zelf de code aanmaken en naar de ontvanger sturen.
+            Bestel een cadeaubon voor poppenkleding. Na betaling ontvang je de cadeauboncode per
+            e-mail, zodat de ontvanger deze in de webshop kan gebruiken.
           </p>
         </div>
         <form class="gift-card-form" data-gift-card-order-form>
           <label>
             Bedrag
             <select name="amount">
-              <option value="15">€15</option>
-              <option value="25" selected>€25</option>
-              <option value="50">€50</option>
-              <option value="75">€75</option>
+              <option value="15">&euro;15</option>
+              <option value="25" selected>&euro;25</option>
+              <option value="50">&euro;50</option>
+              <option value="75">&euro;75</option>
             </select>
           </label>
-          <label>
-            Jouw naam
-            <input name="name" autocomplete="name" required />
-          </label>
-          <label>
-            Jouw e-mail
-            <input name="email" type="email" autocomplete="email" required />
-          </label>
-          <label>
-            Voor wie is de bon?
-            <input name="recipient" />
-          </label>
-          <label>
-            E-mail ontvanger
-            <input name="recipientEmail" type="email" autocomplete="email" />
-          </label>
-          <label>
-            Bericht
-            <textarea name="message" rows="3"></textarea>
-          </label>
+          <label>Jouw naam <input name="name" autocomplete="name" required /></label>
+          <label>Jouw e-mail <input name="email" type="email" autocomplete="email" required /></label>
+          <label>Voor wie is de bon? <input name="recipient" /></label>
+          <label>E-mail ontvanger <input name="recipientEmail" type="email" autocomplete="email" /></label>
+          <label>Bericht <textarea name="message" rows="3"></textarea></label>
           <p class="form-note" data-gift-card-message></p>
           <button class="primary-action" type="submit">Cadeaubon bestellen</button>
         </form>
@@ -148,14 +156,184 @@
           <p class="eyebrow">Bestellen</p>
           <h2 id="bestellen-title">Stuur een bestelverzoek</h2>
           <p>
-            Het winkelmandje maakt automatisch een bericht met de gekozen items.
-            Daarna kunnen jullie maat, betaling, levertijd en stofvoorraad persoonlijk
-            afstemmen.
+            Je plaatst eerst een bestelverzoek. Daarna ontvang je van ons een persoonlijke
+            bevestiging met levertijd, eventuele keuzes en betaalinformatie. Je bestelling is pas
+            definitief nadat alles is afgestemd en betaald.
           </p>
         </div>
         <button class="primary-action" type="button" data-open-cart>Open winkelmand</button>
       </section>
+
+      <section class="content-band reviews-band" aria-labelledby="reviews-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Reviews</p>
+            <h2 id="reviews-title">Liefde van onze klanten</h2>
+          </div>
+        </div>
+        <!-- Voorbeeldreviews: later vervangen door echte klantreviews of klantfoto's. -->
+        <div class="review-grid">
+          <article data-demo-review>"Prachtig gemaakt en superlief verpakt."</article>
+          <article data-demo-review>"Het setje paste perfect bij de pop."</article>
+          <article data-demo-review>"Fijn contact en echt met zorg gemaakt."</article>
+        </div>
+      </section>
+
+      <section class="content-band instagram-band" id="instagram" aria-labelledby="instagram-title">
+        <div>
+          <p class="eyebrow">Instagram</p>
+          <h2 id="instagram-title">Volg Tiny Doll Atelier op Instagram</h2>
+          <p>
+            Voor nieuwe setjes, stofjes, maatwerkvoorbeelden en inspiratie kun je ons volgen op
+            Instagram.
+          </p>
+        </div>
+        <a class="primary-action" href="https://www.instagram.com/" target="_blank" rel="noreferrer">
+          Volg ons op Instagram
+        </a>
+      </section>
+
+      <section class="content-band info-grid-band" id="verzenden" aria-labelledby="verzenden-title">
+        <article class="text-panel">
+          <p class="eyebrow">Verzenden</p>
+          <h2 id="verzenden-title">Zorgvuldig ingepakt</h2>
+          <p>
+            Wij pakken elke bestelling met zorg in. Omdat veel producten met de hand worden gemaakt
+            of op aanvraag worden samengesteld, kan de levertijd per bestelling verschillen.
+          </p>
+          <ul class="check-list">
+            <li>Product op voorraad: 1 tot 3 werkdagen</li>
+            <li>Maatwerk of op aanvraag: 3 tot 10 werkdagen</li>
+            <li>Nederland: [bedrag invullen]</li>
+            <li>Belgie: [bedrag invullen]</li>
+            <li>Gratis verzending vanaf: [bedrag invullen]</li>
+          </ul>
+          <p class="form-note">De verzendbedragen zijn placeholders en kunnen later worden aangepast.</p>
+          <p>Na je bestelling ontvang je een bevestiging met verdere informatie.</p>
+        </article>
+
+        <article class="text-panel" id="retourneren" aria-labelledby="retourneren-title">
+          <p class="eyebrow">Retourneren</p>
+          <h2 id="retourneren-title">Retour of annulering</h2>
+          <ul class="check-list">
+            <li>Standaardproducten kunnen binnen 14 dagen worden aangemeld voor retour.</li>
+            <li>Het product moet ongebruikt en netjes zijn.</li>
+            <li>Retourkosten zijn voor de klant, tenzij anders afgesproken.</li>
+            <li>Maatwerkproducten kunnen mogelijk niet retour als ze speciaal volgens persoonlijke wensen zijn gemaakt.</li>
+          </ul>
+          <a class="secondary-action" href="#retourformulier">Retour of annulering aanmelden</a>
+        </article>
+      </section>
+
+      <section class="content-band form-section" id="retourformulier" aria-labelledby="retourformulier-title">
+        <div>
+          <p class="eyebrow">Formulier</p>
+          <h2 id="retourformulier-title">Retourformulier</h2>
+        </div>
+        <form class="site-form" data-return-form>
+          <label>Naam <input name="name" autocomplete="name" required /></label>
+          <label>E-mailadres <input name="email" type="email" autocomplete="email" required /></label>
+          <label>Ordernummer <input name="orderNumber" required /></label>
+          <label>Product <input name="product" required /></label>
+          <label>Reden van retour, optioneel <input name="reason" /></label>
+          <label>Bericht <textarea name="message" rows="4" required></textarea></label>
+          <p class="form-note" data-return-message></p>
+          <button class="primary-action" type="submit">Retour of annulering aanmelden</button>
+        </form>
+      </section>
+
+      <section class="content-band faq-band" id="veelgestelde-vragen" aria-labelledby="faq-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">FAQ</p>
+            <h2 id="faq-title">Veelgestelde vragen</h2>
+          </div>
+        </div>
+        <div class="faq-list">
+          <details><summary>Past de kleding op elke pop?</summary><p>Onze kleding wordt gemaakt voor poppen van ongeveer 34 cm. Twijfel je? Stuur ons gerust de maat van je pop, dan kijken we met je mee.</p></details>
+          <details><summary>Zit de pop erbij inbegrepen?</summary><p>Alleen wanneer dit duidelijk bij het product staat. Bij losse kledingstukken wordt de pop niet meegeleverd.</p></details>
+          <details><summary>Kan ik zelf een stof of kleur kiezen?</summary><p>Ja, bij maatwerk kun je wensen doorgeven. We stemmen samen af wat mogelijk is.</p></details>
+          <details><summary>Hoe lang duurt mijn bestelling?</summary><p>Producten op voorraad worden meestal binnen 1 tot 3 werkdagen verzonden. Maatwerk duurt gemiddeld 3 tot 10 werkdagen.</p></details>
+          <details><summary>Kan ik mijn bestelling retourneren?</summary><p>Standaardproducten kunnen binnen 14 dagen worden aangemeld voor retour. Maatwerkproducten kunnen mogelijk niet retour als ze speciaal volgens jouw wensen zijn gemaakt.</p></details>
+          <details><summary>Kan ik een bestelling cadeau laten verpakken?</summary><p>Ja, cadeauverpakking kan als extra optie worden toegevoegd.</p></details>
+          <details><summary>Hebben jullie cadeaubonnen?</summary><p>Ja, via de cadeaubonsectie kun je een cadeaubon aanvragen.</p></details>
+        </div>
+      </section>
+
+      <section class="content-band form-section" id="contact" aria-labelledby="contact-title">
+        <div>
+          <p class="eyebrow">Contact</p>
+          <h2 id="contact-title">We denken graag met je mee</h2>
+          <p>Heb je een vraag over een setje, maatwerk of een bestelling? Stuur gerust een bericht.</p>
+          <ul class="contact-list">
+            <li>E-mail: info@tinydollatelier.nl</li>
+            <li>WhatsApp/telefoon: [telefoonnummer invullen]</li>
+            <li>Instagram: [Instagram-link invullen]</li>
+          </ul>
+        </div>
+        <form class="site-form" data-contact-form>
+          <label>Naam <input name="name" autocomplete="name" required /></label>
+          <label>E-mailadres <input name="email" type="email" autocomplete="email" required /></label>
+          <label>Onderwerp <input name="subject" required /></label>
+          <label>Bericht <textarea name="message" rows="4" required></textarea></label>
+          <p class="form-note" data-contact-message></p>
+          <button class="primary-action" type="submit">Bericht versturen</button>
+        </form>
+      </section>
+
+      <section class="content-band legal-band" id="privacyverklaring" aria-labelledby="privacy-title">
+        <div class="text-panel wide-text">
+          <p class="eyebrow">Privacyverklaring</p>
+          <h2 id="privacy-title">Hoe we met gegevens omgaan</h2>
+          <p>
+            Tiny Doll Atelier gebruikt klantgegevens alleen voor contact over bestellingen, het
+            verwerken van bestelverzoeken, verzending, klantenservice en administratie. We bewaren
+            alleen wat nodig is om je vraag of bestelling goed te behandelen.
+          </p>
+          <p>
+            Gegevens worden niet verkocht. Wil je iets laten aanpassen of verwijderen? Neem contact
+            op via info@tinydollatelier.nl.
+          </p>
+        </div>
+      </section>
+
+      <section class="content-band legal-band" id="algemene-voorwaarden" aria-labelledby="voorwaarden-title">
+        <div class="text-panel wide-text">
+          <p class="eyebrow">Voorwaarden</p>
+          <h2 id="voorwaarden-title">Algemene voorwaarden</h2>
+          <ul class="check-list">
+            <li>Bestellen gaat via een bestelverzoek. De bestelling is definitief na afstemming en betaling.</li>
+            <li>Betalen gebeurt volgens de betaalinformatie die je persoonlijk ontvangt.</li>
+            <li>Levering hangt af van voorraad, maatwerk en afgesproken levertijd.</li>
+            <li>Maatwerk wordt vooraf afgestemd op maat, stof, kleur en afwerking.</li>
+            <li>Retourneren kan voor standaardproducten binnen 14 dagen na aanmelding.</li>
+            <li>Klachten lossen we graag zorgvuldig en persoonlijk op.</li>
+            <li>Aansprakelijkheid is beperkt tot het bedrag van de betreffende bestelling.</li>
+            <li>Contact kan via info@tinydollatelier.nl of [telefoonnummer invullen].</li>
+          </ul>
+        </div>
+      </section>
     </main>
+
+    <footer class="site-footer">
+      <div>
+        <strong>Tiny Doll Atelier</strong>
+        <p>Handgemaakte poppenkleding in zachte atelierstijl.</p>
+        <p>E-mail: info@tinydollatelier.nl</p>
+        <p>Telefoon/WhatsApp: [telefoonnummer invullen]</p>
+        <p>Instagram: [Instagram-link invullen]</p>
+      </div>
+      <nav aria-label="Footer navigatie">
+        <a href="#over-ons">Over ons</a>
+        <a href="#contact">Contact</a>
+        <a href="#veelgestelde-vragen">Veelgestelde vragen</a>
+        <a href="#verzenden">Verzenden</a>
+        <a href="#retourneren">Retourneren</a>
+        <a href="#privacyverklaring">Privacyverklaring</a>
+        <a href="#algemene-voorwaarden">Algemene voorwaarden</a>
+        <a href="https://www.instagram.com/" target="_blank" rel="noreferrer">Instagram</a>
+      </nav>
+    </footer>
 
     <aside class="cart-panel" data-cart-panel aria-label="Winkelmand" aria-hidden="true">
       <div class="cart-backdrop" data-close-cart></div>
@@ -166,47 +344,61 @@
             <h2 id="cart-title">Winkelmand</h2>
           </div>
           <button class="icon-button" type="button" data-close-cart aria-label="Winkelmand sluiten">
-            ×
+            x
           </button>
         </div>
         <div class="cart-items" data-cart-items></div>
         <div class="cart-summary">
           <span>Totaal</span>
-          <strong data-cart-total>€0,00</strong>
+          <strong data-cart-total>&euro;0,00</strong>
         </div>
         <div class="cart-actions">
           <button class="primary-action" type="button" data-show-checkout>Gegevens invullen</button>
           <button class="secondary-action" type="button" data-clear-cart>Winkelmand leegmaken</button>
         </div>
         <form class="checkout-form" data-checkout-form hidden>
-          <label>
-            Naam
-            <input name="name" autocomplete="name" required />
+          <p class="checkout-note">
+            Je plaatst eerst een bestelverzoek. Je bestelling is pas definitief nadat alles is
+            afgestemd en betaald.
+          </p>
+          <label class="check-row">
+            <input name="giftWrap" type="checkbox" data-gift-wrap />
+            Cadeauverpakking toevoegen voor &euro;2,95
           </label>
           <label>
-            E-mail
-            <input name="email" type="email" autocomplete="email" required />
+            Persoonlijk kaartje, optioneel
+            <textarea name="giftMessage" rows="2" data-gift-message></textarea>
           </label>
-          <label>
-            Telefoon
-            <input name="phone" autocomplete="tel" />
-          </label>
-          <label>
-            Kortingscode
-            <input name="discountCode" autocomplete="off" />
-          </label>
-          <label>
-            Cadeauboncode
-            <input name="giftCardCode" autocomplete="off" />
-          </label>
-          <label>
-            Opmerking
-            <textarea name="notes" rows="3"></textarea>
-          </label>
+          <label>Naam <input name="name" autocomplete="name" required /></label>
+          <label>E-mail <input name="email" type="email" autocomplete="email" required /></label>
+          <label>Telefoon <input name="phone" autocomplete="tel" /></label>
+          <label>Kortingscode <input name="discountCode" autocomplete="off" /></label>
+          <label>Cadeauboncode <input name="giftCardCode" autocomplete="off" /></label>
+          <label>Opmerking <textarea name="notes" rows="3"></textarea></label>
           <p class="form-note" data-order-message></p>
           <button class="primary-action" type="submit">Bestelverzoek maken</button>
         </form>
       </div>
+    </aside>
+
+    <aside class="product-modal" data-product-modal aria-hidden="true">
+      <div class="modal-backdrop" data-close-product></div>
+      <article class="product-dialog" role="dialog" aria-modal="true" aria-labelledby="modal-product-title">
+        <button class="icon-button" type="button" data-close-product aria-label="Product sluiten">x</button>
+        <img data-modal-image alt="" />
+        <div class="product-dialog-copy">
+          <p class="eyebrow" data-modal-category></p>
+          <h2 id="modal-product-title" data-modal-title></h2>
+          <strong class="modal-price" data-modal-price></strong>
+          <p data-modal-description></p>
+          <dl class="detail-list" data-modal-details></dl>
+          <p class="form-note">
+            Wasadvies: was met de hand of op een fijnwasprogramma. Niet in de droger. Laat liggend
+            drogen voor het mooiste resultaat.
+          </p>
+          <button class="primary-action" type="button" data-modal-add>Toevoegen aan winkelmand</button>
+        </div>
+      </article>
     </aside>
 
     <template id="product-card-template">
@@ -219,11 +411,20 @@
           <p class="product-category"></p>
           <h3></h3>
           <p class="product-description"></p>
+          <dl class="product-details">
+            <div><dt>Popmaat</dt><dd class="product-size"></dd></div>
+            <div><dt>Inhoud</dt><dd class="product-contents"></dd></div>
+            <div><dt>Materiaal</dt><dd class="product-material"></dd></div>
+            <div><dt>Levertijd</dt><dd class="product-leadtime"></dd></div>
+          </dl>
           <div class="product-meta">
             <strong class="product-price"></strong>
             <span class="product-stock"></span>
           </div>
-          <button class="add-button" type="button">Toevoegen</button>
+          <div class="product-actions">
+            <button class="secondary-action view-button" type="button">Bekijk product</button>
+            <button class="add-button" type="button">Toevoegen aan winkelmand</button>
+          </div>
         </div>
       </article>
     </template>
