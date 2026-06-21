@@ -1,7 +1,10 @@
 const tls = require("node:tls");
+const crypto = require("node:crypto");
 
-const allowedTypes = new Set(["order", "gift-card", "return", "contact"]);
+const allowedTypes = new Set(["order", "gift-card", "gift-card-issued", "return", "contact"]);
 const rateLimits = new Map();
+const ADMIN_COOKIE_NAME = "tiny_doll_admin_session";
+const ADMIN_SESSION_MAX_AGE = 60 * 60 * 2;
 
 const templates = {
   "gift-card": {
@@ -11,6 +14,14 @@ const templates = {
       "Hallo {naam},\n\nBedankt voor je cadeaubonaanvraag bij {webshopNaam}.\n\nOntvanger: {ontvangerNaam}\nE-mail ontvanger: {ontvangerEmail}\nBedrag: {bedrag}\nBericht: {bericht}\n\nDe cadeaubon wordt definitief na bevestiging en betaling. Daarna maken we de code aan en sturen we die per e-mail.\n\nLiefs,\n{webshopNaam}",
     adminBody:
       "Nieuwe cadeaubonaanvraag ontvangen.\n\nNaam klant: {naam}\nE-mail klant: {email}\nOntvanger: {ontvangerNaam}\nE-mail ontvanger: {ontvangerEmail}\nBedrag: {bedrag}\nBericht: {bericht}\nDatum: {datum}",
+  },
+  "gift-card-issued": {
+    customerSubject: "Je cadeaubon van {webshopNaam}",
+    adminSubject: "Cadeaubon {cadeauboncode} is verzonden",
+    customerBody:
+      "Hallo {naam},\n\nWat leuk, je cadeaubon van {webshopNaam} is klaar.\n\nCode: {cadeauboncode}\nWaarde: {bedrag}\nResterend saldo: {saldo}\nGeldig tot: {geldigTot}\n\nJe kunt deze code gebruiken in de winkelmand bij het veld Cadeauboncode.\n\nLiefs,\n{webshopNaam}",
+    adminBody:
+      "Cadeaubon verzonden.\n\nCode: {cadeauboncode}\nOntvanger: {naam}\nE-mail ontvanger: {email}\nWaarde: {bedrag}\nResterend saldo: {saldo}\nGeldig tot: {geldigTot}\nDatum: {datum}",
   },
   return: {
     customerSubject: "Je retour of annulering is aangemeld",
@@ -64,6 +75,48 @@ function isEmail(value) {
 function getEmailAddress(value) {
   const match = String(value || "").match(/<([^>]+)>/);
   return (match ? match[1] : value).trim().toLowerCase();
+}
+
+function safeEquals(left = "", right = "") {
+  const leftBuffer = Buffer.from(left);
+  const rightBuffer = Buffer.from(right);
+  return (
+    leftBuffer.length === rightBuffer.length && crypto.timingSafeEqual(leftBuffer, rightBuffer)
+  );
+}
+
+function signAdminSession(value) {
+  return crypto.createHmac("sha256", process.env.ADMIN_SESSION_SECRET || "").update(value).digest("hex");
+}
+
+function parseCookies(header = "") {
+  return Object.fromEntries(
+    header
+      .split(";")
+      .map((item) => item.trim().split("="))
+      .filter(([key, value]) => key && value)
+      .map(([key, value]) => [key, decodeURIComponent(value)]),
+  );
+}
+
+function hasValidAdminSession(event) {
+  if (!process.env.ADMIN_SESSION_SECRET) {
+    return false;
+  }
+
+  const cookies = parseCookies(event.headers.cookie || event.headers.Cookie || "");
+  const session = cookies[ADMIN_COOKIE_NAME];
+  if (!session) {
+    return false;
+  }
+
+  const [timestamp, signature] = session.split(".");
+  if (!timestamp || !signature || !safeEquals(signAdminSession(timestamp), signature)) {
+    return false;
+  }
+
+  const createdAt = Number(timestamp);
+  return Number.isFinite(createdAt) && Date.now() - createdAt < ADMIN_SESSION_MAX_AGE * 1000;
 }
 
 function isPublicMailbox(value) {
@@ -144,12 +197,14 @@ function renderIntroHtml({ type, audience, values }) {
     customer: {
       order: `Hallo ${name},\n\nBedankt voor je bestelverzoek. We kijken je bestelling, levertijd en eventuele keuzes zorgvuldig na en sturen daarna de betaalinformatie.`,
       "gift-card": `Hallo ${name},\n\nBedankt voor je cadeaubonaanvraag. De cadeaubon wordt definitief na bevestiging en betaling. Daarna maken we de code aan en sturen we die per e-mail.`,
+      "gift-card-issued": `Hallo ${name},\n\nWat leuk, je cadeaubon is klaar. Hieronder vind je de code en alle gegevens overzichtelijk bij elkaar.`,
       return: `Hallo ${name},\n\nWe hebben je retour of annulering ontvangen. We bekijken je aanvraag en nemen zo snel mogelijk persoonlijk contact met je op.`,
       contact: `Hallo ${name},\n\nBedankt voor je bericht. We hebben het goed ontvangen en reageren zo snel mogelijk.`,
     },
     admin: {
       order: `Er is een nieuw bestelverzoek binnengekomen via de webshop. Hieronder staan de gegevens overzichtelijk bij elkaar.`,
       "gift-card": `Er is een nieuwe cadeaubonaanvraag binnengekomen. Maak de code pas aan nadat de betaling is afgestemd.`,
+      "gift-card-issued": `De cadeaubon is opgeslagen en de gegevens zijn naar de ontvanger verzonden.`,
       return: `Er is een nieuwe retour- of annuleringsaanvraag binnengekomen via de website.`,
       contact: `Er is een nieuw contactbericht binnengekomen via de website.`,
     },
@@ -175,6 +230,7 @@ function renderEmailHtml({ subject, text, values, type, audience }) {
   const typeLabels = {
     order: "Bestelverzoek",
     "gift-card": "Cadeaubonaanvraag",
+    "gift-card-issued": "Cadeaubon",
     return: "Retour of annulering",
     contact: "Contactbericht",
   };
@@ -194,6 +250,14 @@ function renderEmailHtml({ subject, text, values, type, audience }) {
       ["E-mail ontvanger", values.ontvangerEmail],
       ["Bedrag", values.bedrag],
       ["Datum", values.datum],
+    ],
+    "gift-card-issued": [
+      ["Code", values.cadeauboncode],
+      ["Ontvanger", values.naam],
+      ["E-mail ontvanger", values.email],
+      ["Waarde", values.bedrag],
+      ["Resterend saldo", values.saldo],
+      ["Geldig tot", values.geldigTot],
     ],
     return: [
       ["Naam", values.naam],
@@ -230,6 +294,7 @@ function renderEmailHtml({ subject, text, values, type, audience }) {
   const messageTitles = {
     order: "Opmerking",
     "gift-card": "Persoonlijk bericht",
+    "gift-card-issued": "Extra bericht",
     return: "Toelichting",
     contact: "Bericht",
   };
@@ -250,7 +315,7 @@ function renderEmailHtml({ subject, text, values, type, audience }) {
           <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:680px;background:#fffaf4;border:1px solid #dcc8b7;border-radius:12px;overflow:hidden;box-shadow:0 18px 48px rgba(79,48,28,0.12);">
             <tr>
               <td style="background:#6f4328;padding:28px 30px;color:#fff;">
-                <div style="font-size:12px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:#efe3d6;">${escapeHtml(badge)} · ${escapeHtml(typeLabels[type] || "Bericht")}</div>
+                <div style="font-size:12px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:#efe3d6;">${escapeHtml(badge)} - ${escapeHtml(typeLabels[type] || "Bericht")}</div>
                 <h1 style="margin:12px 0 0;font-family:Georgia,'Times New Roman',serif;font-size:30px;line-height:1.1;color:#fff;">${escapeHtml(subject)}</h1>
               </td>
             </tr>
@@ -360,6 +425,9 @@ function normalizePayload(payload) {
     product: clean(payload.product, 180),
     reden: clean(payload.reason, 500),
     bedrag: clean(payload.amount, 80),
+    saldo: clean(payload.balance, 80),
+    cadeauboncode: clean(payload.giftCardCode, 80).toUpperCase(),
+    geldigTot: clean(payload.expiresAt, 80) || "Geen einddatum",
     ontvangerNaam: clean(payload.recipient, 160),
     ontvangerEmail: clean(payload.recipientEmail, 200),
     totaal: clean(payload.total, 80),
@@ -375,6 +443,7 @@ function normalizePayload(payload) {
     contact: ["onderwerp", "bericht"],
     return: ["ordernummer", "product", "bericht"],
     "gift-card": ["bedrag"],
+    "gift-card-issued": ["cadeauboncode", "bedrag", "saldo"],
     order: ["ordernummer", "bestelling", "totaal"],
   }[type];
 
@@ -532,6 +601,13 @@ exports.handler = async (event) => {
     const { type, values } = normalizePayload(payload);
     const adminEmail = process.env.ADMIN_EMAIL;
     const emailFrom = process.env.EMAIL_FROM;
+
+    if (type === "gift-card-issued" && !hasValidAdminSession(event)) {
+      return json(403, {
+        ok: false,
+        message: "Log opnieuw in bij beheer om een cadeaubonmail te versturen.",
+      });
+    }
 
     if (!adminEmail || !emailFrom) {
       return json(503, {

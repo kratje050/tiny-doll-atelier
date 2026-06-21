@@ -149,6 +149,23 @@ function buildCustomerMail(order) {
     .replaceAll("{waarde}", money(order.giftCardAmount || 0));
 }
 
+async function sendEmail(payload) {
+  const response = await fetch("/.netlify/functions/send-email", {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      webshopNaam: adminState.settings.shopName,
+      ...payload,
+    }),
+  });
+  const data = await response.json().catch(() => ({ message: "Verzenden is mislukt." }));
+  if (!response.ok || !data.ok) {
+    throw new Error(data.message || "Verzenden is mislukt.");
+  }
+  return data;
+}
+
 function appendStatusHistory(order, type, from, to) {
   return {
     ...order,
@@ -1024,6 +1041,9 @@ document.addEventListener("click", (event) => {
     giftCardForm.elements.email.value = giftCard.email || "";
     giftCardForm.elements.expiresAt.value = giftCard.expiresAt || "";
     giftCardForm.elements.active.checked = giftCard.active;
+    giftCardForm.elements.sendEmail.checked = false;
+    document.querySelector("[data-gift-card-message]").textContent =
+      "Bewerk je alleen gegevens? Laat het mail-vinkje uit. Zet het aan als je de cadeaubon opnieuw wilt mailen.";
     document.querySelector("[data-gift-card-form-title]").textContent = "Cadeaubon bewerken";
     giftCardForm.querySelector("[data-cancel-gift-card]").hidden = false;
     setView("giftcards");
@@ -1170,7 +1190,7 @@ discountForm.addEventListener("submit", (event) => {
   renderAll();
 });
 
-giftCardForm.addEventListener("submit", (event) => {
+giftCardForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const data = new FormData(giftCardForm);
   const existingId = data.get("id");
@@ -1178,6 +1198,9 @@ giftCardForm.addEventListener("submit", (event) => {
   const code = data.get("code").trim().toUpperCase();
   const initialValue = Number(data.get("initialValue"));
   const balance = data.get("balance") === "" ? initialValue : Number(data.get("balance"));
+  const sendGiftCardEmail = data.get("sendEmail") === "on";
+  const giftCardMessage = document.querySelector("[data-gift-card-message]");
+  const submitButton = giftCardForm.querySelector('button[type="submit"]');
   const giftCard = {
     id: existingId || TinyStore.slugify(code),
     code,
@@ -1189,21 +1212,52 @@ giftCardForm.addEventListener("submit", (event) => {
     active: data.get("active") === "on",
     createdAt: existingGiftCard?.createdAt || new Date().toISOString(),
   };
+
+  giftCardMessage.textContent = "Cadeaubon wordt opgeslagen...";
+  submitButton.disabled = true;
+
   TinyStore.saveGiftCards([
     giftCard,
     ...adminState.giftCards.filter((item) => item.id !== giftCard.id && item.id !== existingId),
   ]);
-  giftCardForm.reset();
-  giftCardForm.elements.active.checked = true;
-  document.querySelector("[data-gift-card-form-title]").textContent = "Cadeaubon aanmaken";
-  giftCardForm.querySelector("[data-cancel-gift-card]").hidden = true;
-  renderAll();
+
+  try {
+    if (sendGiftCardEmail && giftCard.email) {
+      giftCardMessage.textContent = "Cadeaubon opgeslagen. Mail wordt verzonden...";
+      await sendEmail({
+        type: "gift-card-issued",
+        name: giftCard.recipient || giftCard.email,
+        email: giftCard.email,
+        giftCardCode: giftCard.code,
+        amount: money(giftCard.initialValue),
+        balance: money(giftCard.balance),
+        expiresAt: giftCard.expiresAt || "Geen einddatum",
+      });
+      giftCardMessage.textContent = `Cadeaubon opgeslagen en gemaild naar ${giftCard.email}.`;
+    } else if (sendGiftCardEmail && !giftCard.email) {
+      giftCardMessage.textContent = "Cadeaubon opgeslagen. Er is geen mail verstuurd omdat het e-mailadres ontbreekt.";
+    } else {
+      giftCardMessage.textContent = "Cadeaubon opgeslagen. Er is geen mail verstuurd.";
+    }
+  } catch (error) {
+    giftCardMessage.textContent = `Cadeaubon opgeslagen, maar de mail is niet verzonden: ${error.message}`;
+  } finally {
+    giftCardForm.reset();
+    giftCardForm.elements.active.checked = true;
+    giftCardForm.elements.sendEmail.checked = true;
+    document.querySelector("[data-gift-card-form-title]").textContent = "Cadeaubon aanmaken";
+    giftCardForm.querySelector("[data-cancel-gift-card]").hidden = true;
+    submitButton.disabled = false;
+    renderAll();
+  }
 });
 
 giftCardForm.querySelector("[data-cancel-gift-card]").addEventListener("click", () => {
   giftCardForm.reset();
   giftCardForm.elements.id.value = "";
   giftCardForm.elements.active.checked = true;
+  giftCardForm.elements.sendEmail.checked = true;
+  document.querySelector("[data-gift-card-message]").textContent = "";
   document.querySelector("[data-gift-card-form-title]").textContent = "Cadeaubon aanmaken";
   giftCardForm.querySelector("[data-cancel-gift-card]").hidden = true;
 });
