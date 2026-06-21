@@ -516,7 +516,7 @@ checkoutForm.addEventListener("submit", (event) => {
   saveCart();
   renderCart();
 
-  const mail = `mailto:info@tinydollatelier.nl?subject=${encodeURIComponent(
+  const mail = `mailto:ddytuber@gmail.com?subject=${encodeURIComponent(
     `Bestelverzoek ${order.id}`,
   )}&body=${encodeURIComponent(buildMailBody(order))}`;
   window.location.href = mail;

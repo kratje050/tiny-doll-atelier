@@ -665,6 +665,33 @@ h3 {
   line-height: 1.55;
 }
 
+.instagram-icon-link {
+  display: inline-grid;
+  width: 36px;
+  height: 36px;
+  margin-left: 8px;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--soft);
+  color: var(--sage-dark);
+  box-shadow: inset 0 0 0 1px var(--line);
+  font-size: 0.78rem;
+  font-weight: 800;
+  vertical-align: middle;
+}
+
+.instagram-icon-link:hover,
+.instagram-icon-link:focus-visible {
+  background: #e5d0bd;
+  color: var(--ink);
+}
+
+.footer-instagram {
+  background: rgba(239, 227, 214, 0.18);
+  color: #f3dfc9;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.24);
+}
+
 .form-section {
   display: grid;
   grid-template-columns: minmax(0, 0.72fr) minmax(320px, 0.78fr);
