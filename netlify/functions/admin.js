@@ -10,7 +10,11 @@ function getSecret() {
 }
 
 function isConfigured() {
-  return Boolean(process.env.ADMIN_PASSWORD && process.env.ADMIN_SESSION_SECRET);
+  return Boolean(process.env.ADMIN_EMAIL && process.env.ADMIN_PASSWORD && process.env.ADMIN_SESSION_SECRET);
+}
+
+function normalizeEmail(value = "") {
+  return String(value).trim().toLowerCase();
 }
 
 function safeEquals(left = "", right = "") {
@@ -103,8 +107,12 @@ function loginPage(error = "") {
         <h1 id="login-title">Tiny Doll Atelier</h1>
         <p>Log in om producten, bestellingen, klanten en cadeaubonnen te beheren.</p>
         <label>
+          E-mail
+          <input name="email" type="email" autocomplete="username" required autofocus />
+        </label>
+        <label>
           Wachtwoord
-          <input name="password" type="password" autocomplete="current-password" required autofocus />
+          <input name="password" type="password" autocomplete="current-password" required />
         </label>
         ${configWarning}
         ${error ? `<p class="login-error">${error}</p>` : '<p class="login-error"></p>'}
@@ -138,8 +146,12 @@ exports.handler = async (event) => {
 
   if (event.httpMethod === "POST") {
     const params = new URLSearchParams(event.body || "");
+    const email = normalizeEmail(params.get("email"));
     const password = params.get("password") || "";
-    if (isConfigured() && safeEquals(password, process.env.ADMIN_PASSWORD)) {
+    const emailMatches = safeEquals(email, normalizeEmail(process.env.ADMIN_EMAIL));
+    const passwordMatches = safeEquals(password, process.env.ADMIN_PASSWORD);
+
+    if (isConfigured() && emailMatches && passwordMatches) {
       const session = createSessionCookie();
       return redirect("/admin", [
         `${COOKIE_NAME}=${encodeURIComponent(
@@ -148,7 +160,7 @@ exports.handler = async (event) => {
       ]);
     }
 
-    return htmlResponse(loginPage("Wachtwoord klopt niet."), 401);
+    return htmlResponse(loginPage("E-mail of wachtwoord klopt niet."), 401);
   }
 
   if (!hasValidSession(event)) {
