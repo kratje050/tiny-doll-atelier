@@ -61,12 +61,17 @@ function hasValidSession(event) {
 }
 
 function redirect(location, cookies = []) {
+  const headers = {
+    Location: location,
+  };
+
+  if (cookies.length) {
+    headers["Set-Cookie"] = cookies[0];
+  }
+
   return {
     statusCode: 303,
-    headers: {
-      Location: location,
-      "Set-Cookie": cookies,
-    },
+    headers,
     body: "",
   };
 }
