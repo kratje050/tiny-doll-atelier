@@ -574,29 +574,36 @@ giftCardOrderForm.addEventListener("submit", (event) => {
       phone: "",
     },
   });
-  const { order, giftCard } = result;
-  const deliverTo = giftCard.email || order.customer.email;
+  const { order } = result;
+  const amount = Number(formData.get("amount"));
+  const recipient = formData.get("recipient").trim();
+  const recipientEmail = formData.get("recipientEmail").trim();
+  const message = formData.get("message").trim();
 
-  giftCardMessage.textContent = `Cadeauboncode ${giftCard.code} is aangemaakt en klaargezet voor e-mail.`;
+  giftCardMessage.textContent =
+    "Je cadeaubonaanvraag is klaargezet. Na betaling maken we de cadeauboncode aan en sturen we die per e-mail.";
   const body = [
-    `Hallo ${giftCard.recipient || ""},`.trim(),
+    "Hallo,",
     "",
-    "Je hebt een cadeaubon gekregen voor Tiny Doll Atelier.",
+    "Er is een cadeaubonaanvraag geplaatst via Tiny Doll Atelier.",
     "",
-    `Waarde: ${formatMoney(giftCard.initialValue)}`,
-    `Cadeauboncode: ${giftCard.code}`,
-    `Geldig tot: ${giftCard.expiresAt}`,
+    "CADEAUBONAANVRAAG",
+    `Bestelnummer: ${order.id}`,
+    `Waarde: ${formatMoney(amount)}`,
+    `Aanvrager: ${order.customer.name}`,
+    `E-mail aanvrager: ${order.customer.email}`,
+    `Ontvanger: ${recipient || "-"}`,
+    `E-mail ontvanger: ${recipientEmail || order.customer.email}`,
     "",
-    formData.get("message").trim() ? `Bericht: ${formData.get("message").trim()}` : "",
+    "BERICHT",
+    message || "-",
     "",
-    "Je kunt deze code invullen bij het afrekenen in de webshop.",
+    "Let op: maak de cadeauboncode pas aan en verstuur deze pas nadat betaling is ontvangen.",
     "",
-    "Liefs, Tiny Doll Atelier",
-  ]
-    .filter(Boolean)
-    .join("\n");
-  window.location.href = `mailto:${encodeURIComponent(deliverTo)}?subject=${encodeURIComponent(
-    `Jouw cadeaubon van Tiny Doll Atelier`,
+    "Groetjes,",
+  ].join("\n");
+  window.location.href = `mailto:ddytuber@gmail.com?subject=${encodeURIComponent(
+    `Cadeaubonaanvraag ${order.id}`,
   )}&body=${encodeURIComponent(body)}`;
   giftCardOrderForm.reset();
 });

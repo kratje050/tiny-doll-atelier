@@ -395,20 +395,6 @@ const TinyStore = (() => {
   }
 
   function createGiftCardOrder({ customer, amount, recipient = "", recipientEmail = "", message = "" }) {
-    const code = generateGiftCardCode();
-    const giftCard = {
-      id: slugify(code),
-      code,
-      initialValue: Number(amount),
-      balance: Number(amount),
-      recipient,
-      email: recipientEmail || customer.email,
-      expiresAt: nextYearDate(),
-      active: true,
-      createdAt: new Date().toISOString(),
-    };
-    saveGiftCards([giftCard, ...getGiftCards()]);
-
     const order = createOrder({
       customer,
       items: [
@@ -420,13 +406,13 @@ const TinyStore = (() => {
         },
       ],
       notes: [
-        `Cadeauboncode: ${code}`,
+        "Cadeaubonaanvraag: code pas aanmaken na betaling.",
         `Cadeaubon voor: ${recipient || "-"}`,
         `E-mail ontvanger: ${recipientEmail || customer.email}`,
         `Bericht: ${message || "-"}`,
       ].join("\n"),
     });
-    return { order, giftCard };
+    return { order };
   }
 
   function nextYearDate() {
