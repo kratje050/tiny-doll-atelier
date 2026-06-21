@@ -1,6 +1,9 @@
 [build]
 publish = "."
 
+[build.environment]
+SECRETS_SCAN_OMIT_KEYS = "ADMIN_EMAILS,ADMIN_EMAIL"
+
 [functions]
 directory = "netlify/functions"
 included_files = ["admin.html"]
