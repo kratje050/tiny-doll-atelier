@@ -245,6 +245,28 @@ function applySettings() {
     document.createTextNode(`Gratis verzending vanaf: ${formatMoney(state.settings.freeShippingFrom)}`),
   );
 
+  document.querySelector("[data-custom-section-label]")?.replaceChildren(
+    document.createTextNode(state.settings.customSectionLabel),
+  );
+  document.querySelector("[data-custom-section-title]")?.replaceChildren(
+    document.createTextNode(state.settings.customSectionTitle),
+  );
+  document.querySelector("[data-custom-section-text]")?.replaceChildren(
+    document.createTextNode(state.settings.customSectionText),
+  );
+  document.querySelector("[data-custom-note]")?.replaceChildren(
+    document.createTextNode(state.settings.customNote),
+  );
+
+  for (let index = 1; index <= 6; index += 1) {
+    document.querySelector(`[data-custom-card-title="${index}"]`)?.replaceChildren(
+      document.createTextNode(state.settings[`customCard${index}Title`]),
+    );
+    document.querySelector(`[data-custom-card-text="${index}"]`)?.replaceChildren(
+      document.createTextNode(state.settings[`customCard${index}Text`]),
+    );
+  }
+
   const giftWrapLabel = document.querySelector('[data-gift-wrap]')?.closest("label");
   if (giftWrapLabel) {
     giftWrapLabel.lastChild.textContent = ` Cadeauverpakking toevoegen voor ${formatMoney(GIFT_WRAP_PRICE)}`;

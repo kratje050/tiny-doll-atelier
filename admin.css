@@ -568,6 +568,21 @@ td strong {
   max-width: 1040px;
 }
 
+.settings-block {
+  display: grid;
+  gap: 12px;
+  margin-top: 10px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.settings-block h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
 .wide-field {
   grid-column: 1 / -1;
 }
