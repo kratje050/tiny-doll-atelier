@@ -19,7 +19,7 @@ const templates = {
     customerSubject: "Je cadeaubon van {webshopNaam}",
     adminSubject: "Cadeaubon {cadeauboncode} is verzonden",
     customerBody:
-      "Hallo {naam},\n\nWat leuk, je cadeaubon van {webshopNaam} is klaar.\n\nCode: {cadeauboncode}\nWaarde: {bedrag}\nResterend saldo: {saldo}\nGeldig tot: {geldigTot}\n\nJe kunt deze code gebruiken in je aanvraag bij het veld Cadeauboncode.\n\nLiefs,\n{webshopNaam}",
+      "Hallo {naam},\n\nWat leuk, je cadeaubon van {webshopNaam} is klaar.\n\nCode: {cadeauboncode}\nWaarde: {bedrag}\nResterend saldo: {saldo}\nGeldig tot: {geldigTot}\n\nJe kunt deze code gebruiken in je winkelmandje bij het veld Cadeauboncode.\n\nLiefs,\n{webshopNaam}",
     adminBody:
       "Cadeaubon verzonden.\n\nCode: {cadeauboncode}\nOntvanger: {naam}\nE-mail ontvanger: {email}\nWaarde: {bedrag}\nResterend saldo: {saldo}\nGeldig tot: {geldigTot}\nDatum: {datum}",
   },
