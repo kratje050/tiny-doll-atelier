@@ -40,6 +40,18 @@ function stockQuantity(product) {
   return stockMatch ? Number(stockMatch[0]) : 0;
 }
 
+function assetUrl(path) {
+  if (!path) {
+    return "";
+  }
+
+  try {
+    return new URL(path, window.location.origin).href;
+  } catch {
+    return path;
+  }
+}
+
 function refreshData() {
   adminState.products = TinyStore.getProducts();
   adminState.categories = TinyStore.getCategories();
@@ -294,22 +306,90 @@ function renderOrderDetail(orderId) {
     return;
   }
 
+  const itemSubtotal = order.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const itemCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
+  const createdAt = new Date(order.createdAt);
+  const statusOptions = ["Nieuw", "Betaald", "In productie", "Verzonden", "Afgerond"];
+
   detail.classList.add("is-open");
   detail.innerHTML = `
-    <h2>${order.id}</h2>
-    <p class="muted">${order.customer.name} - ${order.customer.email} - ${order.customer.phone || "-"}</p>
-    <div class="order-lines">
-      ${order.items
-        .map(
-          (item) =>
-            `<div>${item.quantity}x ${item.name} - ${money(item.price * item.quantity)}</div>`,
-        )
-        .join("")}
+    <div class="order-detail-header">
+      <div>
+        <p class="eyebrow">Bestelling</p>
+        <h2>${order.id}</h2>
+        <p class="muted">${createdAt.toLocaleDateString("nl-NL", {
+          day: "2-digit",
+          month: "long",
+          year: "numeric",
+        })} om ${createdAt.toLocaleTimeString("nl-NL", { hour: "2-digit", minute: "2-digit" })}</p>
+      </div>
+      <span class="status-pill">${order.status}</span>
     </div>
-    <p class="muted">Korting: ${order.discountCode || "-"} (${money(order.discountAmount)})</p>
-    <p class="muted">Cadeaubon: ${order.giftCardCode || "-"} (${money(order.giftCardAmount)})</p>
-    <strong>Totaal: ${money(order.total)}</strong>
-    <p class="muted">Opmerking: ${order.notes || "-"}</p>
+
+    <div class="order-detail-grid">
+      <section class="detail-card">
+        <h3>Klantgegevens</h3>
+        <dl class="detail-list">
+          <div><dt>Naam</dt><dd>${order.customer.name}</dd></div>
+          <div><dt>E-mail</dt><dd><a href="mailto:${order.customer.email}">${order.customer.email}</a></dd></div>
+          <div><dt>Telefoon</dt><dd>${order.customer.phone || "-"}</dd></div>
+        </dl>
+      </section>
+
+      <section class="detail-card">
+        <h3>Status en inhoud</h3>
+        <dl class="detail-list">
+          <div><dt>Status</dt><dd>${order.status}</dd></div>
+          <div><dt>Productregels</dt><dd>${order.items.length}</dd></div>
+          <div><dt>Aantal items</dt><dd>${itemCount}</dd></div>
+          <div><dt>Volgende stap</dt><dd>${statusOptions.includes(order.status) ? "Controleer betaling, voorraad en levertijd." : "Controleer de bestelling handmatig."}</dd></div>
+        </dl>
+      </section>
+    </div>
+
+    <section class="detail-card order-products-card">
+      <div class="detail-card-heading">
+        <h3>Producten</h3>
+        <span>${itemCount} items</span>
+      </div>
+      <div class="order-lines">
+        ${order.items
+          .map((item) => {
+            const lineTotal = item.price * item.quantity;
+            const imageLink = item.image
+              ? `<a class="image-link" href="${assetUrl(item.image)}" target="_blank" rel="noreferrer">Afbeelding bekijken</a>`
+              : "";
+            return `
+              <article class="order-line-card">
+                <div>
+                  <strong>${item.name}</strong>
+                  <span>${item.quantity} x ${money(item.price)} per stuk</span>
+                  ${imageLink}
+                </div>
+                <strong>${money(lineTotal)}</strong>
+              </article>
+            `;
+          })
+          .join("")}
+      </div>
+    </section>
+
+    <div class="order-detail-grid">
+      <section class="detail-card">
+        <h3>Kostenoverzicht</h3>
+        <dl class="detail-list">
+          <div><dt>Subtotaal</dt><dd>${money(itemSubtotal)}</dd></div>
+          <div><dt>Korting</dt><dd>${order.discountCode || "-"} ${order.discountAmount ? `(-${money(order.discountAmount)})` : ""}</dd></div>
+          <div><dt>Cadeaubon</dt><dd>${order.giftCardCode || "-"} ${order.giftCardAmount ? `(-${money(order.giftCardAmount)})` : ""}</dd></div>
+          <div class="total-row"><dt>Totaal</dt><dd>${money(order.total)}</dd></div>
+        </dl>
+      </section>
+
+      <section class="detail-card">
+        <h3>Opmerking</h3>
+        <p class="order-note">${order.notes || "Geen opmerking ingevuld."}</p>
+      </section>
+    </div>
   `;
 }
 
