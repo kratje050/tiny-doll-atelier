@@ -119,6 +119,51 @@ const TinyStore = (() => {
     giftWrapPrice: 2.95,
     stockLeadTime: "1 tot 3 werkdagen",
     customLeadTime: "3 tot 10 werkdagen",
+    heroLabel: "Nieuw in het atelier",
+    heroTitle: "Zachte linnen setjes voor poppen.",
+    heroText:
+      "Handgemaakte poppenkleding in naturel tinten, met rustige stoffen, fijne strikjes en een warme atelierstijl.",
+    heroPrimaryButton: "Bekijk collectie",
+    heroSecondaryButton: "Vraag maatwerk aan",
+    aboutLabel: "Over ons",
+    aboutTitle: "Met zorg gemaakt in het atelier",
+    aboutText1:
+      "Tiny Doll Atelier maakt handgemaakte poppenkleding en lieve accessoires in zachte, rustige tinten. Elk setje wordt met zorg samengesteld en kan naar wens worden aangepast. Of je nu zoekt naar een compleet poppensetje, een los kledingstuk of een persoonlijk cadeautje, wij denken graag met je mee.",
+    aboutText2:
+      "Onze stijl is zacht, tijdloos en met liefde gemaakt. Perfect voor kleine poppenmoeders, verjaardagen, kraamcadeautjes of gewoon zomaar.",
+    shippingLabel: "Verzenden",
+    shippingTitle: "Zorgvuldig ingepakt",
+    shippingText:
+      "Wij pakken elke bestelling met zorg in. Omdat veel producten met de hand worden gemaakt of op aanvraag worden samengesteld, kan de levertijd per bestelling verschillen.",
+    shippingAfterText: "Na je bestelling ontvang je een bevestiging met verdere informatie.",
+    returnLabel: "Retourneren",
+    returnTitle: "Retour of annulering",
+    returnLine1: "Standaardproducten kunnen binnen 14 dagen worden aangemeld voor retour.",
+    returnLine2: "Het product moet ongebruikt en netjes zijn.",
+    returnLine3: "Retourkosten zijn voor de klant, tenzij anders afgesproken.",
+    returnLine4:
+      "Maatwerkproducten kunnen mogelijk niet retour als ze speciaal volgens persoonlijke wensen zijn gemaakt.",
+    returnButtonText: "Retour of annulering aanmelden",
+    faqLabel: "FAQ",
+    faqTitle: "Veelgestelde vragen",
+    faq1Question: "Past de kleding op elke pop?",
+    faq1Answer:
+      "Onze kleding wordt gemaakt voor poppen van ongeveer 34 cm. Twijfel je? Stuur ons gerust de maat van je pop, dan kijken we met je mee.",
+    faq2Question: "Zit de pop erbij inbegrepen?",
+    faq2Answer:
+      "Alleen wanneer dit duidelijk bij het product staat. Bij losse kledingstukken wordt de pop niet meegeleverd.",
+    faq3Question: "Kan ik zelf een stof of kleur kiezen?",
+    faq3Answer: "Ja, bij maatwerk kun je wensen doorgeven. We stemmen samen af wat mogelijk is.",
+    faq4Question: "Hoe lang duurt mijn bestelling?",
+    faq4Answer:
+      "Producten op voorraad worden meestal binnen 1 tot 3 werkdagen verzonden. Maatwerk duurt gemiddeld 3 tot 10 werkdagen.",
+    faq5Question: "Kan ik mijn bestelling retourneren?",
+    faq5Answer:
+      "Standaardproducten kunnen binnen 14 dagen worden aangemeld voor retour. Maatwerkproducten kunnen mogelijk niet retour als ze speciaal volgens jouw wensen zijn gemaakt.",
+    faq6Question: "Kan ik een bestelling cadeau laten verpakken?",
+    faq6Answer: "Ja, cadeauverpakking kan als extra optie worden toegevoegd.",
+    faq7Question: "Hebben jullie cadeaubonnen?",
+    faq7Answer: "Ja, via de cadeaubonsectie kun je een cadeaubon aanvragen.",
     customSectionLabel: "Maatwerk",
     customSectionTitle: "Ook op aanvraag",
     customSectionText:

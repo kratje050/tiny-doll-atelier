@@ -245,6 +245,20 @@ function applySettings() {
     document.createTextNode(`Gratis verzending vanaf: ${formatMoney(state.settings.freeShippingFrom)}`),
   );
 
+  document.querySelector("[data-hero-label]")?.replaceChildren(document.createTextNode(state.settings.heroLabel));
+  document.querySelector("[data-hero-title]")?.replaceChildren(document.createTextNode(state.settings.heroTitle));
+  document.querySelector("[data-hero-text]")?.replaceChildren(document.createTextNode(state.settings.heroText));
+  document.querySelector("[data-hero-primary-button]")?.replaceChildren(
+    document.createTextNode(state.settings.heroPrimaryButton),
+  );
+  document.querySelector("[data-hero-secondary-button]")?.replaceChildren(
+    document.createTextNode(state.settings.heroSecondaryButton),
+  );
+  document.querySelector("[data-about-label]")?.replaceChildren(document.createTextNode(state.settings.aboutLabel));
+  document.querySelector("[data-about-title]")?.replaceChildren(document.createTextNode(state.settings.aboutTitle));
+  document.querySelector("[data-about-text-1]")?.replaceChildren(document.createTextNode(state.settings.aboutText1));
+  document.querySelector("[data-about-text-2]")?.replaceChildren(document.createTextNode(state.settings.aboutText2));
+
   document.querySelector("[data-custom-section-label]")?.replaceChildren(
     document.createTextNode(state.settings.customSectionLabel),
   );
@@ -264,6 +278,34 @@ function applySettings() {
     );
     document.querySelector(`[data-custom-card-text="${index}"]`)?.replaceChildren(
       document.createTextNode(state.settings[`customCard${index}Text`]),
+    );
+  }
+
+  document.querySelector("[data-shipping-label]")?.replaceChildren(document.createTextNode(state.settings.shippingLabel));
+  document.querySelector("[data-shipping-title]")?.replaceChildren(document.createTextNode(state.settings.shippingTitle));
+  document.querySelector("[data-shipping-text]")?.replaceChildren(document.createTextNode(state.settings.shippingText));
+  document.querySelector("[data-shipping-after-text]")?.replaceChildren(
+    document.createTextNode(state.settings.shippingAfterText),
+  );
+  document.querySelector("[data-return-label]")?.replaceChildren(document.createTextNode(state.settings.returnLabel));
+  document.querySelector("[data-return-title]")?.replaceChildren(document.createTextNode(state.settings.returnTitle));
+  document.querySelector("[data-return-button-text]")?.replaceChildren(
+    document.createTextNode(state.settings.returnButtonText),
+  );
+  for (let index = 1; index <= 4; index += 1) {
+    document.querySelector(`[data-return-line="${index}"]`)?.replaceChildren(
+      document.createTextNode(state.settings[`returnLine${index}`]),
+    );
+  }
+
+  document.querySelector("[data-faq-label]")?.replaceChildren(document.createTextNode(state.settings.faqLabel));
+  document.querySelector("[data-faq-title]")?.replaceChildren(document.createTextNode(state.settings.faqTitle));
+  for (let index = 1; index <= 7; index += 1) {
+    document.querySelector(`[data-faq-question="${index}"]`)?.replaceChildren(
+      document.createTextNode(state.settings[`faq${index}Question`]),
+    );
+    document.querySelector(`[data-faq-answer="${index}"]`)?.replaceChildren(
+      document.createTextNode(state.settings[`faq${index}Answer`]),
     );
   }
 
