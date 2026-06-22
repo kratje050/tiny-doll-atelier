@@ -76,6 +76,21 @@ function hasValidSession(event) {
 
 async function getBlobStore() {
   const { getStore } = await import("@netlify/blobs");
+  const siteID =
+    process.env.NETLIFY_BLOBS_SITE_ID ||
+    process.env.NETLIFY_SITE_ID ||
+    process.env.SITE_ID ||
+    "";
+  const token =
+    process.env.NETLIFY_BLOBS_TOKEN ||
+    process.env.NETLIFY_AUTH_TOKEN ||
+    process.env.NETLIFY_API_TOKEN ||
+    "";
+
+  if (siteID && token) {
+    return getStore(STORE_NAME, { siteID, token });
+  }
+
   return getStore(STORE_NAME);
 }
 
@@ -158,9 +173,14 @@ exports.handler = async (event) => {
 
     return json(405, { ok: false, message: "Deze actie is niet toegestaan." });
   } catch (error) {
+    const needsBlobConfig = /siteID|token|Netlify Blobs|environment has not been configured/i.test(
+      error.message || "",
+    );
     return json(500, {
       ok: false,
-      message: error.message || "Online opslag kon niet worden bereikt.",
+      message: needsBlobConfig
+        ? "Online opslag is nog niet gekoppeld. Voeg NETLIFY_BLOBS_SITE_ID en NETLIFY_BLOBS_TOKEN toe bij de omgevingsvariabelen in Netlify."
+        : error.message || "Online opslag kon niet worden bereikt.",
     });
   }
 };
