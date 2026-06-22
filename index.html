@@ -169,6 +169,14 @@
             <li>Na betaling maken wij de cadeauboncode aan</li>
             <li>De ontvanger krijgt de cadeaubon per e-mail</li>
           </ol>
+          <form class="gift-card-balance-form" data-gift-card-balance-form>
+            <label>
+              Saldo cadeaubon checken
+              <input name="code" autocomplete="off" placeholder="Vul je cadeauboncode in" />
+            </label>
+            <button class="secondary-action" type="submit">Saldo checken</button>
+            <p class="form-note" data-gift-card-balance-message></p>
+          </form>
         </div>
         <form class="gift-card-form" data-gift-card-order-form>
           <label class="honeypot-field">Laat dit veld leeg <input name="website" autocomplete="off" tabindex="-1" /></label>

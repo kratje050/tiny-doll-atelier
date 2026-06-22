@@ -11,6 +11,7 @@ const state = {
   checkoutVisible: false,
   giftWrap: false,
   giftMessage: "",
+  giftCardLookup: null,
   selectedProductId: "",
 };
 
@@ -73,12 +74,15 @@ const discountFeedback = document.querySelector("[data-discount-feedback]");
 const giftCardFeedback = document.querySelector("[data-gift-card-feedback]");
 const giftCardOrderForm = document.querySelector("[data-gift-card-order-form]");
 const giftCardMessage = document.querySelector("[data-gift-card-message]");
+const giftCardBalanceForm = document.querySelector("[data-gift-card-balance-form]");
+const giftCardBalanceMessage = document.querySelector("[data-gift-card-balance-message]");
 const productModal = document.querySelector("[data-product-modal]");
 const modalAddButton = document.querySelector("[data-modal-add]");
 const contactForm = document.querySelector("[data-contact-form]");
 const returnForm = document.querySelector("[data-return-form]");
 
-TinyStore.recordVisit();
+const visitRecorded = TinyStore.recordVisit();
+let giftCardLookupTimer = null;
 
 function saveCart() {
   localStorage.setItem("poppenatelier-cart", JSON.stringify(state.cart));
@@ -557,7 +561,6 @@ function calculateCartPreview(entries, discountCode = "", giftCardCode = "") {
   const giftWrapTotal = state.giftWrap && entries.length ? GIFT_WRAP_PRICE : 0;
   const subtotal = Number((itemSubtotal + giftWrapTotal).toFixed(2));
   const discounts = TinyStore.getDiscounts();
-  const giftCards = TinyStore.getGiftCards();
   const today = new Date().toISOString().slice(0, 10);
   const cleanDiscountCode = discountCode.trim();
   const cleanGiftCardCode = giftCardCode.trim();
@@ -571,9 +574,20 @@ function calculateCartPreview(entries, discountCode = "", giftCardCode = "") {
     : 0;
   const discountAmount = Number(Math.min(subtotal, Math.max(0, rawDiscountAmount)).toFixed(2));
   const afterDiscount = Number((subtotal - discountAmount).toFixed(2));
-  const giftCard = cleanGiftCardCode
-    ? giftCards.find((item) => item.active && codeMatches(item.code, cleanGiftCardCode))
+  const lookupMatches = state.giftCardLookup && codeMatches(state.giftCardLookup.code, cleanGiftCardCode);
+  const localGiftCard = cleanGiftCardCode && !lookupMatches
+    ? TinyStore.getGiftCards().find((item) => item.active && codeMatches(item.code, cleanGiftCardCode))
     : null;
+  const onlineGiftCard =
+    state.giftCardLookup?.valid && lookupMatches
+      ? {
+          code: state.giftCardLookup.code,
+          balance: Number(state.giftCardLookup.balance),
+          expiresAt: state.giftCardLookup.expiresAt || "",
+          active: true,
+        }
+      : null;
+  const giftCard = onlineGiftCard || localGiftCard;
   const giftCardUsable = Boolean(
     giftCard && Number(giftCard.balance) > 0 && (!giftCard.expiresAt || giftCard.expiresAt >= today),
   );
@@ -791,13 +805,54 @@ async function sendEmail(payload) {
   return data;
 }
 
+async function persistVisit() {
+  if (!visitRecorded) {
+    return;
+  }
+
+  try {
+    await fetch("/.netlify/functions/visit", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ date: new Date().toISOString().slice(0, 10) }),
+    });
+  } catch {
+    // Lokale bezoekmeting blijft werken als online tellen tijdelijk niet lukt.
+  }
+}
+
+async function persistOrder(order) {
+  try {
+    await fetch("/.netlify/functions/public-order", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ order }),
+    });
+  } catch {
+    // De e-mail blijft leidend; online dashboardopslag is een extra synchronisatie.
+  }
+}
+
+async function fetchGiftCardBalance(code) {
+  const response = await fetch("/.netlify/functions/gift-card-balance", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ code }),
+  });
+  const data = await response.json().catch(() => ({ ok: false, message: "Cadeaubon kon niet worden gecontroleerd." }));
+  if (!response.ok || !data.ok) {
+    throw new Error(data.message || "Cadeaubon kon niet worden gecontroleerd.");
+  }
+  return data;
+}
+
 function orderSummary(order) {
-  return order.items
+  const itemLines = order.items
     .map((item) => {
       const lines = [
         `${item.quantity}x ${item.name}`,
         `Prijs per stuk: ${formatMoney(item.price)}`,
-        `Regeltotaal: ${formatMoney(item.price * item.quantity)}`,
+        `Totaal bedrag: ${formatMoney(item.price * item.quantity)}`,
       ];
       if (item.image) {
         lines.push(`Afbeelding: ${absoluteAssetUrl(item.image)}`);
@@ -805,6 +860,25 @@ function orderSummary(order) {
       return lines.join("\n");
     })
     .join("\n\n");
+
+  const costLines = [
+    "",
+    "Overzicht",
+    `Subtotaal: ${formatMoney(order.items.reduce((sum, item) => sum + item.price * item.quantity, 0))}`,
+    order.discountCode
+      ? `Kortingscode ${order.discountCode}: -${formatMoney(order.discountAmount || 0)}`
+      : "Kortingscode: -",
+    order.giftCardCode
+      ? `Cadeaubon ${order.giftCardCode}: -${formatMoney(order.giftCardAmount || 0)}`
+      : "Cadeaubon: -",
+    order.giftCardCode
+      ? `Resterend cadeaubonsaldo na deze aanvraag: ${formatMoney(order.giftCardRemainingBalance || 0)}`
+      : "",
+    order.freeShipping ? "Verzending: gratis via kortingscode" : "Verzending: wordt afgestemd",
+    `Totaal te bevestigen/betalen: ${formatMoney(order.total)}`,
+  ].filter(Boolean);
+
+  return [itemLines, costLines.join("\n")].filter(Boolean).join("\n\n");
 }
 
 function buildMailBody(order) {
@@ -900,7 +974,33 @@ giftMessageInput.addEventListener("input", (event) => {
   state.giftMessage = event.target.value;
 });
 checkoutForm.elements.discountCode.addEventListener("input", renderCart);
-checkoutForm.elements.giftCardCode.addEventListener("input", renderCart);
+checkoutForm.elements.giftCardCode.addEventListener("input", (event) => {
+  const code = event.target.value.trim();
+  clearTimeout(giftCardLookupTimer);
+  state.giftCardLookup = null;
+
+  if (!code) {
+    renderCart();
+    return;
+  }
+
+  if (code.length < 4) {
+    setCodeFeedback(giftCardFeedback, "invalid", "Vul de volledige cadeauboncode in.");
+    renderCart();
+    return;
+  }
+
+  setCodeFeedback(giftCardFeedback, "empty", "Cadeaubon wordt gecontroleerd...");
+  giftCardLookupTimer = setTimeout(async () => {
+    try {
+      const result = await fetchGiftCardBalance(code);
+      state.giftCardLookup = result;
+    } catch {
+      state.giftCardLookup = { valid: false, code };
+    }
+    renderCart();
+  }, 350);
+});
 
 cartItems.addEventListener("click", (event) => {
   const button = event.target.closest("[data-cart-action]");
@@ -1018,8 +1118,19 @@ checkoutForm.addEventListener("submit", async (event) => {
       country: order.customer.country,
       total: formatMoney(order.total),
       orderSummary: orderSummary(order),
+      orderItems: order.items,
+      subtotal: formatMoney(order.items.reduce((sum, item) => sum + item.price * item.quantity, 0)),
+      discountCode: order.discountCode,
+      discountAmount: formatMoney(order.discountAmount || 0),
+      giftCardCode: order.giftCardCode,
+      giftCardAmount: formatMoney(order.giftCardAmount || 0),
+      giftCardRemainingBalance: order.giftCardCode
+        ? formatMoney(order.giftCardRemainingBalance || 0)
+        : "",
+      freeShipping: order.freeShipping ? "Ja" : "Nee",
       notes: order.notes,
     });
+    await persistOrder(order);
     orderMessage.textContent =
       "Bedankt, je aanvraag is verzonden. Je ontvangt persoonlijk de betaalinformatie na bevestiging.";
     state.cart = {};
@@ -1071,11 +1182,36 @@ giftCardOrderForm.addEventListener("submit", async (event) => {
       recipientEmail: recipientEmail || order.customer.email,
       message,
     });
+    await persistOrder(order);
     giftCardMessage.textContent =
       "Bedankt, je cadeaubonaanvraag is verzonden. Na bevestiging ontvang je de betaalinformatie.";
     giftCardOrderForm.reset();
   } catch (error) {
     giftCardMessage.textContent = error.message;
+  }
+});
+
+giftCardBalanceForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const code = new FormData(giftCardBalanceForm).get("code").trim();
+  if (!code) {
+    giftCardBalanceMessage.textContent = "Vul eerst je cadeauboncode in.";
+    return;
+  }
+
+  giftCardBalanceMessage.textContent = "Saldo wordt gecontroleerd...";
+  try {
+    const result = await fetchGiftCardBalance(code);
+    if (!result.valid) {
+      giftCardBalanceMessage.textContent = result.message || "Deze cadeaubon is niet geldig.";
+      return;
+    }
+
+    giftCardBalanceMessage.textContent = `Deze cadeaubon is geldig. Resterend saldo: ${formatMoney(
+      result.balance,
+    )}. Geldig tot: ${result.expiresAt || "geen einddatum"}.`;
+  } catch (error) {
+    giftCardBalanceMessage.textContent = error.message;
   }
 });
 
@@ -1158,13 +1294,17 @@ renderShop();
 TinyStore.loadCloudData()
   .then((result) => {
     if (!result.changed) {
+      persistVisit();
       return;
     }
 
     refreshPublicState();
     renderShop();
+    persistVisit();
   })
-  .catch(() => {});
+  .catch(() => {
+    persistVisit();
+  });
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {

@@ -219,9 +219,22 @@ function buildCustomerMail(order) {
 }
 
 function orderSummaryText(order) {
-  return order.items
+  const productLines = order.items
     .map((item) => `- ${item.quantity}x ${item.name} (${money(item.price)} per stuk)`)
     .join("\n");
+  const costLines = [
+    "",
+    `Subtotaal: ${money(order.items.reduce((sum, item) => sum + item.price * item.quantity, 0))}`,
+    order.discountCode ? `Kortingscode ${order.discountCode}: -${money(order.discountAmount || 0)}` : "",
+    order.giftCardCode ? `Cadeaubon ${order.giftCardCode}: -${money(order.giftCardAmount || 0)}` : "",
+    order.giftCardCode
+      ? `Resterend cadeaubonsaldo na betaling: ${money(order.giftCardRemainingBalance || 0)}`
+      : "",
+    order.freeShipping ? "Verzending: gratis via kortingscode" : "Verzending: wordt afgestemd",
+    `Totaal: ${money(order.total)}`,
+  ].filter(Boolean);
+
+  return [productLines, costLines.join("\n")].filter(Boolean).join("\n\n");
 }
 
 async function sendOrderPaymentMail(order, type) {
@@ -233,6 +246,14 @@ async function sendOrderPaymentMail(order, type) {
     phone: order.customer.phone || "",
     total: money(order.total),
     orderSummary: orderSummaryText(order),
+    orderItems: order.items,
+    subtotal: money(order.items.reduce((sum, item) => sum + item.price * item.quantity, 0)),
+    discountCode: order.discountCode || "",
+    discountAmount: money(order.discountAmount || 0),
+    giftCardCode: order.giftCardCode || "",
+    giftCardAmount: money(order.giftCardAmount || 0),
+    giftCardRemainingBalance: order.giftCardCode ? money(order.giftCardRemainingBalance || 0) : "",
+    freeShipping: order.freeShipping ? "Ja" : "Nee",
     message: order.notes || "-",
   });
 }
@@ -795,6 +816,7 @@ function renderOrders() {
           <td>
             <div class="table-actions">
               <button class="row-button" type="button" data-order-detail="${order.id}">Details</button>
+              <button class="row-button" type="button" data-delete-order="${order.id}">Verwijder</button>
             </div>
           </td>
         </tr>
@@ -837,6 +859,7 @@ function renderOrderDetail(orderId) {
       <div class="detail-actions">
         <button class="row-button" type="button" data-print-order="${order.id}">Print bestelling</button>
         <button class="row-button" type="button" data-print-packing-slip="${order.id}">Pakbon</button>
+        <button class="row-button" type="button" data-delete-order="${order.id}">Verwijder</button>
       </div>
     </div>
 
@@ -1036,6 +1059,25 @@ function renderAll() {
   }
 }
 
+async function refreshCloudDataQuietly() {
+  if (!cloudReady || cloudSyncing) {
+    return;
+  }
+
+  cloudSyncing = true;
+  try {
+    const result = await TinyStore.loadCloudData({ admin: true });
+    if (result.changed) {
+      renderAll();
+      setCloudStatus("Online gegevens bijgewerkt.");
+    }
+  } catch {
+    // De bestaande data blijft zichtbaar als online verversen tijdelijk niet lukt.
+  } finally {
+    cloudSyncing = false;
+  }
+}
+
 navButtons.forEach((button) => {
   button.addEventListener("click", () => setView(button.dataset.viewButton));
 });
@@ -1187,6 +1229,7 @@ document.addEventListener("click", async (event) => {
   const toggleGiftCard = event.target.closest("[data-toggle-gift-card]");
   const deleteGiftCard = event.target.closest("[data-delete-gift-card]");
   const orderDetail = event.target.closest("[data-order-detail]");
+  const deleteOrder = event.target.closest("[data-delete-order]");
   const editReview = event.target.closest("[data-edit-review]");
   const toggleReview = event.target.closest("[data-toggle-review]");
   const deleteReview = event.target.closest("[data-delete-review]");
@@ -1318,6 +1361,18 @@ document.addEventListener("click", async (event) => {
 
   if (orderDetail) {
     renderOrderDetail(orderDetail.dataset.orderDetail);
+  }
+
+  if (deleteOrder) {
+    const orderId = deleteOrder.dataset.deleteOrder;
+    if (!confirm("Weet je zeker dat je deze bestelling wilt verwijderen?")) {
+      return;
+    }
+    TinyStore.saveOrders(adminState.orders.filter((order) => order.id !== orderId));
+    if (adminState.selectedOrderId === orderId) {
+      adminState.selectedOrderId = "";
+    }
+    renderAll();
   }
 
   if (editCustomer) {
@@ -1850,3 +1905,10 @@ async function initializeAdmin() {
 }
 
 initializeAdmin();
+
+window.setInterval(() => {
+  const activeView = document.querySelector("[data-view].is-active")?.dataset.view;
+  if (activeView === "dashboard" || activeView === "orders") {
+    refreshCloudDataQuietly();
+  }
+}, 60000);

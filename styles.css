@@ -680,6 +680,40 @@ h3 {
   box-shadow: 0 14px 34px rgba(79, 48, 28, 0.08);
 }
 
+.gift-card-balance-form {
+  display: grid;
+  gap: 10px;
+  max-width: 420px;
+  margin-top: 22px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 14px 34px rgba(79, 48, 28, 0.08);
+}
+
+.gift-card-balance-form label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 800;
+}
+
+.gift-card-balance-form input {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  padding: 10px 12px;
+}
+
+.gift-card-balance-form .secondary-action {
+  width: 100%;
+}
+
 .gift-card-form label {
   display: grid;
   gap: 6px;

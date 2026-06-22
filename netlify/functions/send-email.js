@@ -215,6 +215,92 @@ function renderSoftBlock(title, value, multiline = false) {
   `;
 }
 
+function sanitizeOrderItems(value) {
+  const items = Array.isArray(value) ? value : [];
+  return items
+    .map((item) => ({
+      name: clean(item.name, 180),
+      quantity: Number(item.quantity) || 1,
+      price: Number(item.price) || 0,
+      image: clean(item.image, 4000),
+    }))
+    .filter((item) => item.name);
+}
+
+function formatEuro(value) {
+  return new Intl.NumberFormat("nl-NL", {
+    style: "currency",
+    currency: "EUR",
+  }).format(Number(value) || 0);
+}
+
+function renderOrderItemsHtml(items) {
+  if (!items.length) {
+    return "";
+  }
+
+  return `
+    <div style="margin:22px 0 0;padding:18px;border-radius:10px;background:#fff6ed;border:1px solid #eadbd0;">
+      <div style="margin-bottom:12px;color:#6f4328;font-size:13px;letter-spacing:.08em;text-transform:uppercase;font-weight:800;">Bestelling</div>
+      ${items
+        .map((item) => {
+          const image = item.image
+            ? `<td width="92" style="padding:0 14px 14px 0;vertical-align:top;">
+                <img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.name)}" width="78" style="display:block;width:78px;max-width:78px;border-radius:8px;border:1px solid #eadbd0;background:#efe3d6;">
+              </td>`
+            : "";
+          const imageLink = item.image
+            ? `<div style="margin-top:8px;"><a href="${escapeHtml(item.image)}" style="color:#6f4328;font-weight:700;">Afbeelding openen</a></div>`
+            : "";
+
+          return `
+            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-bottom:1px solid #eadbd0;margin-bottom:14px;">
+              <tr>
+                ${image}
+                <td style="padding:0 0 14px;vertical-align:top;color:#342216;">
+                  <strong style="display:block;font-size:16px;margin-bottom:7px;">${escapeHtml(item.quantity)}x ${escapeHtml(item.name)}</strong>
+                  <div style="color:#806a59;font-size:14px;line-height:1.7;">Prijs per stuk: ${escapeHtml(formatEuro(item.price))}</div>
+                  <div style="color:#342216;font-size:15px;font-weight:800;line-height:1.7;">Totaal bedrag: ${escapeHtml(formatEuro(item.price * item.quantity))}</div>
+                  ${imageLink}
+                </td>
+              </tr>
+            </table>
+          `;
+        })
+        .join("")}
+    </div>
+  `;
+}
+
+function renderCostOverview(values) {
+  const rows = [
+    ["Subtotaal", values.subtotaal],
+    values.kortingscode ? [`Kortingscode ${values.kortingscode}`, `-${values.korting}`] : null,
+    values.cadeauboncode ? [`Cadeaubon ${values.cadeauboncode}`, `-${values.cadeaubonBedrag}`] : null,
+    values.cadeaubonSaldo ? ["Resterend cadeaubonsaldo na betaling", values.cadeaubonSaldo] : null,
+    values.gratisVerzending === "Ja" ? ["Verzending", "Gratis via kortingscode"] : ["Verzending", "Wordt afgestemd"],
+    ["Totaal", values.totaal],
+  ].filter(Boolean);
+
+  return `
+    <div style="margin:22px 0 0;padding:18px;border-radius:10px;background:#efe3d6;border:1px solid #dcc8b7;">
+      <div style="margin-bottom:10px;color:#6f4328;font-size:13px;letter-spacing:.08em;text-transform:uppercase;font-weight:800;">Kostenoverzicht</div>
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+        ${rows
+          .map(
+            ([label, value]) => `
+              <tr>
+                <td style="padding:8px 0;color:#806a59;font-size:14px;font-weight:700;">${escapeHtml(label)}</td>
+                <td style="padding:8px 0;color:#342216;font-size:14px;font-weight:900;text-align:right;">${escapeHtml(value || "-")}</td>
+              </tr>
+            `,
+          )
+          .join("")}
+      </table>
+    </div>
+  `;
+}
+
 function renderIntroHtml({ type, audience, values }) {
   const name = values.naam || "daar";
   const intros = {
@@ -271,6 +357,8 @@ function renderEmailHtml({ subject, text, values, type, audience }) {
       ["E-mail", values.email],
       ["Telefoon", values.telefoon],
       ["Adres", values.adres],
+      ["Kortingscode", values.kortingscode || "-"],
+      ["Cadeaubon", values.cadeauboncode || "-"],
       ["Totaal", values.totaal],
     ],
     "gift-card": [
@@ -293,12 +381,16 @@ function renderEmailHtml({ subject, text, values, type, audience }) {
       ["Ordernummer", values.ordernummer],
       ["Naam", values.naam],
       ["E-mail", values.email],
+      ["Kortingscode", values.kortingscode || "-"],
+      ["Cadeaubon", values.cadeauboncode || "-"],
       ["Totaal", values.totaal],
     ],
     "payment-received": [
       ["Ordernummer", values.ordernummer],
       ["Naam", values.naam],
       ["E-mail", values.email],
+      ["Kortingscode", values.kortingscode || "-"],
+      ["Cadeaubon", values.cadeauboncode || "-"],
       ["Totaal", values.totaal],
     ],
     return: [
@@ -332,8 +424,11 @@ function renderEmailHtml({ subject, text, values, type, audience }) {
     audience === "admin"
       ? `Nieuwe melding via ${values.webshopNaam}`
       : `Bedankt voor je bericht aan ${values.webshopNaam}`;
-  const orderBlock = ["order", "payment-instructions", "payment-received"].includes(type)
-    ? renderSoftBlock("Bestelling", values.bestelling, true)
+  const hasOrderMail = ["order", "payment-instructions", "payment-received"].includes(type);
+  const orderBlock = hasOrderMail
+    ? values.orderItems.length
+      ? `${renderOrderItemsHtml(values.orderItems)}${renderCostOverview(values)}`
+      : `${renderSoftBlock("Bestelling", values.bestelling, true)}${renderCostOverview(values)}`
     : "";
   const messageTitles = {
     order: "Opmerking",
@@ -478,6 +573,13 @@ function normalizePayload(payload) {
     ontvangerEmail: clean(payload.recipientEmail, 200),
     totaal: clean(payload.total, 80),
     bestelling: clean(payload.orderSummary, 5000),
+    subtotaal: clean(payload.subtotal, 80),
+    kortingscode: clean(payload.discountCode, 80).toUpperCase(),
+    korting: clean(payload.discountAmount, 80),
+    cadeaubonBedrag: clean(payload.giftCardAmount, 80),
+    cadeaubonSaldo: clean(payload.giftCardRemainingBalance, 80),
+    gratisVerzending: clean(payload.freeShipping, 20),
+    orderItems: sanitizeOrderItems(payload.orderItems),
     datum: new Date().toLocaleString("nl-NL", { timeZone: "Europe/Amsterdam" }),
   };
 

@@ -649,7 +649,7 @@ const TinyStore = (() => {
     const today = new Date().toISOString().slice(0, 10);
     const sessionKey = `tiny-doll-visit-${today}`;
     if (sessionStorage.getItem(sessionKey)) {
-      return;
+      return false;
     }
 
     const visits = getVisits();
@@ -661,6 +661,7 @@ const TinyStore = (() => {
     }
     saveVisits(visits);
     sessionStorage.setItem(sessionKey, "1");
+    return true;
   }
 
   function upsertCustomer(customer, total, date) {
@@ -725,7 +726,11 @@ const TinyStore = (() => {
         item.code.toUpperCase() === giftCardCode.toUpperCase() &&
         (!item.expiresAt || item.expiresAt >= today),
     );
-    const giftCardAmount = giftCard ? Math.min(afterDiscount, giftCard.balance) : 0;
+    const giftCardInitialBalance = giftCard ? Number(giftCard.balance) : 0;
+    const giftCardAmount = giftCard ? Math.min(afterDiscount, giftCardInitialBalance) : 0;
+    const giftCardRemainingBalance = giftCard
+      ? Number((giftCardInitialBalance - giftCardAmount).toFixed(2))
+      : 0;
     const order = {
       id: `TD-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}-${Math.floor(
         Math.random() * 900 + 100,
@@ -741,6 +746,8 @@ const TinyStore = (() => {
       freeShippingFrom: discount ? freeShippingFrom : 0,
       giftCardCode: giftCard ? giftCard.code : "",
       giftCardAmount: Number(giftCardAmount.toFixed(2)),
+      giftCardInitialBalance: Number(giftCardInitialBalance.toFixed(2)),
+      giftCardRemainingBalance,
       total: Number((afterDiscount - giftCardAmount).toFixed(2)),
       notes,
       adminNotes: "",
@@ -770,7 +777,7 @@ const TinyStore = (() => {
     }
 
     if (giftCard) {
-      giftCard.balance = Number((giftCard.balance - giftCardAmount).toFixed(2));
+      giftCard.balance = giftCardRemainingBalance;
       saveGiftCards(giftCards);
     }
 
