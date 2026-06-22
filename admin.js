@@ -120,6 +120,8 @@ const cloudSaveMethods = [
 let cloudReady = false;
 let cloudSyncing = false;
 let cloudSaveTimer = null;
+let cloudSaveInFlight = null;
+let onlineEditingEnabled = false;
 let cloudStatusElement = null;
 
 function setCloudStatus(message, isError = false) {
@@ -134,21 +136,67 @@ function setCloudStatus(message, isError = false) {
   cloudStatusElement.classList.toggle("is-ok", !isError);
 }
 
+function setOnlineEditingEnabled(enabled, message = "") {
+  onlineEditingEnabled = enabled;
+  document.body.classList.toggle("admin-offline", !enabled);
+  document.querySelectorAll(".admin-main input, .admin-main select, .admin-main textarea, .admin-main button").forEach(
+    (element) => {
+      if (element.closest("[data-view-button]")) {
+        return;
+      }
+      element.disabled = !enabled;
+    },
+  );
+
+  if (message) {
+    setCloudStatus(message, !enabled);
+  }
+}
+
+async function restoreOnlineDataAfterFailedSave() {
+  cloudSyncing = true;
+  try {
+    await TinyStore.loadCloudData({ admin: true });
+    renderAll();
+  } catch {
+    // De foutmelding van de mislukte save blijft zichtbaar.
+  } finally {
+    cloudSyncing = false;
+  }
+}
+
 function queueCloudSave(successMessage = "Wijzigingen online opgeslagen.") {
-  if (!cloudReady || cloudSyncing) {
+  if (cloudSyncing) {
+    return;
+  }
+
+  if (!cloudReady || !onlineEditingEnabled) {
+    setCloudStatus(
+      "Online opslag is niet klaar. De wijziging is niet opgeslagen. Controleer Netlify Blobs.",
+      true,
+    );
     return;
   }
 
   clearTimeout(cloudSaveTimer);
   setCloudStatus("Wijzigingen online opslaan...");
   cloudSaveTimer = setTimeout(async () => {
+    cloudSaveTimer = null;
     try {
-      await TinyStore.saveCloudData();
+      cloudSaveInFlight = TinyStore.saveCloudData();
+      await cloudSaveInFlight;
       setCloudStatus(successMessage);
     } catch (error) {
-      setCloudStatus(error.message || "Online opslaan is mislukt.", true);
+      setOnlineEditingEnabled(
+        false,
+        error.message ||
+          "Online opslaan is mislukt. Lokale wijzigingen zijn teruggedraaid naar de online versie.",
+      );
+      await restoreOnlineDataAfterFailedSave();
+    } finally {
+      cloudSaveInFlight = null;
     }
-  }, 350);
+  }, 80);
 }
 
 cloudSaveMethods.forEach((methodName) => {
@@ -162,6 +210,15 @@ cloudSaveMethods.forEach((methodName) => {
 
 logoutButton.addEventListener("click", () => {
   window.location.href = "/admin/logout";
+});
+
+window.addEventListener("beforeunload", (event) => {
+  if (!cloudSaveTimer && !cloudSaveInFlight) {
+    return;
+  }
+
+  event.preventDefault();
+  event.returnValue = "";
 });
 
 function categoryName(id) {
@@ -1057,6 +1114,9 @@ function renderAll() {
   if (adminState.selectedOrderId) {
     renderOrderDetail(adminState.selectedOrderId);
   }
+  if (!onlineEditingEnabled) {
+    setOnlineEditingEnabled(false);
+  }
 }
 
 async function refreshCloudDataQuietly() {
@@ -1081,6 +1141,19 @@ async function refreshCloudDataQuietly() {
 navButtons.forEach((button) => {
   button.addEventListener("click", () => setView(button.dataset.viewButton));
 });
+
+document.addEventListener(
+  "submit",
+  (event) => {
+    if (onlineEditingEnabled) {
+      return;
+    }
+
+    event.preventDefault();
+    setCloudStatus("Online opslag is verplicht. Log opnieuw in of controleer Netlify Blobs.", true);
+  },
+  true,
+);
 
 productForm.addEventListener("submit", (event) => {
   event.preventDefault();
@@ -1873,7 +1946,10 @@ document.addEventListener("change", (event) => {
 
 async function initializeAdmin() {
   setCloudStatus("Online opslag controleren...");
+  setOnlineEditingEnabled(false);
   cloudSyncing = true;
+  let readyForOnlineEditing = false;
+  let readyMessage = "";
   try {
     const status = await TinyStore.getCloudStatus();
     if (!status.blobsConfigured) {
@@ -1889,18 +1965,23 @@ async function initializeAdmin() {
     setCloudStatus(status.message || "Online opslag is gekoppeld. Winkeldata wordt centraal opgeslagen.");
     const result = await TinyStore.loadCloudData({ admin: true });
     if (result.seeded) {
-      setCloudStatus("Lokale beheerdata online gezet.");
+      readyMessage = "Online opslag is aangemaakt. Winkeldata wordt centraal opgeslagen.";
     } else if (result.merged) {
-      setCloudStatus("Lokale en online producten samengevoegd.");
+      readyMessage = "Online opslag is gekoppeld. Winkeldata wordt centraal opgeslagen.";
     } else {
-      setCloudStatus("Online opslag is gekoppeld. Winkeldata wordt centraal opgeslagen.");
+      readyMessage = "Online opslag is gekoppeld. Winkeldata wordt centraal opgeslagen.";
     }
+    readyForOnlineEditing = true;
   } catch (error) {
-    setCloudStatus(error.message || "Online opslag kon niet worden geladen.", true);
+    readyMessage =
+      error.message ||
+      "Online opslag kon niet worden geladen. Beheer is alleen-lezen zodat niets lokaal blijft hangen.";
   } finally {
     cloudSyncing = false;
-    cloudReady = true;
+    cloudReady = readyForOnlineEditing;
+    onlineEditingEnabled = readyForOnlineEditing;
     renderAll();
+    setOnlineEditingEnabled(readyForOnlineEditing, readyMessage);
   }
 }
 

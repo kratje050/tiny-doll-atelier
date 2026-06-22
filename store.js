@@ -470,7 +470,7 @@ const TinyStore = (() => {
     return {
       exportedAt: new Date().toISOString(),
       version: 1,
-      storage: "localStorage",
+      storage: "netlify-blobs",
       products: getProducts(),
       categories: getCategories(),
       discounts: getDiscounts(),
@@ -547,26 +547,12 @@ const TinyStore = (() => {
     return true;
   }
 
-  function mergeLocalProducts(localProducts) {
-    const currentProducts = getProducts();
-    const currentIds = new Set(currentProducts.map((product) => product.id));
-    const missingProducts = localProducts.filter((product) => product?.id && !currentIds.has(product.id));
-
-    if (!missingProducts.length) {
-      return false;
-    }
-
-    saveProducts([...missingProducts, ...currentProducts]);
-    return true;
-  }
-
   async function loadCloudData(options = {}) {
     if (typeof fetch !== "function") {
       return { ok: false, changed: false, message: "Online opslag is niet beschikbaar." };
     }
 
     const admin = Boolean(options.admin);
-    const localProducts = getProducts();
     const response = await fetch(`/.netlify/functions/data${admin ? "?private=1" : ""}`, {
       method: "GET",
       credentials: "same-origin",
@@ -587,15 +573,11 @@ const TinyStore = (() => {
     }
 
     const changed = applyCloudData(result.data);
-    const merged = admin ? mergeLocalProducts(localProducts) : false;
-    if (merged) {
-      await saveCloudData();
-    }
 
     return {
       ok: true,
-      changed: changed || merged,
-      merged,
+      changed,
+      merged: false,
       updatedAt: result.updatedAt || "",
     };
   }

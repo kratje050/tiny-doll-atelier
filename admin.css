@@ -101,6 +101,14 @@ body:not(.admin-locked) .login-screen {
   display: none;
 }
 
+body.admin-offline .admin-main {
+  opacity: 0.72;
+}
+
+body.admin-offline .cloud-status {
+  opacity: 1;
+}
+
 .login-screen {
   display: grid;
   min-height: 100vh;
