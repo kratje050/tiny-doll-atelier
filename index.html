@@ -429,6 +429,7 @@
           </button>
         </div>
         <div class="cart-items" data-cart-items></div>
+        <div class="cart-breakdown" data-cart-breakdown hidden></div>
         <div class="cart-summary">
           <span>Totaal</span>
           <strong data-cart-total>&euro;0,00</strong>
@@ -468,8 +469,16 @@
           <label>Postcode <input name="postalCode" autocomplete="postal-code" /></label>
           <label>Plaats <input name="city" autocomplete="address-level2" /></label>
           <label>Land <input name="country" autocomplete="country-name" value="Nederland" /></label>
-          <label>Kortingscode <input name="discountCode" autocomplete="off" /></label>
-          <label>Cadeauboncode <input name="giftCardCode" autocomplete="off" /></label>
+          <label>
+            Kortingscode
+            <input name="discountCode" autocomplete="off" data-discount-code />
+            <span class="code-feedback" data-discount-feedback></span>
+          </label>
+          <label>
+            Cadeauboncode
+            <input name="giftCardCode" autocomplete="off" data-gift-card-code />
+            <span class="code-feedback" data-gift-card-feedback></span>
+          </label>
           <label>Opmerking <textarea name="notes" rows="3"></textarea></label>
           <p class="form-note" data-order-message></p>
           <button class="primary-action" type="submit">Aanvraag versturen</button>

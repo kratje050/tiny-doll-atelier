@@ -61,6 +61,7 @@ const cartPanel = document.querySelector("[data-cart-panel]");
 const menuOverlay = document.querySelector("[data-menu-overlay]");
 const openMenuButton = document.querySelector("[data-open-menu]");
 const cartItems = document.querySelector("[data-cart-items]");
+const cartBreakdown = document.querySelector("[data-cart-breakdown]");
 const cartTotal = document.querySelector("[data-cart-total]");
 const cartCount = document.querySelector("[data-cart-count]");
 const checkoutForm = document.querySelector("[data-checkout-form]");
@@ -68,6 +69,8 @@ const checkoutToggle = document.querySelector("[data-show-checkout]");
 const giftWrapInput = document.querySelector("[data-gift-wrap]");
 const giftMessageInput = document.querySelector("[data-gift-message]");
 const orderMessage = document.querySelector("[data-order-message]");
+const discountFeedback = document.querySelector("[data-discount-feedback]");
+const giftCardFeedback = document.querySelector("[data-gift-card-feedback]");
 const giftCardOrderForm = document.querySelector("[data-gift-card-order-form]");
 const giftCardMessage = document.querySelector("[data-gift-card-message]");
 const productModal = document.querySelector("[data-product-modal]");
@@ -541,6 +544,132 @@ function cartEntries() {
     .filter((entry) => entry.product && entry.quantity > 0);
 }
 
+function checkoutCodeValue(name) {
+  return checkoutForm.elements[name]?.value.trim() || "";
+}
+
+function codeMatches(savedCode, enteredCode) {
+  return String(savedCode || "").toUpperCase() === String(enteredCode || "").toUpperCase();
+}
+
+function calculateCartPreview(entries, discountCode = "", giftCardCode = "") {
+  const itemSubtotal = entries.reduce((sum, entry) => sum + entry.product.price * entry.quantity, 0);
+  const giftWrapTotal = state.giftWrap && entries.length ? GIFT_WRAP_PRICE : 0;
+  const subtotal = Number((itemSubtotal + giftWrapTotal).toFixed(2));
+  const discounts = TinyStore.getDiscounts();
+  const giftCards = TinyStore.getGiftCards();
+  const today = new Date().toISOString().slice(0, 10);
+  const cleanDiscountCode = discountCode.trim();
+  const cleanGiftCardCode = giftCardCode.trim();
+  const discount = cleanDiscountCode
+    ? discounts.find((item) => item.active && codeMatches(item.code, cleanDiscountCode))
+    : null;
+  const rawDiscountAmount = discount
+    ? discount.type === "percent"
+      ? subtotal * (Number(discount.value) / 100)
+      : Number(discount.value)
+    : 0;
+  const discountAmount = Number(Math.min(subtotal, Math.max(0, rawDiscountAmount)).toFixed(2));
+  const afterDiscount = Number((subtotal - discountAmount).toFixed(2));
+  const giftCard = cleanGiftCardCode
+    ? giftCards.find((item) => item.active && codeMatches(item.code, cleanGiftCardCode))
+    : null;
+  const giftCardUsable = Boolean(
+    giftCard && Number(giftCard.balance) > 0 && (!giftCard.expiresAt || giftCard.expiresAt >= today),
+  );
+  const giftCardAmount = giftCardUsable
+    ? Number(Math.min(afterDiscount, Number(giftCard.balance)).toFixed(2))
+    : 0;
+  const freeShippingFrom = Number(discount?.freeShippingFrom || 0);
+  const freeShipping = Boolean(
+    discount && (discount.freeShipping || (freeShippingFrom > 0 && subtotal >= freeShippingFrom)),
+  );
+
+  return {
+    subtotal,
+    giftWrapTotal,
+    discount,
+    discountCode: discount?.code || cleanDiscountCode,
+    discountAmount,
+    discountStatus: !cleanDiscountCode ? "empty" : discount ? "valid" : "invalid",
+    freeShipping,
+    giftCard,
+    giftCardCode: giftCard?.code || cleanGiftCardCode,
+    giftCardAmount,
+    giftCardStatus: !cleanGiftCardCode ? "empty" : giftCardUsable ? "valid" : "invalid",
+    total: Number((afterDiscount - giftCardAmount).toFixed(2)),
+  };
+}
+
+function setCodeFeedback(element, status, message) {
+  if (!element) {
+    return;
+  }
+
+  element.textContent = message;
+  element.classList.toggle("is-valid", status === "valid");
+  element.classList.toggle("is-invalid", status === "invalid");
+}
+
+function renderCartBreakdown(preview, entries) {
+  cartBreakdown.hidden = !entries.length;
+
+  if (!entries.length) {
+    cartBreakdown.innerHTML = "";
+    setCodeFeedback(discountFeedback, "empty", "");
+    setCodeFeedback(giftCardFeedback, "empty", "");
+    return;
+  }
+
+  const rows = [`<div><span>Subtotaal</span><strong>${formatMoney(preview.subtotal)}</strong></div>`];
+
+  if (preview.discountStatus === "valid" && preview.discountAmount > 0) {
+    rows.push(
+      `<div class="discount-row"><span>Korting ${escapeHtml(preview.discount.code)}</span><strong>-${formatMoney(
+        preview.discountAmount,
+      )}</strong></div>`,
+    );
+  }
+
+  if (preview.giftCardStatus === "valid" && preview.giftCardAmount > 0) {
+    rows.push(
+      `<div class="discount-row"><span>Cadeaubon ${escapeHtml(preview.giftCard.code)}</span><strong>-${formatMoney(
+        preview.giftCardAmount,
+      )}</strong></div>`,
+    );
+  }
+
+  cartBreakdown.innerHTML = rows.join("");
+
+  if (preview.discountStatus === "valid") {
+    const messages = [
+      preview.discountAmount > 0
+        ? `Kortingscode geldig: ${formatMoney(preview.discountAmount)} korting toegepast.`
+        : "Kortingscode geldig.",
+    ];
+    if (preview.freeShipping) {
+      messages.push("Gratis verzending geldt voor deze aanvraag.");
+    }
+    setCodeFeedback(discountFeedback, "valid", messages.join(" "));
+  } else if (preview.discountStatus === "invalid") {
+    setCodeFeedback(discountFeedback, "invalid", "Deze kortingscode is niet geldig of staat uit.");
+  } else {
+    setCodeFeedback(discountFeedback, "empty", "");
+  }
+
+  if (preview.giftCardStatus === "valid") {
+    setCodeFeedback(
+      giftCardFeedback,
+      "valid",
+      `Cadeaubon geldig: ${formatMoney(preview.giftCardAmount)} wordt verrekend.`,
+    );
+  } else if (preview.giftCardStatus === "invalid") {
+    setCodeFeedback(giftCardFeedback, "invalid", "Deze cadeauboncode is niet geldig, verlopen of heeft geen saldo.");
+  } else {
+    setCodeFeedback(giftCardFeedback, "empty", "");
+  }
+}
+
 function renderCart() {
   const entries = cartEntries();
   cartItems.innerHTML = "";
@@ -584,11 +713,14 @@ function renderCart() {
     cartItems.append(giftLine);
   }
 
-  const subtotal = entries.reduce((sum, entry) => sum + entry.product.price * entry.quantity, 0);
-  const giftWrapTotal = state.giftWrap && entries.length ? GIFT_WRAP_PRICE : 0;
-  const total = subtotal + giftWrapTotal;
+  const preview = calculateCartPreview(
+    entries,
+    checkoutCodeValue("discountCode"),
+    checkoutCodeValue("giftCardCode"),
+  );
   const count = entries.reduce((sum, entry) => sum + entry.quantity, 0);
-  cartTotal.textContent = formatMoney(total);
+  renderCartBreakdown(preview, entries);
+  cartTotal.textContent = formatMoney(preview.total);
   cartCount.textContent = count;
   checkoutToggle.disabled = !count;
   checkoutToggle.hidden = state.checkoutVisible || !count;
@@ -767,6 +899,8 @@ giftWrapInput.addEventListener("change", (event) => {
 giftMessageInput.addEventListener("input", (event) => {
   state.giftMessage = event.target.value;
 });
+checkoutForm.elements.discountCode.addEventListener("input", renderCart);
+checkoutForm.elements.giftCardCode.addEventListener("input", renderCart);
 
 cartItems.addEventListener("click", (event) => {
   const button = event.target.closest("[data-cart-action]");
@@ -822,6 +956,18 @@ checkoutForm.addEventListener("submit", async (event) => {
   }
   state.giftWrap = formData.get("giftWrap") === "on";
   state.giftMessage = formData.get("giftMessage").trim();
+  const preview = calculateCartPreview(
+    entries,
+    formData.get("discountCode").trim(),
+    formData.get("giftCardCode").trim(),
+  );
+  renderCartBreakdown(preview, entries);
+
+  if (preview.discountStatus === "invalid" || preview.giftCardStatus === "invalid") {
+    orderMessage.textContent = "Controleer de kortingscode of cadeauboncode voordat je de aanvraag verstuurt.";
+    return;
+  }
+
   const orderItems = entries.map(({ product, quantity }) => ({
     productId: product.id,
     name: product.name,
