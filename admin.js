@@ -123,6 +123,8 @@ let cloudSaveTimer = null;
 let cloudSaveInFlight = null;
 let onlineEditingEnabled = false;
 let cloudStatusElement = null;
+let activeViewName = "dashboard";
+let viewRefreshCounter = 0;
 
 function setCloudStatus(message, isError = false) {
   if (!cloudStatusElement) {
@@ -437,11 +439,16 @@ function refreshData() {
   adminState.emailTemplates = TinyStore.getEmailTemplates();
 }
 
-function setView(viewName) {
+function setView(viewName, options = {}) {
+  activeViewName = viewName;
   views.forEach((view) => view.classList.toggle("is-active", view.dataset.view === viewName));
   navButtons.forEach((button) =>
     button.classList.toggle("is-active", button.dataset.viewButton === viewName),
   );
+
+  if (options.refresh !== false) {
+    refreshViewFromCloud(viewName);
+  }
 }
 
 function renderDashboard() {
@@ -1133,6 +1140,36 @@ async function refreshCloudDataQuietly() {
     }
   } catch {
     // De bestaande data blijft zichtbaar als online verversen tijdelijk niet lukt.
+  } finally {
+    cloudSyncing = false;
+  }
+}
+
+async function refreshViewFromCloud(viewName) {
+  if (!cloudReady || cloudSyncing || !onlineEditingEnabled) {
+    return;
+  }
+
+  if (cloudSaveTimer || cloudSaveInFlight) {
+    setCloudStatus("Wacht even: wijzigingen worden nog online opgeslagen...");
+    return;
+  }
+
+  const refreshId = ++viewRefreshCounter;
+  cloudSyncing = true;
+  setCloudStatus("Online gegevens ophalen...");
+
+  try {
+    const result = await TinyStore.loadCloudData({ admin: true });
+    if (refreshId !== viewRefreshCounter) {
+      return;
+    }
+
+    renderAll();
+    setView(viewName, { refresh: false });
+    setCloudStatus(result.changed ? "Online gegevens bijgewerkt." : "Je bekijkt de nieuwste online gegevens.");
+  } catch (error) {
+    setCloudStatus(error.message || "Online gegevens konden niet worden opgehaald.", true);
   } finally {
     cloudSyncing = false;
   }
@@ -1988,8 +2025,7 @@ async function initializeAdmin() {
 initializeAdmin();
 
 window.setInterval(() => {
-  const activeView = document.querySelector("[data-view].is-active")?.dataset.view;
-  if (activeView === "dashboard" || activeView === "orders") {
+  if (activeViewName === "dashboard" || activeViewName === "orders") {
     refreshCloudDataQuietly();
   }
 }, 60000);
