@@ -1,4 +1,4 @@
-const CACHE_NAME = "tiny-doll-atelier-v1";
+const CACHE_NAME = "tiny-doll-atelier-v2";
 const APP_SHELL = [
   "/",
   "/index.html",
@@ -42,6 +42,10 @@ self.addEventListener("fetch", (event) => {
 
   const requestUrl = new URL(event.request.url);
   if (requestUrl.origin !== self.location.origin) {
+    return;
+  }
+
+  if (requestUrl.pathname.startsWith("/.netlify/functions/")) {
     return;
   }
 

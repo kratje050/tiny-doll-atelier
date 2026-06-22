@@ -1,0 +1,9 @@
+{
+  "name": "tiny-doll-atelier",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Tiny Doll Atelier webshop",
+  "dependencies": {
+    "@netlify/blobs": "^8.1.0"
+  }
+}

@@ -519,6 +519,107 @@ const TinyStore = (() => {
     return getBackupData();
   }
 
+  function hasCollectionData(data) {
+    return Boolean(
+      data &&
+        typeof data === "object" &&
+        [
+          "products",
+          "categories",
+          "discounts",
+          "giftCards",
+          "orders",
+          "customers",
+          "visits",
+          "settings",
+          "reviews",
+          "emailTemplates",
+        ].some((key) => key in data),
+    );
+  }
+
+  function applyCloudData(data) {
+    if (!hasCollectionData(data)) {
+      return false;
+    }
+
+    importBackupData(data);
+    return true;
+  }
+
+  function mergeLocalProducts(localProducts) {
+    const currentProducts = getProducts();
+    const currentIds = new Set(currentProducts.map((product) => product.id));
+    const missingProducts = localProducts.filter((product) => product?.id && !currentIds.has(product.id));
+
+    if (!missingProducts.length) {
+      return false;
+    }
+
+    saveProducts([...missingProducts, ...currentProducts]);
+    return true;
+  }
+
+  async function loadCloudData(options = {}) {
+    if (typeof fetch !== "function") {
+      return { ok: false, changed: false, message: "Online opslag is niet beschikbaar." };
+    }
+
+    const admin = Boolean(options.admin);
+    const localProducts = getProducts();
+    const response = await fetch(`/.netlify/functions/data${admin ? "?private=1" : ""}`, {
+      method: "GET",
+      credentials: "same-origin",
+      cache: "no-store",
+    });
+    const result = await response.json().catch(() => ({}));
+
+    if (!response.ok || !result.ok) {
+      throw new Error(result.message || "Online gegevens konden niet worden opgehaald.");
+    }
+
+    if (!hasCollectionData(result.data)) {
+      if (admin) {
+        await saveCloudData();
+        return { ok: true, changed: false, seeded: true, message: "Lokale gegevens online gezet." };
+      }
+      return { ok: true, changed: false, message: "Geen online gegevens gevonden." };
+    }
+
+    const changed = applyCloudData(result.data);
+    const merged = admin ? mergeLocalProducts(localProducts) : false;
+    if (merged) {
+      await saveCloudData();
+    }
+
+    return {
+      ok: true,
+      changed: changed || merged,
+      merged,
+      updatedAt: result.updatedAt || "",
+    };
+  }
+
+  async function saveCloudData() {
+    if (typeof fetch !== "function") {
+      return { ok: false, message: "Online opslag is niet beschikbaar." };
+    }
+
+    const response = await fetch("/.netlify/functions/data", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ data: getBackupData() }),
+    });
+    const result = await response.json().catch(() => ({}));
+
+    if (!response.ok || !result.ok) {
+      throw new Error(result.message || "Wijzigingen konden niet online worden opgeslagen.");
+    }
+
+    return result;
+  }
+
   function recordVisit() {
     const today = new Date().toISOString().slice(0, 10);
     const sessionKey = `tiny-doll-visit-${today}`;
@@ -762,6 +863,9 @@ const TinyStore = (() => {
     saveEmailTemplates,
     getBackupData,
     importBackupData,
+    applyCloudData,
+    loadCloudData,
+    saveCloudData,
     recordVisit,
     createOrder,
     createGiftCardOrder,

@@ -987,11 +987,33 @@ document.addEventListener("keydown", (event) => {
   }
 });
 
-renderFilters();
-applySettings();
-renderReviews();
-renderProducts();
-renderCart();
+function refreshPublicState() {
+  state.products = TinyStore.getProducts().filter((product) => product.active);
+  state.categories = TinyStore.getCategories();
+  state.settings = TinyStore.getSettings();
+  state.reviews = TinyStore.getReviews();
+}
+
+function renderShop() {
+  renderFilters();
+  applySettings();
+  renderReviews();
+  renderProducts();
+  renderCart();
+}
+
+renderShop();
+
+TinyStore.loadCloudData()
+  .then((result) => {
+    if (!result.changed) {
+      return;
+    }
+
+    refreshPublicState();
+    renderShop();
+  })
+  .catch(() => {});
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {

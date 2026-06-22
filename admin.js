@@ -96,6 +96,59 @@ const uploadName = document.querySelector("[data-upload-name]");
 const extraUploadName = document.querySelector("[data-extra-upload-name]");
 const imagePreview = document.querySelector("[data-image-preview]");
 const extraImagePreview = document.querySelector("[data-extra-image-preview]");
+const cloudSaveMethods = [
+  "saveProducts",
+  "saveCategories",
+  "saveDiscounts",
+  "saveGiftCards",
+  "saveOrders",
+  "saveCustomers",
+  "saveVisits",
+  "saveSettings",
+  "saveReviews",
+  "saveEmailTemplates",
+];
+let cloudReady = false;
+let cloudSyncing = false;
+let cloudSaveTimer = null;
+let cloudStatusElement = null;
+
+function setCloudStatus(message, isError = false) {
+  if (!cloudStatusElement) {
+    cloudStatusElement = document.createElement("div");
+    cloudStatusElement.className = "cloud-status";
+    document.body.append(cloudStatusElement);
+  }
+
+  cloudStatusElement.textContent = message;
+  cloudStatusElement.classList.toggle("is-error", isError);
+}
+
+function queueCloudSave(successMessage = "Wijzigingen online opgeslagen.") {
+  if (!cloudReady || cloudSyncing) {
+    return;
+  }
+
+  clearTimeout(cloudSaveTimer);
+  setCloudStatus("Wijzigingen online opslaan...");
+  cloudSaveTimer = setTimeout(async () => {
+    try {
+      await TinyStore.saveCloudData();
+      setCloudStatus(successMessage);
+    } catch (error) {
+      setCloudStatus(error.message || "Online opslaan is mislukt.", true);
+    }
+  }, 350);
+}
+
+cloudSaveMethods.forEach((methodName) => {
+  const originalMethod = TinyStore[methodName];
+  TinyStore[methodName] = (...args) => {
+    const result = originalMethod(...args);
+    queueCloudSave();
+    return result;
+  };
+});
 
 logoutButton.addEventListener("click", () => {
   window.location.href = "/admin/logout";
@@ -1518,6 +1571,7 @@ document.querySelector("[data-import-backup]").addEventListener("change", (event
     try {
       TinyStore.importBackupData(JSON.parse(reader.result));
       document.querySelector("[data-backup-message]").textContent = "Back-up geimporteerd.";
+      queueCloudSave("Back-up online opgeslagen.");
       renderAll();
     } catch (error) {
       document.querySelector("[data-backup-message]").textContent = error.message;
@@ -1600,4 +1654,25 @@ document.addEventListener("change", (event) => {
   renderAll();
 });
 
-renderAll();
+async function initializeAdmin() {
+  setCloudStatus("Online gegevens laden...");
+  cloudSyncing = true;
+  try {
+    const result = await TinyStore.loadCloudData({ admin: true });
+    if (result.seeded) {
+      setCloudStatus("Lokale beheerdata online gezet.");
+    } else if (result.merged) {
+      setCloudStatus("Lokale en online producten samengevoegd.");
+    } else {
+      setCloudStatus("Online opslag actief.");
+    }
+  } catch (error) {
+    setCloudStatus(error.message || "Online opslag kon niet worden geladen.", true);
+  } finally {
+    cloudSyncing = false;
+    cloudReady = true;
+    renderAll();
+  }
+}
+
+initializeAdmin();
