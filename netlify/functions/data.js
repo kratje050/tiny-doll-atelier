@@ -18,6 +18,21 @@ const PRIVATE_KEYS = [
 ];
 const PUBLIC_KEYS = ["products", "categories", "discounts", "settings", "reviews"];
 
+function getBlobConfig() {
+  const siteID = process.env.NETLIFY_BLOBS_SITE_ID || "";
+  const token = process.env.NETLIFY_BLOBS_TOKEN || "";
+  const missing = [];
+
+  if (!siteID) {
+    missing.push("NETLIFY_BLOBS_SITE_ID");
+  }
+  if (!token) {
+    missing.push("NETLIFY_BLOBS_TOKEN");
+  }
+
+  return { siteID, token, missing };
+}
+
 function json(statusCode, body) {
   return {
     statusCode,
@@ -75,23 +90,61 @@ function hasValidSession(event) {
 }
 
 async function getBlobStore() {
-  const { getStore } = await import("@netlify/blobs");
-  const siteID =
-    process.env.NETLIFY_BLOBS_SITE_ID ||
-    process.env.NETLIFY_SITE_ID ||
-    process.env.SITE_ID ||
-    "";
-  const token =
-    process.env.NETLIFY_BLOBS_TOKEN ||
-    process.env.NETLIFY_AUTH_TOKEN ||
-    process.env.NETLIFY_API_TOKEN ||
-    "";
-
-  if (siteID && token) {
-    return getStore(STORE_NAME, { siteID, token });
+  const config = getBlobConfig();
+  if (config.missing.length) {
+    const error = new Error(`Online opslag mist: ${config.missing.join(", ")}.`);
+    error.code = "BLOBS_CONFIG_MISSING";
+    error.missing = config.missing;
+    throw error;
   }
 
-  return getStore(STORE_NAME);
+  const { getStore } = await import("@netlify/blobs");
+  return getStore({
+    name: STORE_NAME,
+    siteID: config.siteID,
+    token: config.token,
+  });
+}
+
+async function getStorageStatus() {
+  const config = getBlobConfig();
+  if (config.missing.length) {
+    return {
+      ok: true,
+      blobsConfigured: false,
+      storageMode: "local",
+      writable: false,
+      missing: config.missing,
+      message: `Online opslag mist: ${config.missing.join(", ")}.`,
+    };
+  }
+
+  try {
+    const store = await getBlobStore();
+    const status = {
+      checkedAt: new Date().toISOString(),
+      ok: true,
+    };
+    await store.setJSON("storage-status", status);
+    const savedStatus = await store.get("storage-status", { type: "json" });
+
+    return {
+      ok: true,
+      blobsConfigured: true,
+      storageMode: "online",
+      writable: Boolean(savedStatus?.ok),
+      message: "Online opslag is gekoppeld. Winkeldata wordt centraal opgeslagen.",
+    };
+  } catch {
+    return {
+      ok: true,
+      blobsConfigured: true,
+      storageMode: "error",
+      writable: false,
+      message:
+        "Online opslag is ingesteld, maar schrijven naar Netlify Blobs lukt nog niet. Controleer tokenrechten.",
+    };
+  }
 }
 
 function pickData(data, keys) {
@@ -137,14 +190,24 @@ function sanitizeIncomingData(value) {
 
 exports.handler = async (event) => {
   try {
-    const store = await getBlobStore();
-
     if (event.httpMethod === "GET") {
-      const privateRequest = new URLSearchParams(event.rawQuery || "").get("private") === "1";
+      const params = new URLSearchParams(event.rawQuery || "");
+      const privateRequest = params.get("private") === "1";
+      const statusRequest = params.get("status") === "1";
+
       if (privateRequest && !hasValidSession(event)) {
         return json(401, { ok: false, message: "Log opnieuw in bij beheer." });
       }
 
+      if (statusRequest) {
+        if (!hasValidSession(event)) {
+          return json(401, { ok: false, message: "Log opnieuw in bij beheer." });
+        }
+
+        return json(200, await getStorageStatus());
+      }
+
+      const store = await getBlobStore();
       const data = (await store.get(DATA_KEY, { type: "json" })) || {};
       return json(200, {
         ok: true,
@@ -158,6 +221,7 @@ exports.handler = async (event) => {
         return json(401, { ok: false, message: "Log opnieuw in bij beheer om wijzigingen op te slaan." });
       }
 
+      const store = await getBlobStore();
       const payload = JSON.parse(event.body || "{}");
       const incoming = sanitizeIncomingData(payload.data);
       const current = (await store.get(DATA_KEY, { type: "json" })) || {};
@@ -173,13 +237,14 @@ exports.handler = async (event) => {
 
     return json(405, { ok: false, message: "Deze actie is niet toegestaan." });
   } catch (error) {
-    const needsBlobConfig = /siteID|token|Netlify Blobs|environment has not been configured/i.test(
-      error.message || "",
-    );
+    const missing = error.code === "BLOBS_CONFIG_MISSING" ? error.missing || [] : [];
     return json(500, {
       ok: false,
-      message: needsBlobConfig
-        ? "Online opslag is nog niet gekoppeld. Voeg NETLIFY_BLOBS_SITE_ID en NETLIFY_BLOBS_TOKEN toe bij de omgevingsvariabelen in Netlify."
+      blobsConfigured: false,
+      storageMode: "local",
+      missing,
+      message: missing.length
+        ? `Online opslag mist: ${missing.join(", ")}.`
         : error.message || "Online opslag kon niet worden bereikt.",
     });
   }

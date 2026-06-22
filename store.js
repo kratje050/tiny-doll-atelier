@@ -600,6 +600,31 @@ const TinyStore = (() => {
     };
   }
 
+  async function getCloudStatus() {
+    if (typeof fetch !== "function") {
+      return {
+        ok: false,
+        blobsConfigured: false,
+        storageMode: "local",
+        writable: false,
+        message: "Online opslag is niet beschikbaar.",
+      };
+    }
+
+    const response = await fetch("/.netlify/functions/data?status=1", {
+      method: "GET",
+      credentials: "same-origin",
+      cache: "no-store",
+    });
+    const result = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      throw new Error(result.message || "Online opslagstatus kon niet worden opgehaald.");
+    }
+
+    return result;
+  }
+
   async function saveCloudData() {
     if (typeof fetch !== "function") {
       return { ok: false, message: "Online opslag is niet beschikbaar." };
@@ -865,6 +890,7 @@ const TinyStore = (() => {
     importBackupData,
     applyCloudData,
     loadCloudData,
+    getCloudStatus,
     saveCloudData,
     recordVisit,
     createOrder,

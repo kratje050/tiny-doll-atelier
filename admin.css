@@ -50,6 +50,11 @@ body {
   color: #8f2f24;
 }
 
+.cloud-status.is-ok {
+  border-color: rgba(95, 123, 77, 0.35);
+  color: var(--ok);
+}
+
 body.admin-locked {
   display: block;
   overflow: hidden;

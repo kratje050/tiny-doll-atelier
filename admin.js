@@ -122,6 +122,7 @@ function setCloudStatus(message, isError = false) {
 
   cloudStatusElement.textContent = message;
   cloudStatusElement.classList.toggle("is-error", isError);
+  cloudStatusElement.classList.toggle("is-ok", !isError);
 }
 
 function queueCloudSave(successMessage = "Wijzigingen online opgeslagen.") {
@@ -1655,16 +1656,28 @@ document.addEventListener("change", (event) => {
 });
 
 async function initializeAdmin() {
-  setCloudStatus("Online gegevens laden...");
+  setCloudStatus("Online opslag controleren...");
   cloudSyncing = true;
   try {
+    const status = await TinyStore.getCloudStatus();
+    if (!status.blobsConfigured) {
+      throw new Error(status.message || "Online opslag is nog niet gekoppeld.");
+    }
+    if (!status.writable) {
+      throw new Error(
+        status.message ||
+          "Online opslag is ingesteld, maar schrijven naar Netlify Blobs lukt nog niet. Controleer tokenrechten.",
+      );
+    }
+
+    setCloudStatus(status.message || "Online opslag is gekoppeld. Winkeldata wordt centraal opgeslagen.");
     const result = await TinyStore.loadCloudData({ admin: true });
     if (result.seeded) {
       setCloudStatus("Lokale beheerdata online gezet.");
     } else if (result.merged) {
       setCloudStatus("Lokale en online producten samengevoegd.");
     } else {
-      setCloudStatus("Online opslag actief.");
+      setCloudStatus("Online opslag is gekoppeld. Winkeldata wordt centraal opgeslagen.");
     }
   } catch (error) {
     setCloudStatus(error.message || "Online opslag kon niet worden geladen.", true);
