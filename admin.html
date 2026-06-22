@@ -220,6 +220,16 @@
             <label>Ontvanger <input name="recipient" /></label>
             <label>E-mail ontvanger <input name="email" type="email" /></label>
             <label>Geldig tot <input name="expiresAt" type="date" /></label>
+            <label>
+              Betaalstatus
+              <select name="paymentStatus">
+                <option>Aangevraagd</option>
+                <option>Wacht op betaling</option>
+                <option>Betaald</option>
+                <option>Cadeaubon verstuurd</option>
+                <option>Geannuleerd</option>
+              </select>
+            </label>
             <label class="check-row"><input name="active" type="checkbox" checked /> Actief</label>
             <label class="check-row"><input name="sendEmail" type="checkbox" checked /> Mail cadeaubon naar ontvanger na opslaan</label>
             <p class="form-note" data-gift-card-message></p>
@@ -338,6 +348,7 @@
               <option>Nieuw</option>
               <option>Afgestemd</option>
               <option>In afwachting van betaling</option>
+              <option>Wacht op betaling</option>
               <option>Betaald</option>
               <option>In productie</option>
               <option>Verzonden</option>

@@ -1,8 +1,7 @@
-const CACHE_NAME = "tiny-doll-atelier-v3";
+const CACHE_NAME = "tiny-doll-atelier-v4";
 const APP_SHELL = [
   "/",
   "/index.html",
-  "/bedankt.html",
   "/styles.css",
   "/script.js",
   "/store.js",

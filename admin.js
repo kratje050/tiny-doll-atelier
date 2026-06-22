@@ -21,27 +21,23 @@ const adminState = {
 const money = TinyStore.formatMoney;
 const orderStatuses = [
   "Nieuw",
-  "Wacht op betaling",
-  "Betaald",
-  "Mislukt",
-  "Geannuleerd",
-  "Verlopen",
   "Afgestemd",
   "In afwachting van betaling",
+  "Wacht op betaling",
+  "Betaald",
   "In productie",
   "Verzonden",
   "Afgerond",
+  "Geannuleerd",
 ];
 const paymentStatuses = [
-  "Nog niet betaald",
-  "pending_payment",
-  "paid",
-  "failed",
-  "canceled",
-  "expired",
-  "Betaalverzoek gestuurd",
+  "Wacht op bevestiging",
+  "Betaalinstructie verstuurd",
+  "Wacht op betaling",
   "Betaald",
-  "Terugbetaald",
+  "In productie",
+  "Verzonden",
+  "Geannuleerd",
 ];
 const MAX_PRODUCT_IMAGE_SIZE = 1400;
 const PRODUCT_IMAGE_QUALITY = 0.82;
@@ -222,6 +218,25 @@ function buildCustomerMail(order) {
     .replaceAll("{waarde}", money(order.giftCardAmount || 0));
 }
 
+function orderSummaryText(order) {
+  return order.items
+    .map((item) => `- ${item.quantity}x ${item.name} (${money(item.price)} per stuk)`)
+    .join("\n");
+}
+
+async function sendOrderPaymentMail(order, type) {
+  await sendEmail({
+    type,
+    orderId: order.id,
+    name: order.customer.name,
+    email: order.customer.email,
+    phone: order.customer.phone || "",
+    total: money(order.total),
+    orderSummary: orderSummaryText(order),
+    message: order.notes || "-",
+  });
+}
+
 async function sendEmail(payload) {
   const response = await fetch("/.netlify/functions/send-email", {
     method: "POST",
@@ -303,7 +318,7 @@ function printOrder(orderId, type) {
         <strong>E-mail:</strong> ${escapeHtml(order.customer.email)}<br>
         <strong>Telefoon:</strong> ${escapeHtml(order.customer.phone || "-")}</p>
         <p><strong>Status:</strong> ${escapeHtml(order.status)}<br>
-        <strong>Betaalstatus:</strong> ${escapeHtml(order.paymentStatus || "Nog niet betaald")}<br>
+        <strong>Betaalstatus:</strong> ${escapeHtml(order.paymentStatus || "Wacht op bevestiging")}<br>
         <strong>Verzending:</strong> ${escapeHtml(order.shippingMethod || "-")}<br>
         <strong>Track & trace:</strong> ${escapeHtml(order.trackTrace || "-")}</p>
         <table>
@@ -573,7 +588,9 @@ function renderGiftCards() {
   document.querySelector("[data-gift-card-table]").innerHTML = adminState.giftCards
     .map((giftCard) => {
       const isExpired = giftCard.expiresAt && giftCard.expiresAt < new Date().toISOString().slice(0, 10);
-      const status = !giftCard.active ? "Uit" : isExpired ? "Verlopen" : giftCard.balance <= 0 ? "Gebruikt" : "Actief";
+      const status =
+        giftCard.paymentStatus ||
+        (!giftCard.active ? "Uit" : isExpired ? "Verlopen" : giftCard.balance <= 0 ? "Gebruikt" : "Actief");
       return `
         <tr>
           <td><strong>${giftCard.code}</strong></td>
@@ -728,7 +745,7 @@ function renderOrders() {
   document.querySelector("[data-order-table]").innerHTML = orders
     .map(
       (order) => {
-        const paymentStatus = order.paymentStatus || "Nog niet betaald";
+        const paymentStatus = order.paymentStatus || "Wacht op bevestiging";
         return `
         <tr>
           <td>
@@ -780,7 +797,7 @@ function renderOrderDetail(orderId) {
   const shippingText = order.freeShipping
     ? `Gratis via ${order.discountCode || "kortingscode"}`
     : order.shippingMethod || "Wordt afgestemd";
-  const paymentStatus = order.paymentStatus || "Nog niet betaald";
+  const paymentStatus = order.paymentStatus || "Wacht op bevestiging";
   const history = order.statusHistory || [];
   detail.classList.add("is-open");
   detail.innerHTML = `
@@ -815,9 +832,7 @@ function renderOrderDetail(orderId) {
         <dl class="detail-list">
           <div><dt>Status</dt><dd>${order.status}</dd></div>
           <div><dt>Betaalstatus</dt><dd>${paymentStatus}</dd></div>
-          <div><dt>Mollie payment id</dt><dd>${order.molliePaymentId || "-"}</dd></div>
           <div><dt>Betaaldatum</dt><dd>${order.paidAt ? new Date(order.paidAt).toLocaleString("nl-NL") : "-"}</dd></div>
-          <div><dt>Betaalmethode</dt><dd>${order.paymentMethod || "-"}</dd></div>
           <div><dt>Productregels</dt><dd>${order.items.length}</dd></div>
           <div><dt>Aantal items</dt><dd>${itemCount}</dd></div>
           <div><dt>Volgende stap</dt><dd>${order.status === "Nieuw" ? "Stem levertijd en betaling af." : "Werk status, betaling en verzending bij."}</dd></div>
@@ -850,6 +865,11 @@ function renderOrderDetail(orderId) {
         )}</textarea></label>
       </div>
       <button class="primary-button" type="button" data-save-order-admin="${order.id}">Ordergegevens opslaan</button>
+      <div class="manual-payment-actions">
+        <button class="row-button" type="button" data-send-payment-instructions="${order.id}">Betaalinstructie versturen</button>
+        <button class="row-button" type="button" data-mark-paid="${order.id}">Markeer als betaald</button>
+      </div>
+      <p class="form-note">${order.paymentInstructionsSentAt ? `Betaalinstructie verstuurd op ${new Date(order.paymentInstructionsSentAt).toLocaleString("nl-NL")}.` : "Betaalinformatie volgt na bevestiging."}</p>
     </section>
 
     <section class="detail-card order-products-card">
@@ -1121,7 +1141,7 @@ productForm.elements.extraImages.addEventListener("input", () => {
   setExtraImagePreview();
 });
 
-document.addEventListener("click", (event) => {
+document.addEventListener("click", async (event) => {
   const editProduct = event.target.closest("[data-edit-product]");
   const deleteProduct = event.target.closest("[data-delete-product]");
   const deleteCategory = event.target.closest("[data-delete-category]");
@@ -1138,6 +1158,8 @@ document.addEventListener("click", (event) => {
   const deleteCustomer = event.target.closest("[data-delete-customer]");
   const cancelCustomer = event.target.closest("[data-cancel-customer]");
   const saveOrderAdmin = event.target.closest("[data-save-order-admin]");
+  const sendPaymentInstructions = event.target.closest("[data-send-payment-instructions]");
+  const markPaid = event.target.closest("[data-mark-paid]");
   const printOrderButton = event.target.closest("[data-print-order]");
   const printPackingSlipButton = event.target.closest("[data-print-packing-slip]");
   const exportButton = event.target.closest("[data-export-key]");
@@ -1228,6 +1250,7 @@ document.addEventListener("click", (event) => {
     giftCardForm.elements.recipient.value = giftCard.recipient || "";
     giftCardForm.elements.email.value = giftCard.email || "";
     giftCardForm.elements.expiresAt.value = giftCard.expiresAt || "";
+    giftCardForm.elements.paymentStatus.value = giftCard.paymentStatus || "Betaald";
     giftCardForm.elements.active.checked = giftCard.active;
     giftCardForm.elements.sendEmail.checked = false;
     document.querySelector("[data-gift-card-message]").textContent =
@@ -1332,6 +1355,80 @@ document.addEventListener("click", (event) => {
     renderAll();
   }
 
+  if (sendPaymentInstructions) {
+    const orderId = sendPaymentInstructions.dataset.sendPaymentInstructions;
+    const order = adminState.orders.find((item) => item.id === orderId);
+    if (!order) {
+      return;
+    }
+
+    sendPaymentInstructions.disabled = true;
+    sendPaymentInstructions.textContent = "Versturen...";
+    try {
+      await sendOrderPaymentMail(order, "payment-instructions");
+      const now = new Date().toISOString();
+      TinyStore.saveOrders(
+        adminState.orders.map((item) =>
+          item.id === orderId
+            ? appendStatusHistory(
+                {
+                  ...item,
+                  paymentStatus: "Wacht op betaling",
+                  paymentInstructionsSentAt: now,
+                  status: item.status === "Nieuw" ? "In afwachting van betaling" : item.status,
+                },
+                "payment",
+                item.paymentStatus || "Wacht op bevestiging",
+                "Wacht op betaling",
+              )
+            : item,
+        ),
+      );
+      renderAll();
+    } catch (error) {
+      sendPaymentInstructions.disabled = false;
+      sendPaymentInstructions.textContent = "Betaalinstructie versturen";
+      alert(error.message);
+    }
+  }
+
+  if (markPaid) {
+    const orderId = markPaid.dataset.markPaid;
+    const order = adminState.orders.find((item) => item.id === orderId);
+    if (!order) {
+      return;
+    }
+
+    markPaid.disabled = true;
+    markPaid.textContent = "Opslaan...";
+    try {
+      await sendOrderPaymentMail(order, "payment-received");
+      const now = new Date().toISOString();
+      TinyStore.saveOrders(
+        adminState.orders.map((item) =>
+          item.id === orderId
+            ? appendStatusHistory(
+                {
+                  ...item,
+                  paymentStatus: "Betaald",
+                  paidAt: now,
+                  status: item.status === "Nieuw" || item.status === "In afwachting van betaling" ? "Betaald" : item.status,
+                },
+                "payment",
+                item.paymentStatus || "Wacht op bevestiging",
+                "Betaald",
+              )
+            : item,
+        ),
+      );
+      renderAll();
+    } catch (error) {
+      markPaid.disabled = false;
+      markPaid.textContent = "Markeer als betaald";
+      alert(error.message);
+    }
+  }
+
   if (printOrderButton) {
     printOrder(printOrderButton.dataset.printOrder, "order");
   }
@@ -1397,6 +1494,7 @@ giftCardForm.addEventListener("submit", async (event) => {
     recipient: data.get("recipient").trim(),
     email: data.get("email").trim(),
     expiresAt: data.get("expiresAt"),
+    paymentStatus: data.get("paymentStatus") || "Aangevraagd",
     active: data.get("active") === "on",
     createdAt: existingGiftCard?.createdAt || new Date().toISOString(),
   };
@@ -1421,6 +1519,11 @@ giftCardForm.addEventListener("submit", async (event) => {
         balance: money(giftCard.balance),
         expiresAt: giftCard.expiresAt || "Geen einddatum",
       });
+      giftCard.paymentStatus = "Cadeaubon verstuurd";
+      TinyStore.saveGiftCards([
+        giftCard,
+        ...adminState.giftCards.filter((item) => item.id !== giftCard.id && item.id !== existingId),
+      ]);
       giftCardMessage.textContent = `Cadeaubon opgeslagen en gemaild naar ${giftCard.email}.`;
     } else if (sendGiftCardEmail && !giftCard.email) {
       giftCardMessage.textContent = "Cadeaubon opgeslagen. Er is geen mail verstuurd omdat het e-mailadres ontbreekt.";
@@ -1432,6 +1535,7 @@ giftCardForm.addEventListener("submit", async (event) => {
   } finally {
     giftCardForm.reset();
     giftCardForm.elements.active.checked = true;
+    giftCardForm.elements.paymentStatus.value = "Aangevraagd";
     giftCardForm.elements.sendEmail.checked = true;
     document.querySelector("[data-gift-card-form-title]").textContent = "Cadeaubon aanmaken";
     giftCardForm.querySelector("[data-cancel-gift-card]").hidden = true;
@@ -1444,6 +1548,7 @@ giftCardForm.querySelector("[data-cancel-gift-card]").addEventListener("click", 
   giftCardForm.reset();
   giftCardForm.elements.id.value = "";
   giftCardForm.elements.active.checked = true;
+  giftCardForm.elements.paymentStatus.value = "Aangevraagd";
   giftCardForm.elements.sendEmail.checked = true;
   document.querySelector("[data-gift-card-message]").textContent = "";
   document.querySelector("[data-gift-card-form-title]").textContent = "Cadeaubon aanmaken";
@@ -1665,7 +1770,7 @@ document.addEventListener("change", (event) => {
           ? appendStatusHistory(
               { ...order, paymentStatus: paymentSelect.value },
               "payment",
-              order.paymentStatus || "Nog niet betaald",
+              order.paymentStatus || "Wacht op bevestiging",
               paymentSelect.value,
             )
           : order,

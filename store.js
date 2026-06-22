@@ -183,8 +183,8 @@ const TinyStore = (() => {
     customCard6Title: "Verwachte levertijd",
     customCard6Text: "Meestal 3 tot 10 werkdagen, afhankelijk van stof en wensen",
     orderRequestText:
-      "Je plaatst eerst een bestelverzoek. Daarna ontvang je van ons een persoonlijke bevestiging met levertijd, eventuele keuzes en betaalinformatie. Je bestelling is pas definitief nadat alles is afgestemd en betaald.",
-    orderSuccessText: "Bedankt, je bestelverzoek is verzonden. We nemen zo snel mogelijk contact met je op.",
+      "Je plaatst eerst een aanvraag. Daarna controleren we voorraad, maatwerk en levertijd. Je ontvangt van ons persoonlijk de betaalinformatie. Je bestelling is pas definitief nadat alles is bevestigd en betaald.",
+    orderSuccessText: "Bedankt, je aanvraag is verzonden. Je ontvangt persoonlijk de betaalinformatie na bevestiging.",
     contactText: "Heb je een vraag over een setje, maatwerk of een bestelling? Stuur gerust een bericht.",
   };
 
@@ -251,9 +251,9 @@ const TinyStore = (() => {
     },
     {
       id: "payment-request",
-      title: "Betaalverzoek",
+      title: "Betaalinstructie",
       subject: "Betaalinformatie voor {bestelnummer}",
-      body: "Hallo {naam},\n\nJe bestelling {bestelnummer} is afgestemd. Het totaalbedrag is {totaal}. Na betaling ga ik ermee aan de slag.\n\nLiefs,\nTiny Doll Atelier",
+      body: "Hallo {naam},\n\nJe aanvraag {bestelnummer} is gecontroleerd. Het totaalbedrag is {totaal}. Je ontvangt de betaalgegevens persoonlijk van ons. De bestelling is pas definitief na betaling.\n\nLiefs,\nTiny Doll Atelier",
     },
     {
       id: "shipped",
@@ -732,7 +732,7 @@ const TinyStore = (() => {
       )}`,
       createdAt: new Date().toISOString(),
       status: "Nieuw",
-      paymentStatus: "Nog niet betaald",
+      paymentStatus: "Wacht op bevestiging",
       customer,
       items,
       discountCode: discount ? discount.code : "",
@@ -752,6 +752,12 @@ const TinyStore = (() => {
           type: "order",
           from: "",
           to: "Nieuw",
+        },
+        {
+          at: new Date().toISOString(),
+          type: "payment",
+          from: "",
+          to: "Wacht op bevestiging",
         },
       ],
     };
@@ -785,7 +791,7 @@ const TinyStore = (() => {
         },
       ],
       notes: [
-        "Cadeaubonaanvraag: code pas aanmaken na betaling.",
+        "Cadeaubonaanvraag: code pas aanmaken na handmatige betaling.",
         `Cadeaubon voor: ${recipient || "-"}`,
         `E-mail ontvanger: ${recipientEmail || customer.email}`,
         `Bericht: ${message || "-"}`,

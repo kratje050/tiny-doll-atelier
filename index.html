@@ -159,13 +159,13 @@
           <p class="eyebrow">Cadeaubon</p>
           <h2 id="cadeaubon-title">Geef atelier-tegoed cadeau</h2>
           <p>
-            Bestel een cadeaubon voor poppenkleding en betaal veilig via Mollie. De
-            cadeauboncode wordt pas na succesvolle betaling vanuit beheer aangemaakt en per e-mail
-            verstuurd.
+            Vraag een cadeaubon voor poppenkleding aan. Na je aanvraag ontvang je eerst een
+            persoonlijke bevestiging met betaalinformatie. De cadeauboncode wordt pas na betaling
+            aangemaakt en per e-mail verstuurd.
           </p>
           <ol class="step-list">
-            <li>Je kiest een bedrag</li>
-            <li>Je betaalt veilig via Mollie</li>
+            <li>Je vraagt een cadeaubon aan</li>
+            <li>Je ontvangt persoonlijk betaalinformatie</li>
             <li>Na betaling maken wij de cadeauboncode aan</li>
             <li>De ontvanger krijgt de cadeaubon per e-mail</li>
           </ol>
@@ -186,25 +186,28 @@
           <label>Voor wie is de bon? <input name="recipient" /></label>
           <label>E-mail ontvanger <input name="recipientEmail" type="email" autocomplete="email" /></label>
           <label>Bericht <textarea name="message" rows="3"></textarea></label>
-          <p class="checkout-note">Je wordt doorgestuurd naar een veilige betaalpagina van Mollie.</p>
+          <p class="checkout-note">
+            Tiny Doll Atelier werkt met persoonlijke aanvragen. Na controle ontvang je de
+            betaalgegevens per e-mail.
+          </p>
           <p class="form-note" data-gift-card-message></p>
-          <button class="primary-action" type="submit">Cadeaubon bestellen en betalen</button>
+          <button class="primary-action" type="submit">Cadeaubon aanvragen</button>
         </form>
       </section>
 
       <section class="order-band" id="bestellen" aria-labelledby="bestellen-title">
         <div>
           <p class="eyebrow">Bestellen</p>
-          <h2 id="bestellen-title">Stuur een bestelverzoek</h2>
+          <h2 id="bestellen-title">Stuur een aanvraag</h2>
           <p data-order-request-text>
-            Je plaatst eerst een bestelverzoek. Daarna ontvang je van ons een persoonlijke
-            bevestiging met levertijd, eventuele keuzes en betaalinformatie. Je bestelling is pas
-            definitief nadat alles is afgestemd en betaald.
+            Je plaatst eerst een aanvraag. Daarna controleren we voorraad, maatwerk en levertijd.
+            Je ontvangt van ons persoonlijk de betaalinformatie. Je bestelling is pas definitief
+            nadat alles is bevestigd en betaald.
           </p>
           <ol class="step-list">
             <li>Kies je favoriete setje</li>
-            <li>Voeg het toe aan je winkelmandje</li>
-            <li>Verstuur je bestelverzoek</li>
+            <li>Voeg het toe aan je aanvraag</li>
+            <li>Verstuur je aanvraag</li>
             <li>Je ontvangt van ons levertijd, keuzes en betaalinformatie</li>
             <li>Na betaling maken of verzenden we je bestelling</li>
           </ol>
@@ -437,14 +440,19 @@
         <form class="checkout-form" data-checkout-form hidden>
           <label class="honeypot-field">Laat dit veld leeg <input name="website" autocomplete="off" tabindex="-1" /></label>
           <p class="checkout-note">
-            Je plaatst eerst een bestelverzoek. Daarna ontvang je van ons een persoonlijke
-            bevestiging met levertijd, eventuele keuzes en betaalinformatie. Je bestelling is pas
-            definitief nadat alles is afgestemd en betaald.
+            Tiny Doll Atelier werkt met persoonlijke aanvragen. Omdat veel producten handgemaakt of
+            op aanvraag worden samengesteld, ontvang je eerst een bevestiging met levertijd en
+            betaalinformatie.
           </p>
-          <p class="checkout-note">
-            Standaardproducten die op voorraad zijn kun je direct veilig betalen via Mollie. Bij
-            maatwerk of op-aanvraag producten blijft dit eerst een aanvraag.
-          </p>
+          <div class="payment-info-box">
+            <strong>Betaalmogelijkheden na bevestiging</strong>
+            <ul>
+              <li>Bankoverschrijving</li>
+              <li>Betaalverzoek</li>
+              <li>Tikkie</li>
+            </ul>
+            <p>Na controle van je aanvraag ontvang je de betaalgegevens per e-mail.</p>
+          </div>
           <label class="check-row">
             <input name="giftWrap" type="checkbox" data-gift-wrap />
             Cadeauverpakking toevoegen voor &euro;2,95
@@ -464,9 +472,7 @@
           <label>Cadeauboncode <input name="giftCardCode" autocomplete="off" /></label>
           <label>Opmerking <textarea name="notes" rows="3"></textarea></label>
           <p class="form-note" data-order-message></p>
-          <button class="primary-action" type="button" data-start-payment>Afrekenen en betalen</button>
-          <p class="checkout-note">Je wordt doorgestuurd naar een veilige betaalpagina van Mollie. Na betaling ontvang je een bevestiging per e-mail.</p>
-          <button class="primary-action" type="submit">Bestelverzoek maken</button>
+          <button class="primary-action" type="submit">Aanvraag versturen</button>
         </form>
       </div>
     </aside>
@@ -487,7 +493,7 @@
             Wasadvies: was met de hand of op een fijnwasprogramma. Niet in de droger. Laat liggend
             drogen voor het mooiste resultaat.
           </p>
-          <button class="primary-action" type="button" data-modal-add>Toevoegen aan winkelmandje</button>
+          <button class="primary-action" type="button" data-modal-add>Toevoegen aan aanvraag</button>
         </div>
       </article>
     </aside>
@@ -515,7 +521,7 @@
           </div>
           <div class="product-actions">
             <button class="secondary-action view-button" type="button">Bekijk product</button>
-            <button class="add-button" type="button">Toevoegen aan winkelmandje</button>
+            <button class="add-button" type="button">Toevoegen aan aanvraag</button>
           </div>
         </div>
       </article>

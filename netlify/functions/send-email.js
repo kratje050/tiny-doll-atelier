@@ -1,7 +1,15 @@
 const tls = require("node:tls");
 const crypto = require("node:crypto");
 
-const allowedTypes = new Set(["order", "gift-card", "gift-card-issued", "payment-paid", "return", "contact"]);
+const allowedTypes = new Set([
+  "order",
+  "gift-card",
+  "gift-card-issued",
+  "payment-instructions",
+  "payment-received",
+  "return",
+  "contact",
+]);
 const rateLimits = new Map();
 const ADMIN_COOKIE_NAME = "tiny_doll_admin_session";
 const ADMIN_SESSION_MAX_AGE = 60 * 60 * 2;
@@ -23,13 +31,21 @@ const templates = {
     adminBody:
       "Cadeaubon verzonden.\n\nCode: {cadeauboncode}\nOntvanger: {naam}\nE-mail ontvanger: {email}\nWaarde: {bedrag}\nResterend saldo: {saldo}\nGeldig tot: {geldigTot}\nDatum: {datum}",
   },
-  "payment-paid": {
+  "payment-instructions": {
+    customerSubject: "Betaalinformatie voor {ordernummer}",
+    adminSubject: "Betaalinstructie verstuurd voor {ordernummer}",
+    customerBody:
+      "Hallo {naam},\n\nBedankt voor je aanvraag. We hebben je bestelling gecontroleerd.\n\nOrdernummer: {ordernummer}\n\n{bestelling}\n\nTotaalbedrag: {totaal}\n\nJe bestelling is pas definitief nadat alles is bevestigd en betaald.\n\nBetaalmogelijkheden na bevestiging:\n- Bankoverschrijving\n- Betaalverzoek\n- Tikkie\n\nJe ontvangt de betaalgegevens persoonlijk van ons.\n\nLiefs,\n{webshopNaam}",
+    adminBody:
+      "Betaalinstructie verstuurd.\n\nOrdernummer: {ordernummer}\nKlantnaam: {naam}\nE-mail: {email}\nTotaalbedrag: {totaal}\nDatum: {datum}",
+  },
+  "payment-received": {
     customerSubject: "We hebben je betaling ontvangen",
-    adminSubject: "Nieuwe betaalde bestelling ontvangen",
+    adminSubject: "Bestelling gemarkeerd als betaald",
     customerBody:
       "Hallo {naam},\n\nBedankt voor je bestelling. We hebben je betaling ontvangen.\n\nOrdernummer: {ordernummer}\n\n{bestelling}\n\nTotaalbedrag: {totaal}\n\nWe gaan met je bestelling aan de slag. Bij maatwerk of persoonlijke details stemmen we dit nog persoonlijk met je af.\n\nLiefs,\n{webshopNaam}",
     adminBody:
-      "Nieuwe betaalde bestelling ontvangen.\n\nOrdernummer: {ordernummer}\nKlantnaam: {naam}\nE-mail: {email}\n\n{bestelling}\n\nTotaalbedrag: {totaal}\nBetaalstatus: {betaalstatus}\nOpmerking: {bericht}\nDatum: {datum}",
+      "Bestelling is gemarkeerd als betaald.\n\nOrdernummer: {ordernummer}\nKlantnaam: {naam}\nE-mail: {email}\n\n{bestelling}\n\nTotaalbedrag: {totaal}\nOpmerking: {bericht}\nDatum: {datum}",
   },
   return: {
     customerSubject: "Je retour of annulering is aangemeld",
@@ -127,18 +143,6 @@ function hasValidAdminSession(event) {
   return Number.isFinite(createdAt) && Date.now() - createdAt < ADMIN_SESSION_MAX_AGE * 1000;
 }
 
-function internalSignature() {
-  return crypto
-    .createHmac("sha256", process.env.ADMIN_SESSION_SECRET || "")
-    .update("payment-paid")
-    .digest("hex");
-}
-
-function hasValidInternalSignature(event) {
-  const signature = event.headers["x-tiny-internal"] || event.headers["X-Tiny-Internal"] || "";
-  return Boolean(process.env.ADMIN_SESSION_SECRET && signature && safeEquals(signature, internalSignature()));
-}
-
 function isPublicMailbox(value) {
   const email = getEmailAddress(value);
   return /@(gmail|googlemail|hotmail|outlook|live|yahoo)\./i.test(email);
@@ -218,7 +222,8 @@ function renderIntroHtml({ type, audience, values }) {
       order: `Hallo ${name},\n\nBedankt voor je bestelverzoek. We kijken je bestelling, levertijd en eventuele keuzes zorgvuldig na en sturen daarna de betaalinformatie.`,
       "gift-card": `Hallo ${name},\n\nBedankt voor je cadeaubonaanvraag. De cadeaubon wordt definitief na bevestiging en betaling. Daarna maken we de code aan en sturen we die per e-mail.`,
       "gift-card-issued": `Hallo ${name},\n\nWat leuk, je cadeaubon is klaar. Hieronder vind je de code en alle gegevens overzichtelijk bij elkaar.`,
-      "payment-paid": `Hallo ${name},\n\nBedankt voor je bestelling. We hebben je betaling ontvangen en gaan met je bestelling aan de slag.`,
+      "payment-instructions": `Hallo ${name},\n\nBedankt voor je aanvraag. We hebben je bestelling gecontroleerd. Hieronder vind je de informatie om de betaling persoonlijk af te stemmen.`,
+      "payment-received": `Hallo ${name},\n\nBedankt voor je bestelling. We hebben je betaling ontvangen en gaan met je bestelling aan de slag.`,
       return: `Hallo ${name},\n\nWe hebben je retour of annulering ontvangen. We bekijken je aanvraag en nemen zo snel mogelijk persoonlijk contact met je op.`,
       contact: `Hallo ${name},\n\nBedankt voor je bericht. We hebben het goed ontvangen en reageren zo snel mogelijk.`,
     },
@@ -226,7 +231,8 @@ function renderIntroHtml({ type, audience, values }) {
       order: `Er is een nieuw bestelverzoek binnengekomen via de webshop. Hieronder staan de gegevens overzichtelijk bij elkaar.`,
       "gift-card": `Er is een nieuwe cadeaubonaanvraag binnengekomen. Maak de code pas aan nadat de betaling is afgestemd.`,
       "gift-card-issued": `De cadeaubon is opgeslagen en de gegevens zijn naar de ontvanger verzonden.`,
-      "payment-paid": `Er is een betaalde bestelling binnengekomen via Mollie. Hieronder staan de gegevens overzichtelijk bij elkaar.`,
+      "payment-instructions": `Er is een betaalinstructie naar de klant verzonden.`,
+      "payment-received": `De bestelling is handmatig gemarkeerd als betaald.`,
       return: `Er is een nieuwe retour- of annuleringsaanvraag binnengekomen via de website.`,
       contact: `Er is een nieuw contactbericht binnengekomen via de website.`,
     },
@@ -253,7 +259,8 @@ function renderEmailHtml({ subject, text, values, type, audience }) {
     order: "Bestelverzoek",
     "gift-card": "Cadeaubonaanvraag",
     "gift-card-issued": "Cadeaubon",
-    "payment-paid": "Betaalde bestelling",
+    "payment-instructions": "Betaalinstructie",
+    "payment-received": "Betaling ontvangen",
     return: "Retour of annulering",
     contact: "Contactbericht",
   };
@@ -282,12 +289,17 @@ function renderEmailHtml({ subject, text, values, type, audience }) {
       ["Resterend saldo", values.saldo],
       ["Geldig tot", values.geldigTot],
     ],
-    "payment-paid": [
+    "payment-instructions": [
       ["Ordernummer", values.ordernummer],
       ["Naam", values.naam],
       ["E-mail", values.email],
       ["Totaal", values.totaal],
-      ["Betaalstatus", values.betaalstatus],
+    ],
+    "payment-received": [
+      ["Ordernummer", values.ordernummer],
+      ["Naam", values.naam],
+      ["E-mail", values.email],
+      ["Totaal", values.totaal],
     ],
     return: [
       ["Naam", values.naam],
@@ -320,14 +332,15 @@ function renderEmailHtml({ subject, text, values, type, audience }) {
     audience === "admin"
       ? `Nieuwe melding via ${values.webshopNaam}`
       : `Bedankt voor je bericht aan ${values.webshopNaam}`;
-  const orderBlock = ["order", "payment-paid"].includes(type)
+  const orderBlock = ["order", "payment-instructions", "payment-received"].includes(type)
     ? renderSoftBlock("Bestelling", values.bestelling, true)
     : "";
   const messageTitles = {
     order: "Opmerking",
     "gift-card": "Persoonlijk bericht",
     "gift-card-issued": "Extra bericht",
-    "payment-paid": "Opmerking",
+    "payment-instructions": "Opmerking",
+    "payment-received": "Opmerking",
     return: "Toelichting",
     contact: "Bericht",
   };
@@ -461,7 +474,6 @@ function normalizePayload(payload) {
     saldo: clean(payload.balance, 80),
     cadeauboncode: clean(payload.giftCardCode, 80).toUpperCase(),
     geldigTot: clean(payload.expiresAt, 80) || "Geen einddatum",
-    betaalstatus: clean(payload.paymentStatus, 80),
     ontvangerNaam: clean(payload.recipient, 160),
     ontvangerEmail: clean(payload.recipientEmail, 200),
     totaal: clean(payload.total, 80),
@@ -478,7 +490,8 @@ function normalizePayload(payload) {
     return: ["ordernummer", "product", "bericht"],
     "gift-card": ["bedrag"],
     "gift-card-issued": ["cadeauboncode", "bedrag", "saldo"],
-    "payment-paid": ["ordernummer", "bestelling", "totaal", "betaalstatus"],
+    "payment-instructions": ["ordernummer", "bestelling", "totaal"],
+    "payment-received": ["ordernummer", "bestelling", "totaal"],
     order: ["ordernummer", "bestelling", "totaal"],
   }[type];
 
@@ -628,8 +641,7 @@ exports.handler = async (event) => {
   }
 
   try {
-    const internalRequest = hasValidInternalSignature(event);
-    if (!internalRequest && !checkRateLimit(getIp(event))) {
+    if (!checkRateLimit(getIp(event))) {
       return json(429, { ok: false, message: "Te veel pogingen. Probeer het later opnieuw." });
     }
 
@@ -638,17 +650,10 @@ exports.handler = async (event) => {
     const adminEmail = process.env.ADMIN_EMAIL;
     const emailFrom = process.env.EMAIL_FROM;
 
-    if (type === "gift-card-issued" && !hasValidAdminSession(event)) {
+    if (["gift-card-issued", "payment-instructions", "payment-received"].includes(type) && !hasValidAdminSession(event)) {
       return json(403, {
         ok: false,
-        message: "Log opnieuw in bij beheer om een cadeaubonmail te versturen.",
-      });
-    }
-
-    if (type === "payment-paid" && !hasValidInternalSignature(event)) {
-      return json(403, {
-        ok: false,
-        message: "Betaalbevestiging mag alleen server-side worden verzonden.",
+        message: "Log opnieuw in bij beheer om deze mail te versturen.",
       });
     }
 

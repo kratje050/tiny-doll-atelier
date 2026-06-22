@@ -80,6 +80,13 @@ body {
   color: #8f2f24;
 }
 
+.manual-payment-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+
 body.admin-locked {
   display: block;
   overflow: hidden;
