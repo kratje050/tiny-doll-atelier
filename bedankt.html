@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="nl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Bedankt voor je bestelling - Tiny Doll Atelier</title>
+    <meta
+      name="description"
+      content="Bedankt voor je bestelling bij Tiny Doll Atelier. We controleren je betaling en sturen een bevestiging per e-mail."
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="thank-you-page">
+      <section class="content-band thank-you-card" aria-labelledby="thank-you-title">
+        <p class="eyebrow">Betaling</p>
+        <h1 id="thank-you-title">Bedankt voor je bestelling</h1>
+        <p data-payment-status-text>
+          We hebben je betaling ontvangen of controleren deze nog. Je ontvangt een bevestiging per
+          e-mail zodra de betaling is verwerkt.
+        </p>
+        <dl class="detail-list" data-payment-status-detail hidden></dl>
+        <div class="thank-you-actions">
+          <a class="primary-action" href="index.html#collectie">Verder winkelen</a>
+          <a class="secondary-action" href="index.html#contact">Contact opnemen</a>
+        </div>
+      </section>
+    </main>
+    <script>
+      const params = new URLSearchParams(window.location.search);
+      const orderId = params.get("orderId") || "";
+      const text = document.querySelector("[data-payment-status-text]");
+      const detail = document.querySelector("[data-payment-status-detail]");
+      const messages = {
+        paid: "Je betaling is gelukt. We gaan met je bestelling aan de slag.",
+        pending_payment: "Je betaling wordt nog verwerkt.",
+        failed: "De betaling is niet afgerond. Je kunt het opnieuw proberen of contact opnemen.",
+        canceled: "De betaling is niet afgerond. Je kunt het opnieuw proberen of contact opnemen.",
+        expired: "De betaling is niet afgerond. Je kunt het opnieuw proberen of contact opnemen.",
+      };
+
+      if (orderId) {
+        fetch(`/.netlify/functions/get-payment-status?orderId=${encodeURIComponent(orderId)}`, {
+          cache: "no-store",
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (!data.ok) {
+              return;
+            }
+
+            text.textContent =
+              messages[data.paymentStatus] ||
+              "We hebben je betaling ontvangen of controleren deze nog. Je ontvangt een bevestiging per e-mail zodra de betaling is verwerkt.";
+            detail.hidden = false;
+            detail.innerHTML = `
+              <div><dt>Ordernummer</dt><dd>${data.orderId}</dd></div>
+              <div><dt>Betaalstatus</dt><dd>${data.paymentStatus}</dd></div>
+              <div><dt>Totaal</dt><dd>${data.total}</dd></div>
+            `;
+          })
+          .catch(() => {});
+      }
+    </script>
+  </body>
+</html>

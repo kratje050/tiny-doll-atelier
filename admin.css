@@ -55,6 +55,31 @@ body {
   color: var(--ok);
 }
 
+.payment-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 7px 11px;
+  border-radius: 8px;
+  background: #efe3d6;
+  color: var(--brown-dark);
+  font-size: 0.9rem;
+  font-weight: 900;
+}
+
+.payment-paid,
+.payment-betaald {
+  background: rgba(95, 123, 77, 0.16);
+  color: var(--ok);
+}
+
+.payment-failed,
+.payment-canceled,
+.payment-expired {
+  background: rgba(143, 47, 36, 0.12);
+  color: #8f2f24;
+}
+
 body.admin-locked {
   display: block;
   overflow: hidden;

@@ -21,15 +21,28 @@ const adminState = {
 const money = TinyStore.formatMoney;
 const orderStatuses = [
   "Nieuw",
+  "Wacht op betaling",
+  "Betaald",
+  "Mislukt",
+  "Geannuleerd",
+  "Verlopen",
   "Afgestemd",
   "In afwachting van betaling",
-  "Betaald",
   "In productie",
   "Verzonden",
   "Afgerond",
-  "Geannuleerd",
 ];
-const paymentStatuses = ["Nog niet betaald", "Betaalverzoek gestuurd", "Betaald", "Terugbetaald"];
+const paymentStatuses = [
+  "Nog niet betaald",
+  "pending_payment",
+  "paid",
+  "failed",
+  "canceled",
+  "expired",
+  "Betaalverzoek gestuurd",
+  "Betaald",
+  "Terugbetaald",
+];
 const MAX_PRODUCT_IMAGE_SIZE = 1400;
 const PRODUCT_IMAGE_QUALITY = 0.82;
 const MAX_EXTRA_PRODUCT_IMAGES = 10;
@@ -714,7 +727,9 @@ function renderOrders() {
       : adminState.orders.filter((order) => order.status === adminState.orderFilter);
   document.querySelector("[data-order-table]").innerHTML = orders
     .map(
-      (order) => `
+      (order) => {
+        const paymentStatus = order.paymentStatus || "Nog niet betaald";
+        return `
         <tr>
           <td>
             <strong>${order.id}</strong>
@@ -726,6 +741,7 @@ function renderOrders() {
           </td>
           <td>${order.items.reduce((sum, item) => sum + item.quantity, 0)} items</td>
           <td>${money(order.total)}</td>
+          <td><span class="payment-pill payment-${String(paymentStatus).replace(/[^a-z0-9]+/gi, "-").toLowerCase()}">${paymentStatus}</span></td>
           <td>
             <select data-order-status="${order.id}">
               ${orderStatuses
@@ -742,7 +758,8 @@ function renderOrders() {
             </div>
           </td>
         </tr>
-      `,
+      `;
+      },
     )
     .join("");
 }
@@ -798,6 +815,9 @@ function renderOrderDetail(orderId) {
         <dl class="detail-list">
           <div><dt>Status</dt><dd>${order.status}</dd></div>
           <div><dt>Betaalstatus</dt><dd>${paymentStatus}</dd></div>
+          <div><dt>Mollie payment id</dt><dd>${order.molliePaymentId || "-"}</dd></div>
+          <div><dt>Betaaldatum</dt><dd>${order.paidAt ? new Date(order.paidAt).toLocaleString("nl-NL") : "-"}</dd></div>
+          <div><dt>Betaalmethode</dt><dd>${order.paymentMethod || "-"}</dd></div>
           <div><dt>Productregels</dt><dd>${order.items.length}</dd></div>
           <div><dt>Aantal items</dt><dd>${itemCount}</dd></div>
           <div><dt>Volgende stap</dt><dd>${order.status === "Nieuw" ? "Stem levertijd en betaling af." : "Werk status, betaling en verzending bij."}</dd></div>

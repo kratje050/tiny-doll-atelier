@@ -159,13 +159,13 @@
           <p class="eyebrow">Cadeaubon</p>
           <h2 id="cadeaubon-title">Geef atelier-tegoed cadeau</h2>
           <p>
-            Vraag een cadeaubon voor poppenkleding aan. Na je aanvraag ontvang je eerst de
-            betaalinformatie. De cadeauboncode wordt pas na betaling aangemaakt en per e-mail
+            Bestel een cadeaubon voor poppenkleding en betaal veilig via Mollie. De
+            cadeauboncode wordt pas na succesvolle betaling vanuit beheer aangemaakt en per e-mail
             verstuurd.
           </p>
           <ol class="step-list">
-            <li>Je vraagt een cadeaubon aan</li>
-            <li>Je ontvangt betaalinformatie</li>
+            <li>Je kiest een bedrag</li>
+            <li>Je betaalt veilig via Mollie</li>
             <li>Na betaling maken wij de cadeauboncode aan</li>
             <li>De ontvanger krijgt de cadeaubon per e-mail</li>
           </ol>
@@ -186,8 +186,9 @@
           <label>Voor wie is de bon? <input name="recipient" /></label>
           <label>E-mail ontvanger <input name="recipientEmail" type="email" autocomplete="email" /></label>
           <label>Bericht <textarea name="message" rows="3"></textarea></label>
+          <p class="checkout-note">Je wordt doorgestuurd naar een veilige betaalpagina van Mollie.</p>
           <p class="form-note" data-gift-card-message></p>
-          <button class="primary-action" type="submit">Cadeaubon bestellen</button>
+          <button class="primary-action" type="submit">Cadeaubon bestellen en betalen</button>
         </form>
       </section>
 
@@ -440,6 +441,10 @@
             bevestiging met levertijd, eventuele keuzes en betaalinformatie. Je bestelling is pas
             definitief nadat alles is afgestemd en betaald.
           </p>
+          <p class="checkout-note">
+            Standaardproducten die op voorraad zijn kun je direct veilig betalen via Mollie. Bij
+            maatwerk of op-aanvraag producten blijft dit eerst een aanvraag.
+          </p>
           <label class="check-row">
             <input name="giftWrap" type="checkbox" data-gift-wrap />
             Cadeauverpakking toevoegen voor &euro;2,95
@@ -459,6 +464,8 @@
           <label>Cadeauboncode <input name="giftCardCode" autocomplete="off" /></label>
           <label>Opmerking <textarea name="notes" rows="3"></textarea></label>
           <p class="form-note" data-order-message></p>
+          <button class="primary-action" type="button" data-start-payment>Afrekenen en betalen</button>
+          <p class="checkout-note">Je wordt doorgestuurd naar een veilige betaalpagina van Mollie. Na betaling ontvang je een bevestiging per e-mail.</p>
           <button class="primary-action" type="submit">Bestelverzoek maken</button>
         </form>
       </div>

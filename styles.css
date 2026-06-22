@@ -1263,6 +1263,36 @@ h3 {
   font-weight: 800;
 }
 
+.thank-you-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 28px;
+  background:
+    linear-gradient(120deg, rgba(251, 246, 239, 0.96), rgba(239, 227, 214, 0.86)),
+    var(--paper);
+}
+
+.thank-you-card {
+  width: min(100%, 760px);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+
+.thank-you-card h1 {
+  margin: 0 0 14px;
+  font-size: clamp(2.4rem, 7vw, 4.8rem);
+}
+
+.thank-you-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 24px;
+}
+
 .cart-actions .primary-action,
 .cart-actions .secondary-action {
   width: 100%;

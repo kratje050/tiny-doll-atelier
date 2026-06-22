@@ -65,6 +65,7 @@ const cartTotal = document.querySelector("[data-cart-total]");
 const cartCount = document.querySelector("[data-cart-count]");
 const checkoutForm = document.querySelector("[data-checkout-form]");
 const checkoutToggle = document.querySelector("[data-show-checkout]");
+const startPaymentButton = document.querySelector("[data-start-payment]");
 const giftWrapInput = document.querySelector("[data-gift-wrap]");
 const giftMessageInput = document.querySelector("[data-gift-message]");
 const orderMessage = document.querySelector("[data-order-message]");
@@ -116,6 +117,12 @@ function dollNotice(product) {
   return /inclusief\s+pop|pop\s+inbegrepen/.test(text)
     ? "Inclusief pop"
     : "Pop niet inbegrepen, tenzij anders vermeld";
+}
+
+function directPaymentNotice(product) {
+  return product.madeToOrder || stockQuantity(product) <= 0
+    ? "Dit product wordt eerst afgestemd. Je ontvangt betaalinformatie nadat we je aanvraag hebben bevestigd."
+    : "";
 }
 
 function getProductDetails(product) {
@@ -219,6 +226,10 @@ function renderProducts() {
     card.querySelector(".product-doll-note").textContent = dollNotice(product);
     card.querySelector(".product-price").textContent = formatMoney(product.price);
     card.querySelector(".product-stock").textContent = details.stockStatus;
+    const paymentNotice = directPaymentNotice(product);
+    if (paymentNotice) {
+      card.querySelector(".product-stock").textContent = `${details.stockStatus}. Eerst aanvraag.`;
+    }
     card.querySelector(".view-button").addEventListener("click", () => openProductModal(product.id));
     const addButton = card.querySelector(".add-button");
     const canOrder = !product.soldOut && (stockQuantity(product) > 0 || product.madeToOrder);
@@ -722,6 +733,54 @@ function buildMailBody(order) {
   ].join("\n");
 }
 
+function checkoutPayload(formData) {
+  return {
+    type: "cart",
+    website: formData.get("website"),
+    customer: {
+      name: formData.get("name").trim(),
+      email: formData.get("email").trim(),
+      phone: formData.get("phone").trim(),
+      address: formData.get("address").trim(),
+      postalCode: formData.get("postalCode").trim(),
+      city: formData.get("city").trim(),
+      country: formData.get("country").trim(),
+    },
+    discountCode: formData.get("discountCode").trim(),
+    giftCardCode: formData.get("giftCardCode").trim(),
+    notes: formData.get("notes").trim(),
+    giftWrap: formData.get("giftWrap") === "on",
+    giftMessage: formData.get("giftMessage").trim(),
+    items: cartEntries().map(({ product, quantity }) => ({
+      productId: product.id,
+      quantity,
+    })),
+  };
+}
+
+function cartPaymentBlocker() {
+  const blockedProduct = cartEntries().find(({ product }) => product.madeToOrder || stockQuantity(product) <= 0);
+  return blockedProduct
+    ? `${blockedProduct.product.name}: Dit product wordt eerst afgestemd. Je ontvangt betaalinformatie nadat we je aanvraag hebben bevestigd.`
+    : "";
+}
+
+async function createPayment(payload) {
+  const response = await fetch("/.netlify/functions/create-payment", {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const data = await response.json().catch(() => ({ message: "Betaling kon niet worden gestart." }));
+
+  if (!response.ok || !data.ok || !data.checkoutUrl) {
+    throw new Error(data.message || "Betaling kon niet worden gestart.");
+  }
+
+  return data;
+}
+
 filterTabs.addEventListener("click", (event) => {
   const button = event.target.closest("[data-filter]");
   if (!button) {
@@ -762,6 +821,39 @@ giftWrapInput.addEventListener("change", (event) => {
 });
 giftMessageInput.addEventListener("input", (event) => {
   state.giftMessage = event.target.value;
+});
+
+startPaymentButton.addEventListener("click", async () => {
+  const entries = cartEntries();
+  if (!entries.length) {
+    orderMessage.textContent = "Je winkelmandje is nog leeg.";
+    return;
+  }
+
+  const blocker = cartPaymentBlocker();
+  if (blocker) {
+    orderMessage.textContent = blocker;
+    return;
+  }
+
+  if (!checkoutForm.reportValidity()) {
+    return;
+  }
+
+  const formData = new FormData(checkoutForm);
+  if (formData.get("website")) {
+    return;
+  }
+
+  try {
+    startPaymentButton.disabled = true;
+    orderMessage.textContent = "Je wordt doorgestuurd naar een veilige betaalpagina van Mollie...";
+    const payment = await createPayment(checkoutPayload(formData));
+    window.location.href = payment.checkoutUrl;
+  } catch (error) {
+    orderMessage.textContent = error.message;
+    startPaymentButton.disabled = false;
+  }
 });
 
 cartItems.addEventListener("click", (event) => {
@@ -890,39 +982,23 @@ giftCardOrderForm.addEventListener("submit", async (event) => {
   if (formData.get("website")) {
     return;
   }
-  const result = TinyStore.createGiftCardOrder({
-    amount: Number(formData.get("amount")),
-    recipient: formData.get("recipient").trim(),
-    recipientEmail: formData.get("recipientEmail").trim(),
-    message: formData.get("message").trim(),
-    customer: {
-      name: formData.get("name").trim(),
-      email: formData.get("email").trim(),
-      phone: "",
-    },
-  });
-  const { order } = result;
-  const amount = Number(formData.get("amount"));
-  const recipient = formData.get("recipient").trim();
-  const recipientEmail = formData.get("recipientEmail").trim();
-  const message = formData.get("message").trim();
 
   try {
-    giftCardMessage.textContent = "Je cadeaubonaanvraag wordt verzonden...";
-    await sendEmail({
+    giftCardMessage.textContent = "Je wordt doorgestuurd naar een veilige betaalpagina van Mollie...";
+    const payment = await createPayment({
       type: "gift-card",
       website: formData.get("website"),
-      orderId: order.id,
-      name: order.customer.name,
-      email: order.customer.email,
-      amount: formatMoney(amount),
-      recipient,
-      recipientEmail: recipientEmail || order.customer.email,
-      message,
+      amount: Number(formData.get("amount")),
+      customer: {
+        name: formData.get("name").trim(),
+        email: formData.get("email").trim(),
+        phone: "",
+      },
+      recipient: formData.get("recipient").trim(),
+      recipientEmail: formData.get("recipientEmail").trim(),
+      message: formData.get("message").trim(),
     });
-    giftCardMessage.textContent =
-      "Bedankt, je cadeaubonaanvraag is verzonden. Na bevestiging en betaling maken we de code aan.";
-    giftCardOrderForm.reset();
+    window.location.href = payment.checkoutUrl;
   } catch (error) {
     giftCardMessage.textContent = error.message;
   }
