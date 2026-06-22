@@ -949,6 +949,18 @@ h3 {
   align-items: center;
 }
 
+.checkout-form .terms-check {
+  align-items: flex-start;
+  line-height: 1.45;
+}
+
+.terms-check a {
+  color: var(--brown);
+  font-weight: 900;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .site-form input,
 .site-form textarea {
   width: 100%;

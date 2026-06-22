@@ -690,12 +690,12 @@ function renderDiscounts() {
       ].filter(Boolean);
       return `
         <tr>
-          <td><strong>${discount.code}</strong></td>
-          <td>${value}</td>
-          <td>${shippingRules.length ? shippingRules.join("<br>") : "-"}</td>
-          <td>${discount.uses}</td>
-          <td><span class="status-pill">${discount.active ? "Actief" : "Uit"}</span></td>
-          <td>
+          <td data-label="Code"><strong>${discount.code}</strong></td>
+          <td data-label="Korting">${value}</td>
+          <td data-label="Verzending">${shippingRules.length ? shippingRules.join("<br>") : "-"}</td>
+          <td data-label="Gebruikt">${discount.uses}</td>
+          <td data-label="Status"><span class="status-pill">${discount.active ? "Actief" : "Uit"}</span></td>
+          <td data-label="Acties">
             <div class="table-actions">
               <button class="row-button" type="button" data-toggle-discount="${discount.id}">
                 ${discount.active ? "Zet uit" : "Zet aan"}
@@ -718,16 +718,16 @@ function renderGiftCards() {
         (!giftCard.active ? "Uit" : isExpired ? "Verlopen" : giftCard.balance <= 0 ? "Gebruikt" : "Actief");
       return `
         <tr>
-          <td><strong>${giftCard.code}</strong></td>
-          <td>
+          <td data-label="Code"><strong>${giftCard.code}</strong></td>
+          <td data-label="Ontvanger">
             <strong>${giftCard.recipient || "-"}</strong>
             <span class="muted">${giftCard.email || ""}</span>
           </td>
-          <td>${money(giftCard.initialValue)}</td>
-          <td>${money(giftCard.balance)}</td>
-          <td>${giftCard.expiresAt || "-"}</td>
-          <td><span class="status-pill">${status}</span></td>
-          <td>
+          <td data-label="Waarde">${money(giftCard.initialValue)}</td>
+          <td data-label="Saldo">${money(giftCard.balance)}</td>
+          <td data-label="Geldig tot">${giftCard.expiresAt || "-"}</td>
+          <td data-label="Status"><span class="status-pill">${status}</span></td>
+          <td data-label="Acties">
             <div class="table-actions">
               <button class="row-button" type="button" data-edit-gift-card="${giftCard.id}">Bewerk</button>
               <button class="row-button" type="button" data-toggle-gift-card="${giftCard.id}">
@@ -762,21 +762,21 @@ function renderCustomers() {
     .map(
       (customer) => `
         <tr>
-          <td>
+          <td data-label="Klant">
             <strong>${escapeHtml(customer.name)}</strong>
             <span class="muted">Laatste: ${escapeHtml(customer.lastOrderAt || "-")}</span>
           </td>
-          <td>
+          <td data-label="Contact">
             ${escapeHtml(customer.email)}
             <span class="muted">${escapeHtml(customer.phone || "-")}</span>
           </td>
-          <td>
+          <td data-label="Adres">
             ${escapeHtml(customer.address || "-")}
             <span class="muted">${escapeHtml([customer.postalCode, customer.city, customer.country].filter(Boolean).join(" ") || "-")}</span>
           </td>
-          <td>${customer.orderCount || 0}</td>
-          <td>${money(customer.totalSpent)}</td>
-          <td>
+          <td data-label="Bestellingen">${customer.orderCount || 0}</td>
+          <td data-label="Omzet">${money(customer.totalSpent)}</td>
+          <td data-label="Acties">
             <div class="table-actions">
               <button class="row-button" type="button" data-edit-customer="${customer.id}">Bewerk</button>
               <button class="row-button" type="button" data-delete-customer="${customer.id}">Verwijder</button>
@@ -873,18 +873,18 @@ function renderOrders() {
         const paymentStatus = order.paymentStatus || "Wacht op bevestiging";
         return `
         <tr>
-          <td>
+          <td data-label="Bestelling">
             <strong>${order.id}</strong>
             <span class="muted">${new Date(order.createdAt).toLocaleDateString("nl-NL")}</span>
           </td>
-          <td>
+          <td data-label="Klant">
             <strong>${order.customer.name}</strong>
             <span class="muted">${order.customer.email}</span>
           </td>
-          <td>${order.items.reduce((sum, item) => sum + item.quantity, 0)} items</td>
-          <td>${money(order.total)}</td>
-          <td><span class="payment-pill payment-${String(paymentStatus).replace(/[^a-z0-9]+/gi, "-").toLowerCase()}">${paymentStatus}</span></td>
-          <td>
+          <td data-label="Items">${order.items.reduce((sum, item) => sum + item.quantity, 0)} items</td>
+          <td data-label="Totaal">${money(order.total)}</td>
+          <td data-label="Betaalstatus"><span class="payment-pill payment-${String(paymentStatus).replace(/[^a-z0-9]+/gi, "-").toLowerCase()}">${paymentStatus}</span></td>
+          <td data-label="Status">
             <select data-order-status="${order.id}">
               ${orderStatuses
                 .map(
@@ -894,7 +894,7 @@ function renderOrders() {
                 .join("")}
             </select>
           </td>
-          <td>
+          <td data-label="Acties">
             <div class="table-actions">
               <button class="row-button" type="button" data-order-detail="${order.id}">Details</button>
               <button class="row-button" type="button" data-delete-order="${order.id}">Verwijder</button>
@@ -1078,13 +1078,13 @@ function renderReviews() {
       .map(
         (review) => `
           <tr>
-            <td>
+            <td data-label="Klant">
               <strong>${escapeHtml(review.name)}</strong>
               <span class="muted">${escapeHtml(review.product || "")}</span>
             </td>
-            <td>${escapeHtml(review.text)}</td>
-            <td><span class="status-pill">${review.visible ? "Zichtbaar" : "Verborgen"}</span></td>
-            <td>
+            <td data-label="Review">${escapeHtml(review.text)}</td>
+            <td data-label="Status"><span class="status-pill">${review.visible ? "Zichtbaar" : "Verborgen"}</span></td>
+            <td data-label="Acties">
               <div class="table-actions">
                 <button class="row-button" type="button" data-edit-review="${review.id}">Bewerk</button>
                 <button class="row-button" type="button" data-toggle-review="${review.id}">${review.visible ? "Verberg" : "Toon"}</button>

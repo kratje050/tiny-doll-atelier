@@ -1054,6 +1054,10 @@ checkoutForm.addEventListener("submit", async (event) => {
   if (formData.get("website")) {
     return;
   }
+  if (formData.get("termsAccepted") !== "on") {
+    orderMessage.textContent = "Vink eerst aan dat je akkoord gaat met de algemene voorwaarden.";
+    return;
+  }
   state.giftWrap = formData.get("giftWrap") === "on";
   state.giftMessage = formData.get("giftMessage").trim();
   const preview = calculateCartPreview(
