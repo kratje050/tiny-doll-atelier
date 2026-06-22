@@ -123,22 +123,39 @@ let cloudSaveTimer = null;
 let cloudSaveInFlight = null;
 let onlineEditingEnabled = false;
 let cloudStatusElement = null;
+let cloudStatusTimer = null;
 let activeViewName = "dashboard";
 let viewRefreshCounter = 0;
 
-function setCloudStatus(message, isError = false) {
+function setCloudStatus(message, isError = false, options = {}) {
   if (!cloudStatusElement) {
     cloudStatusElement = document.createElement("div");
     cloudStatusElement.className = "cloud-status";
     document.body.append(cloudStatusElement);
   }
 
+  clearTimeout(cloudStatusTimer);
   cloudStatusElement.textContent = message;
   cloudStatusElement.classList.toggle("is-error", isError);
   cloudStatusElement.classList.toggle("is-ok", !isError);
+  cloudStatusElement.hidden = !message;
+
+  const duration = options.duration ?? (isError ? 9000 : 2600);
+  if (message && duration > 0) {
+    cloudStatusTimer = setTimeout(() => {
+      cloudStatusElement.hidden = true;
+    }, duration);
+  }
 }
 
-function setOnlineEditingEnabled(enabled, message = "") {
+function hideCloudStatus() {
+  clearTimeout(cloudStatusTimer);
+  if (cloudStatusElement) {
+    cloudStatusElement.hidden = true;
+  }
+}
+
+function setOnlineEditingEnabled(enabled, message = "", options = {}) {
   onlineEditingEnabled = enabled;
   document.body.classList.toggle("admin-offline", !enabled);
   document.querySelectorAll(".admin-main input, .admin-main select, .admin-main textarea, .admin-main button").forEach(
@@ -150,7 +167,7 @@ function setOnlineEditingEnabled(enabled, message = "") {
     },
   );
 
-  if (message) {
+  if (message && (!enabled || !options.silent)) {
     setCloudStatus(message, !enabled);
   }
 }
@@ -1157,7 +1174,6 @@ async function refreshViewFromCloud(viewName) {
 
   const refreshId = ++viewRefreshCounter;
   cloudSyncing = true;
-  setCloudStatus("Online gegevens ophalen...");
 
   try {
     const result = await TinyStore.loadCloudData({ admin: true });
@@ -1167,7 +1183,9 @@ async function refreshViewFromCloud(viewName) {
 
     renderAll();
     setView(viewName, { refresh: false });
-    setCloudStatus(result.changed ? "Online gegevens bijgewerkt." : "Je bekijkt de nieuwste online gegevens.");
+    if (result.changed) {
+      setCloudStatus("Online gegevens bijgewerkt.");
+    }
   } catch (error) {
     setCloudStatus(error.message || "Online gegevens konden niet worden opgehaald.", true);
   } finally {
@@ -1982,7 +2000,7 @@ document.addEventListener("change", (event) => {
 });
 
 async function initializeAdmin() {
-  setCloudStatus("Online opslag controleren...");
+  hideCloudStatus();
   setOnlineEditingEnabled(false);
   cloudSyncing = true;
   let readyForOnlineEditing = false;
@@ -1999,7 +2017,6 @@ async function initializeAdmin() {
       );
     }
 
-    setCloudStatus(status.message || "Online opslag is gekoppeld. Winkeldata wordt centraal opgeslagen.");
     const result = await TinyStore.loadCloudData({ admin: true });
     if (result.seeded) {
       readyMessage = "Online opslag is aangemaakt. Winkeldata wordt centraal opgeslagen.";
@@ -2018,7 +2035,7 @@ async function initializeAdmin() {
     cloudReady = readyForOnlineEditing;
     onlineEditingEnabled = readyForOnlineEditing;
     renderAll();
-    setOnlineEditingEnabled(readyForOnlineEditing, readyMessage);
+    setOnlineEditingEnabled(readyForOnlineEditing, readyMessage, { silent: readyForOnlineEditing });
   }
 }
 
