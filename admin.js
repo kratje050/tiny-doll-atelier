@@ -39,8 +39,8 @@ const paymentStatuses = [
   "Verzonden",
   "Geannuleerd",
 ];
-const MAX_PRODUCT_IMAGE_SIZE = 1400;
-const PRODUCT_IMAGE_QUALITY = 0.82;
+const MAX_PRODUCT_IMAGE_SIZE = 1000;
+const PRODUCT_IMAGE_QUALITY = 0.76;
 const MAX_EXTRA_PRODUCT_IMAGES = 10;
 const settingVisibilityKeys = [
   "showStockLeadTime",
@@ -470,13 +470,27 @@ function fileToDataUrl(file) {
 function loadImage(src) {
   return new Promise((resolve, reject) => {
     const image = new Image();
-    image.addEventListener("load", () => resolve(image));
-    image.addEventListener("error", reject);
+    const timeout = window.setTimeout(() => {
+      image.src = "";
+      reject(new Error("Afbeelding laden duurde te lang."));
+    }, 12000);
+    image.addEventListener("load", () => {
+      window.clearTimeout(timeout);
+      resolve(image);
+    });
+    image.addEventListener("error", () => {
+      window.clearTimeout(timeout);
+      reject(new Error("Afbeelding kon niet worden gelezen."));
+    });
     image.src = src;
   });
 }
 
 async function resizeImageFile(file) {
+  if (!file.type.startsWith("image/")) {
+    throw new Error("Kies een afbeeldingsbestand.");
+  }
+
   const dataUrl = await fileToDataUrl(file);
 
   try {
@@ -489,11 +503,20 @@ async function resizeImageFile(file) {
     canvas.width = width;
     canvas.height = height;
     const context = canvas.getContext("2d");
+    if (!context) {
+      throw new Error("Afbeelding kon niet worden verkleind.");
+    }
     context.fillStyle = "#fffaf4";
     context.fillRect(0, 0, width, height);
     context.drawImage(image, 0, 0, width, height);
-    return canvas.toDataURL("image/jpeg", PRODUCT_IMAGE_QUALITY);
-  } catch {
+    const resized = canvas.toDataURL("image/jpeg", PRODUCT_IMAGE_QUALITY);
+    canvas.width = 1;
+    canvas.height = 1;
+    return resized;
+  } catch (error) {
+    if (dataUrl.length > 950000) {
+      throw new Error("Deze foto is te groot of wordt door iPhone/Safari niet goed gelezen. Kies een kleinere JPG-foto of maak een screenshot van de foto en upload die.");
+    }
     return dataUrl;
   }
 }
@@ -1019,46 +1042,59 @@ navButtons.forEach((button) => {
 
 productForm.addEventListener("submit", (event) => {
   event.preventDefault();
-  const data = new FormData(productForm);
-  const id = data.get("id") || TinyStore.slugify(data.get("name"));
-  const product = {
-    id,
-    name: data.get("name").trim(),
-    categoryId: data.get("categoryId"),
-    price: Number(data.get("price")),
-    stockQuantity: Number(data.get("stockQuantity")),
-    stock: data.get("stock").trim(),
-    badge: data.get("badge").trim(),
-    image: data.get("image").trim(),
-    description: data.get("description").trim(),
-    longDescription: data.get("longDescription").trim(),
-    material: data.get("material").trim(),
-    size: data.get("size").trim(),
-    leadTime: data.get("leadTime").trim(),
-    washCare: data.get("washCare").trim(),
-    extraImages: data
-      .get("extraImages")
-      .split("\n")
-      .map((line) => line.trim())
-      .filter(Boolean),
-    featured: data.get("featured") === "on",
-    bestseller: data.get("bestseller") === "on",
-    madeToOrder: data.get("madeToOrder") === "on",
-    soldOut: data.get("soldOut") === "on",
-    active: data.get("active") === "on",
-  };
-  const products = adminState.products.filter((item) => item.id !== id);
-  TinyStore.saveProducts([product, ...products]);
-  productForm.reset();
-  productForm.elements.active.checked = true;
-  productForm.elements.featured.checked = false;
-  productForm.elements.bestseller.checked = false;
-  productForm.elements.madeToOrder.checked = false;
-  productForm.elements.soldOut.checked = false;
-  productForm.querySelector("[data-cancel-product]").hidden = true;
-  setImagePreview("");
-  setExtraImagePreview([]);
-  renderAll();
+  const submitButton = productForm.querySelector('button[type="submit"]');
+  const originalText = submitButton.textContent;
+  submitButton.disabled = true;
+  submitButton.textContent = "Product opslaan...";
+
+  try {
+    const data = new FormData(productForm);
+    const id = data.get("id") || TinyStore.slugify(data.get("name"));
+    const product = {
+      id,
+      name: data.get("name").trim(),
+      categoryId: data.get("categoryId"),
+      price: Number(data.get("price")),
+      stockQuantity: Number(data.get("stockQuantity")),
+      stock: data.get("stock").trim(),
+      badge: data.get("badge").trim(),
+      image: data.get("image").trim(),
+      description: data.get("description").trim(),
+      longDescription: data.get("longDescription").trim(),
+      material: data.get("material").trim(),
+      size: data.get("size").trim(),
+      leadTime: data.get("leadTime").trim(),
+      washCare: data.get("washCare").trim(),
+      extraImages: data
+        .get("extraImages")
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean),
+      featured: data.get("featured") === "on",
+      bestseller: data.get("bestseller") === "on",
+      madeToOrder: data.get("madeToOrder") === "on",
+      soldOut: data.get("soldOut") === "on",
+      active: data.get("active") === "on",
+    };
+    const products = adminState.products.filter((item) => item.id !== id);
+    TinyStore.saveProducts([product, ...products]);
+    productForm.reset();
+    productForm.elements.active.checked = true;
+    productForm.elements.featured.checked = false;
+    productForm.elements.bestseller.checked = false;
+    productForm.elements.madeToOrder.checked = false;
+    productForm.elements.soldOut.checked = false;
+    productForm.querySelector("[data-cancel-product]").hidden = true;
+    setImagePreview("");
+    setExtraImagePreview([]);
+    setCloudStatus("Product opgeslagen. Online opslaan...");
+    renderAll();
+  } catch (error) {
+    setCloudStatus(error.message || "Product opslaan is mislukt.", true);
+  } finally {
+    submitButton.disabled = false;
+    submitButton.textContent = originalText;
+  }
 });
 
 document.querySelector("[data-cancel-product]").addEventListener("click", () => {
@@ -1086,8 +1122,8 @@ productUpload.addEventListener("change", async () => {
     const imageData = await resizeImageFile(file);
     productForm.elements.image.value = imageData;
     setImagePreview(imageData, `${file.name} toegevoegd`);
-  } catch {
-    uploadName.textContent = "Afbeelding uploaden is mislukt.";
+  } catch (error) {
+    uploadName.textContent = error.message || "Afbeelding uploaden is mislukt.";
   } finally {
     productUpload.disabled = false;
     productUpload.value = "";
@@ -1125,8 +1161,8 @@ extraImageUpload.addEventListener("change", async () => {
       images,
       `${uploadedImages.length} extra afbeelding${uploadedImages.length === 1 ? "" : "en"} toegevoegd.${skipped}`,
     );
-  } catch {
-    extraUploadName.textContent = "Extra afbeelding uploaden is mislukt. Probeer een kleinere foto.";
+  } catch (error) {
+    extraUploadName.textContent = error.message || "Extra afbeelding uploaden is mislukt. Probeer een kleinere foto.";
   } finally {
     extraImageUpload.disabled = false;
     extraImageUpload.value = "";

@@ -521,12 +521,27 @@ h3 {
 .product-photo img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   transition: transform 220ms ease;
 }
 
 .product-card:hover .product-photo img {
   transform: scale(1.035);
+}
+
+.product-photo.has-image-error {
+  display: grid;
+  place-items: center;
+  min-height: 220px;
+}
+
+.product-photo.has-image-error::after {
+  content: "Afbeelding niet beschikbaar";
+  padding: 12px;
+  color: var(--muted);
+  font-size: 0.92rem;
+  font-weight: 800;
+  text-align: center;
 }
 
 .product-badge {

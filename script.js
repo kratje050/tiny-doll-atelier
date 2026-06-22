@@ -208,6 +208,10 @@ function renderProducts() {
     const image = card.querySelector("img");
     image.src = product.image;
     image.alt = product.name;
+    image.addEventListener("error", () => {
+      image.hidden = true;
+      image.closest(".product-photo")?.classList.add("has-image-error");
+    });
     card.querySelector(".product-badge").textContent = product.badge;
     card.querySelector(".product-category").textContent = categoryName(product.categoryId);
     card.querySelector("h3").textContent = product.name;

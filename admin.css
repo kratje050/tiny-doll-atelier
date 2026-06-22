@@ -156,6 +156,14 @@ textarea {
   font: inherit;
 }
 
+@supports (-webkit-touch-callout: none) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
 button {
   border: 0;
   cursor: pointer;
@@ -356,11 +364,19 @@ input,
 select,
 textarea {
   width: 100%;
+  min-width: 0;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #fff;
   color: var(--ink);
   padding: 10px 12px;
+}
+
+input[name="image"],
+textarea[name="extraImages"] {
+  overflow: hidden;
+  font-size: 0.84rem;
+  text-overflow: ellipsis;
 }
 
 input[type="file"] {
@@ -420,7 +436,7 @@ textarea {
   display: block;
   width: 100%;
   max-height: 220px;
-  object-fit: cover;
+  object-fit: contain;
 }
 
 .extra-image-preview {
@@ -435,7 +451,7 @@ textarea {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--soft);
-  object-fit: cover;
+  object-fit: contain;
 }
 
 .check-row {
@@ -886,16 +902,37 @@ td strong {
 
 @media (max-width: 980px) {
   body {
+    display: block;
     grid-template-columns: 1fr;
+    overflow-x: hidden;
   }
 
   .admin-sidebar {
     position: static;
     height: auto;
+    gap: 14px;
+    padding: 14px;
   }
 
   .admin-nav {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x proximity;
+  }
+
+  .admin-nav button {
+    flex: 0 0 auto;
+    min-width: 132px;
+    scroll-snap-align: start;
+  }
+
+  .store-link,
+  .logout-button {
+    margin-top: 0;
+    width: 100%;
   }
 
   .metric-grid,
@@ -913,8 +950,28 @@ td strong {
 }
 
 @media (max-width: 640px) {
+  html,
+  body {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
   .admin-main {
     padding: 20px 12px 36px;
+  }
+
+  .admin-sidebar {
+    padding: 12px;
+  }
+
+  .admin-brand {
+    margin-bottom: 2px;
+  }
+
+  .store-link,
+  .logout-button {
+    min-height: 42px;
+    padding: 10px 12px;
   }
 
   .admin-top,
@@ -943,7 +1000,23 @@ td strong {
     gap: 10px;
   }
 
-  .admin-nav {
-    grid-template-columns: 1fr;
+  .admin-nav button {
+    min-width: 118px;
+    min-height: 40px;
+    padding: 9px 10px;
+    font-size: 0.9rem;
+    white-space: nowrap;
+  }
+
+  .panel,
+  .table-wrap {
+    max-width: 100%;
+  }
+
+  .primary-button,
+  .row-button,
+  .ghost-button,
+  .upload-button {
+    min-height: 44px;
   }
 }
