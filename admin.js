@@ -543,15 +543,15 @@ function renderProducts() {
       ].filter(Boolean);
       return `
         <tr>
-          <td>
+          <td data-label="Product">
             <strong>${product.name}</strong>
             <span class="muted">${tags.length ? tags.join(" / ") : product.stock}</span>
           </td>
-          <td>${categoryName(product.categoryId)}</td>
-          <td>${money(product.price)}</td>
-          <td><strong>${stockStatus}</strong><span class="muted">${product.leadTime || ""}</span></td>
-          <td><span class="status-pill">${product.active ? "Zichtbaar" : "Verborgen"}</span></td>
-          <td>
+          <td data-label="Categorie">${categoryName(product.categoryId)}</td>
+          <td data-label="Prijs">${money(product.price)}</td>
+          <td data-label="Voorraad"><strong>${stockStatus}</strong><span class="muted">${product.leadTime || ""}</span></td>
+          <td data-label="Status"><span class="status-pill">${product.active ? "Zichtbaar" : "Verborgen"}</span></td>
+          <td data-label="Acties">
             <div class="table-actions">
               <button class="row-button" type="button" data-edit-product="${product.id}">Bewerk</button>
               <button class="row-button" type="button" data-delete-product="${product.id}">Verwijder</button>

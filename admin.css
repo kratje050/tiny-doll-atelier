@@ -277,6 +277,8 @@ h2 {
 
 .admin-view {
   display: none;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .admin-view.is-active {
@@ -315,6 +317,8 @@ h2 {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(360px, 0.82fr);
   gap: 18px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .work-grid {
@@ -326,6 +330,8 @@ h2 {
 }
 
 .panel {
+  min-width: 0;
+  max-width: 100%;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--panel);
@@ -467,10 +473,12 @@ textarea {
 .primary-button,
 .ghost-button,
 .row-button {
+  max-width: 100%;
   min-height: 40px;
   border-radius: 8px;
   padding: 10px 13px;
   font-weight: 900;
+  overflow-wrap: anywhere;
 }
 
 .primary-button {
@@ -499,7 +507,9 @@ textarea {
 }
 
 .table-wrap {
+  max-width: 100%;
   overflow: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 table {
@@ -1011,6 +1021,94 @@ td strong {
   .panel,
   .table-wrap {
     max-width: 100%;
+  }
+
+  .form-panel .primary-button {
+    width: 100%;
+  }
+
+  .upload-box {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .upload-button {
+    width: 100%;
+    text-align: center;
+  }
+
+  .upload-box span {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .product-table-wrap {
+    overflow: visible;
+  }
+
+  .product-table,
+  .product-table thead,
+  .product-table tbody,
+  .product-table tr,
+  .product-table th,
+  .product-table td {
+    display: block;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .product-table {
+    min-width: 0;
+  }
+
+  .product-table thead {
+    display: none;
+  }
+
+  .product-table tr {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .product-table td {
+    display: grid;
+    grid-template-columns: minmax(92px, 0.42fr) minmax(0, 1fr);
+    gap: 10px;
+    padding: 7px 0;
+    border-bottom: 0;
+    word-break: break-word;
+  }
+
+  .product-table td::before {
+    content: attr(data-label);
+    color: var(--muted);
+    font-size: 0.72rem;
+    font-weight: 900;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .product-table td:first-child {
+    display: block;
+    padding-top: 0;
+  }
+
+  .product-table td:first-child::before {
+    display: none;
+  }
+
+  .product-table .muted {
+    display: block;
+    margin-top: 2px;
+  }
+
+  .product-table .table-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    justify-content: stretch;
+  }
+
+  .product-table .row-button {
+    width: 100%;
   }
 
   .primary-button,
