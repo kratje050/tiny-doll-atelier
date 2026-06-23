@@ -374,6 +374,7 @@ function renderPaymentInstructionBlock(values) {
   }
 
   const rows = [
+    ["Totaalbedrag", values.totaal],
     ["Rekeninghouder", values.paymentHolder],
     ["IBAN", values.paymentIban],
     ["Omschrijving", values.paymentDescription || values.ordernummer],

@@ -458,10 +458,11 @@ function renderOrderDetail(orderId) {
 
   const paymentInstruction = order.paymentInstructionsSentAt
     ? `
-      <div class="payment-box">
+      <div class="payment-box account-section-card">
         <h3>Betaalinstructie</h3>
-        <p>Je kunt het totaalbedrag overmaken naar:</p>
+        <p>Je kunt het totaalbedrag van <strong>${money(order.total)}</strong> overmaken naar:</p>
         <dl class="detail-list">
+          <div><dt>Totaalbedrag</dt><dd>${money(order.total)}</dd></div>
           <div><dt>Rekeninghouder</dt><dd>${escapeHtml(holder)}</dd></div>
           <div><dt>IBAN</dt><dd>${escapeHtml(iban)}</dd></div>
           <div><dt>Omschrijving</dt><dd>${escapeHtml(order.id)}</dd></div>
@@ -482,48 +483,75 @@ function renderOrderDetail(orderId) {
 
   detail.innerHTML = `
     <a href="/account/orders" class="secondary-action">Terug naar bestellingen</a>
-    <h2>${escapeHtml(order.id)}</h2>
-    <p class="muted">${new Date(order.createdAt).toLocaleString("nl-NL")}</p>
-    <div class="status-badges">
-      <span>${escapeHtml(orderStatusText(order))}</span>
-      <span>${escapeHtml(paymentText(order))}</span>
-    </div>
-    <p>${escapeHtml(statusMessage)}</p>
-    <div class="account-lines">
-      ${order.items
-        .map(
-          (item) => {
-            const image = item.imageUrl || item.image || "";
-            const details = [item.category, item.popSize, item.material, item.deliveryTime].filter(Boolean).join(" - ");
-            return `
-            <div class="account-line">
-              ${
-                image
-                  ? `<img src="${escapeHtml(image)}" alt="${escapeHtml(item.imageAlt || item.name || "Productafbeelding")}" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'account-line-placeholder',textContent:'Geen afbeelding beschikbaar'}))">`
-                  : '<span class="account-line-placeholder">Geen afbeelding beschikbaar</span>'
-              }
-              <div>
-                <strong>${escapeHtml(item.name || item.productName)}</strong>
-                <span class="muted">${item.quantity} x ${money(item.price)}</span>
-                ${details ? `<span class="muted">${escapeHtml(details)}</span>` : ""}
+    <section class="account-order-hero">
+      <div>
+        <span class="muted">Bestelling</span>
+        <h2>${escapeHtml(order.id)}</h2>
+        <p class="muted">${new Date(order.createdAt).toLocaleString("nl-NL")}</p>
+      </div>
+      <div class="status-badges">
+        <span>${escapeHtml(orderStatusText(order))}</span>
+        <span>${escapeHtml(paymentText(order))}</span>
+      </div>
+      <p>${escapeHtml(statusMessage)}</p>
+    </section>
+
+    <section class="account-section-card">
+      <div class="account-section-heading">
+        <h3>Producten</h3>
+        <strong>${money(order.total)}</strong>
+      </div>
+      <div class="account-lines">
+        ${order.items
+          .map(
+            (item) => {
+              const image = item.imageUrl || item.image || "";
+              const details = [item.category, item.popSize, item.material, item.deliveryTime].filter(Boolean).join(" - ");
+              return `
+              <div class="account-line">
+                ${
+                  image
+                    ? `<img src="${escapeHtml(image)}" alt="${escapeHtml(item.imageAlt || item.name || "Productafbeelding")}" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'account-line-placeholder',textContent:'Geen afbeelding beschikbaar'}))">`
+                    : '<span class="account-line-placeholder">Geen afbeelding beschikbaar</span>'
+                }
+                <div>
+                  <strong>${escapeHtml(item.name || item.productName)}</strong>
+                  <span class="muted">${item.quantity} x ${money(item.price)}</span>
+                  ${details ? `<span class="muted">${escapeHtml(details)}</span>` : ""}
+                </div>
+                <strong>${money(item.lineTotal || item.price * item.quantity)}</strong>
               </div>
-              <strong>${money(item.lineTotal || item.price * item.quantity)}</strong>
-            </div>
-          `;
-          },
-        )
-        .join("")}
+            `;
+            },
+          )
+          .join("")}
+      </div>
+    </section>
+
+    <div class="account-detail-grid">
+      <section class="account-section-card">
+        <h3>Betaling</h3>
+        <dl class="detail-list">
+          <div><dt>Totaalbedrag</dt><dd>${money(order.total)}</dd></div>
+          <div><dt>Betaalstatus</dt><dd>${escapeHtml(paymentText(order))}</dd></div>
+          <div><dt>Cadeaubon</dt><dd>${order.giftCardCode ? `${escapeHtml(order.giftCardCode)} (-${money(order.giftCardAmount)})` : "-"}</dd></div>
+          <div><dt>Korting</dt><dd>${order.discountCode ? `${escapeHtml(order.discountCode)} (-${money(order.discountAmount || 0)})` : "-"}</dd></div>
+        </dl>
+      </section>
+      <section class="account-section-card">
+        <h3>Verzending</h3>
+        <dl class="detail-list">
+          <div><dt>Verzendkosten</dt><dd>${order.freeShipping ? "Gratis via kortingscode" : "Wordt afgestemd"}</dd></div>
+          <div><dt>Track & trace</dt><dd>${order.trackTrace || "-"}</dd></div>
+          <div><dt>Verwachte levertijd</dt><dd>Wordt persoonlijk afgestemd na bevestiging.</dd></div>
+          <div><dt>Opmerking</dt><dd>${escapeHtml(order.notes || "-")}</dd></div>
+        </dl>
+      </section>
     </div>
-    <dl class="detail-list account-detail-card">
-      <div><dt>Totaalbedrag</dt><dd>${money(order.total)}</dd></div>
-      <div><dt>Verzendkosten</dt><dd>${order.freeShipping ? "Gratis via kortingscode" : "Wordt afgestemd"}</dd></div>
-      <div><dt>Cadeaubon</dt><dd>${order.giftCardCode ? `${escapeHtml(order.giftCardCode)} (-${money(order.giftCardAmount)})` : "-"}</dd></div>
-      <div><dt>Track & trace</dt><dd>${order.trackTrace || "-"}</dd></div>
-      <div><dt>Verwachte levertijd</dt><dd>Wordt persoonlijk afgestemd na bevestiging.</dd></div>
-      <div><dt>Opmerking</dt><dd>${escapeHtml(order.notes || "-")}</dd></div>
-    </dl>
     ${paymentInstruction}
-    <a class="primary-action" href="/#contact">Contact over deze bestelling</a>
+    <div class="account-actions-row">
+      <a class="primary-action" href="/#contact">Contact over deze bestelling</a>
+    </div>
   `;
 }
 
