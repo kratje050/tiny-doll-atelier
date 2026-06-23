@@ -16,6 +16,96 @@ const TinyStore = (() => {
     { id: "linnen", name: "Linnen" },
     { id: "setjes", name: "Setjes" },
     { id: "accessoires", name: "Accessoires" },
+    { id: "cadeaubonnen", name: "Cadeaubonnen" },
+  ];
+
+  const defaultGiftCardProducts = [
+    {
+      id: "cadeaubon-15",
+      name: "Cadeaubon €15",
+      categoryId: "cadeaubonnen",
+      price: 15,
+      stockQuantity: 0,
+      stock: "Op aanvraag",
+      stockStatus: "Aan te vragen",
+      badge: "Klein cadeautje",
+      image: "assets/tiny-doll-atelier.png",
+      description: "Een lief klein tegoed voor een accessoire, haarband of bijdrage aan een setje.",
+      longDescription:
+        "De cadeaubon wordt na bevestiging en betaling persoonlijk aangemaakt. De ontvanger krijgt de code per e-mail.",
+      size: "Vrij te besteden",
+      contents: "Digitale cadeauboncode per e-mail",
+      material: "Cadeautegoed voor Tiny Doll Atelier",
+      leadTime: "Na betaling per e-mail",
+      options: "Naam ontvanger en persoonlijk bericht mogelijk",
+      madeToOrder: true,
+      active: true,
+    },
+    {
+      id: "cadeaubon-25",
+      name: "Cadeaubon €25",
+      categoryId: "cadeaubonnen",
+      price: 25,
+      stockQuantity: 0,
+      stock: "Op aanvraag",
+      stockStatus: "Meest gekozen",
+      badge: "Populair cadeau",
+      image: "assets/tiny-doll-atelier.png",
+      description: "Een populair bedrag voor een mooi handgemaakt kledingstuk of setje.",
+      longDescription:
+        "De cadeaubon wordt na bevestiging en betaling persoonlijk aangemaakt. De ontvanger krijgt de code per e-mail.",
+      size: "Vrij te besteden",
+      contents: "Digitale cadeauboncode per e-mail",
+      material: "Cadeautegoed voor Tiny Doll Atelier",
+      leadTime: "Na betaling per e-mail",
+      options: "Naam ontvanger en persoonlijk bericht mogelijk",
+      madeToOrder: true,
+      active: true,
+      bestseller: true,
+    },
+    {
+      id: "cadeaubon-50",
+      name: "Cadeaubon €50",
+      categoryId: "cadeaubonnen",
+      price: 50,
+      stockQuantity: 0,
+      stock: "Op aanvraag",
+      stockStatus: "Mooi ruim cadeau",
+      badge: "Ruim tegoed",
+      image: "assets/tiny-doll-atelier.png",
+      description: "Een royaal tegoed voor een setje, maatwerk of meerdere accessoires.",
+      longDescription:
+        "De cadeaubon wordt na bevestiging en betaling persoonlijk aangemaakt. De ontvanger krijgt de code per e-mail.",
+      size: "Vrij te besteden",
+      contents: "Digitale cadeauboncode per e-mail",
+      material: "Cadeautegoed voor Tiny Doll Atelier",
+      leadTime: "Na betaling per e-mail",
+      options: "Naam ontvanger en persoonlijk bericht mogelijk",
+      madeToOrder: true,
+      active: true,
+      featured: true,
+    },
+    {
+      id: "cadeaubon-75",
+      name: "Cadeaubon €75",
+      categoryId: "cadeaubonnen",
+      price: 75,
+      stockQuantity: 0,
+      stock: "Op aanvraag",
+      stockStatus: "Voor een bijzonder cadeau",
+      badge: "Bijzonder cadeau",
+      image: "assets/tiny-doll-atelier.png",
+      description: "Een extra mooi tegoed voor een uitgebreid poppensetje of persoonlijk maatwerk.",
+      longDescription:
+        "De cadeaubon wordt na bevestiging en betaling persoonlijk aangemaakt. De ontvanger krijgt de code per e-mail.",
+      size: "Vrij te besteden",
+      contents: "Digitale cadeauboncode per e-mail",
+      material: "Cadeautegoed voor Tiny Doll Atelier",
+      leadTime: "Na betaling per e-mail",
+      options: "Naam ontvanger en persoonlijk bericht mogelijk",
+      madeToOrder: true,
+      active: true,
+    },
   ];
 
   const defaultProducts = [
@@ -67,6 +157,7 @@ const TinyStore = (() => {
       description: "Romper in ribbelstof met zachte ruches en elastische pasvorm.",
       active: true,
     },
+    ...defaultGiftCardProducts,
   ];
 
   const defaultDiscounts = [
@@ -440,7 +531,17 @@ const TinyStore = (() => {
   }
 
   function getProducts() {
-    return read(keys.products, defaultProducts);
+    const products = read(keys.products, defaultProducts);
+    const missingGiftCards = defaultGiftCardProducts.filter(
+      (giftCardProduct) => !products.some((product) => product.id === giftCardProduct.id),
+    );
+    if (!missingGiftCards.length) {
+      return products;
+    }
+
+    const mergedProducts = [...products, ...missingGiftCards];
+    saveProducts(mergedProducts);
+    return mergedProducts;
   }
 
   function saveProducts(products) {

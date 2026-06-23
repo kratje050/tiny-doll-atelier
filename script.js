@@ -108,6 +108,9 @@ function saveCart() {
 }
 
 function categoryName(categoryId) {
+  if (categoryId === "cadeaubonnen") {
+    return "Cadeaubonnen";
+  }
   return state.categories.find((category) => category.id === categoryId)?.name || categoryId;
 }
 
@@ -129,6 +132,10 @@ function stockLabel(product) {
 }
 
 function dollNotice(product) {
+  if (product.categoryId === "cadeaubonnen" || /cadeaubon|cadeaukaart|tegoed/i.test(product.name || "")) {
+    return "Code wordt na betaling per e-mail verstuurd";
+  }
+
   const text = [
     product.includesDoll,
     product.contents,
@@ -601,7 +608,7 @@ function renderHomepageProductGroup(sectionSelector, gridSelector, products) {
 }
 
 function renderHomepageProducts() {
-  const products = state.products.filter((product) => product.active !== false);
+  const products = state.products.filter((product) => product.active !== false && product.categoryId !== "cadeaubonnen");
   const newestProducts = [...products].reverse();
   const favoriteProducts = [
     ...products.filter((product) => product.featured || product.bestseller || product.highlighted),
