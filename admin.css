@@ -465,6 +465,24 @@ h2 {
   border-bottom: 1px solid var(--line);
 }
 
+.order-toolbar {
+  display: grid;
+  width: min(100%, 920px);
+  grid-template-columns: minmax(260px, 1fr) minmax(220px, 0.45fr);
+  gap: 12px;
+}
+
+.order-toolbar label {
+  color: var(--muted);
+}
+
+.empty-table {
+  padding: 22px;
+  color: var(--muted);
+  font-weight: 900;
+  text-align: center;
+}
+
 .form-panel {
   display: grid;
   align-content: start;
@@ -1159,6 +1177,11 @@ td strong {
 
   .metric-grid {
     gap: 10px;
+  }
+
+  .order-toolbar {
+    grid-template-columns: 1fr;
+    width: 100%;
   }
 
   .admin-nav button {

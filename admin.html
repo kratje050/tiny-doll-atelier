@@ -427,18 +427,27 @@
         <section class="panel table-panel">
           <div class="panel-heading">
             <h2>Bestellingoverzicht</h2>
-            <select data-order-status-filter>
-              <option value="alles">Alle statussen</option>
-              <option>Nieuw</option>
-              <option>Afgestemd</option>
-              <option>In afwachting van betaling</option>
-              <option>Wacht op betaling</option>
-              <option>Betaald</option>
-              <option>In productie</option>
-              <option>Verzonden</option>
-              <option>Afgerond</option>
-              <option>Geannuleerd</option>
-            </select>
+            <div class="order-toolbar">
+              <label>
+                Zoeken
+                <input data-order-search type="search" placeholder="Naam, ordernummer, e-mail, product..." />
+              </label>
+              <label>
+                Status
+                <select data-order-status-filter>
+                  <option value="alles">Alle statussen</option>
+                  <option>Nieuw</option>
+                  <option>Afgestemd</option>
+                  <option>In afwachting van betaling</option>
+                  <option>Wacht op betaling</option>
+                  <option>Betaald</option>
+                  <option>In productie</option>
+                  <option>Verzonden</option>
+                  <option>Afgerond</option>
+                  <option>Geannuleerd</option>
+                </select>
+              </label>
+            </div>
           </div>
           <div class="table-wrap">
             <table>

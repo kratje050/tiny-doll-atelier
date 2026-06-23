@@ -15,6 +15,7 @@ const adminState = {
   editingCustomerId: "",
   selectedOrderId: "",
   orderFilter: "alles",
+  orderSearch: "",
   customerSearch: "",
   accountAccounts: [],
   accountDuplicates: [],
@@ -1491,11 +1492,43 @@ function renderCustomerDetail(customerId) {
 }
 
 function renderOrders() {
-  const orders =
-    adminState.orderFilter === "alles"
-      ? adminState.orders
-      : adminState.orders.filter((order) => order.status === adminState.orderFilter);
-  document.querySelector("[data-order-table]").innerHTML = orders
+  const query = adminState.orderSearch.trim().toLowerCase();
+  const orders = adminState.orders.filter((order) => {
+    const matchesStatus = adminState.orderFilter === "alles" || order.status === adminState.orderFilter;
+    if (!matchesStatus) {
+      return false;
+    }
+    if (!query) {
+      return true;
+    }
+
+    const searchable = [
+      order.id,
+      order.status,
+      order.paymentStatus,
+      order.customer?.name,
+      order.customer?.email,
+      order.customer?.phone,
+      order.customer?.address,
+      order.customer?.postalCode,
+      order.customer?.city,
+      order.customer?.country,
+      order.discountCode,
+      order.giftCardCode,
+      order.trackTrace,
+      order.notes,
+      ...(Array.isArray(order.items)
+        ? order.items.flatMap((item) => [item.name, item.productName, item.category, item.popSize, item.material])
+        : []),
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+
+    return searchable.includes(query);
+  });
+  document.querySelector("[data-order-table]").innerHTML = orders.length
+    ? orders
     .map(
       (order) => {
         const paymentStatus = order.paymentStatus || "Wacht op bevestiging";
@@ -1532,7 +1565,8 @@ function renderOrders() {
       `;
       },
     )
-    .join("");
+    .join("")
+    : `<tr><td colspan="7" class="empty-table">Geen bestellingen gevonden.</td></tr>`;
 }
 
 function renderOrderDetail(orderId) {
@@ -2934,6 +2968,11 @@ document.querySelector("[data-customer-detail]").addEventListener("submit", (eve
 
 document.querySelector("[data-order-status-filter]").addEventListener("change", (event) => {
   adminState.orderFilter = event.target.value;
+  renderOrders();
+});
+
+document.querySelector("[data-order-search]").addEventListener("input", (event) => {
+  adminState.orderSearch = event.target.value;
   renderOrders();
 });
 
