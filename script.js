@@ -54,6 +54,8 @@ const PRODUCT_DETAILS = {
   },
 };
 
+const SHOP_BASE_URL = "https://tiny-doll-atelier.netlify.app";
+
 const grid = document.querySelector("[data-product-grid]");
 const productTemplate = document.querySelector("#product-card-template");
 const filterTabs = document.querySelector("[data-filter-tabs]");
@@ -161,6 +163,44 @@ function escapeHtml(value) {
   );
 }
 
+function publicImageUrl(src) {
+  const value = String(src || "").trim();
+  if (!value || value.startsWith("data:") || value.startsWith("blob:") || value.startsWith("file:")) {
+    return "";
+  }
+  try {
+    const browserOrigin = window.location.origin || "";
+    const origin = !browserOrigin || browserOrigin === "null" || browserOrigin.startsWith("file:")
+      ? SHOP_BASE_URL
+      : /^https?:\/\/(localhost|127\.0\.0\.1)/.test(browserOrigin)
+      ? SHOP_BASE_URL
+      : browserOrigin;
+    return new URL(value, origin).href;
+  } catch {
+    return "";
+  }
+}
+
+function orderItemSnapshot(product, quantity) {
+  const details = getProductDetails(product);
+  const imageUrl = publicImageUrl(product.image);
+  return {
+    productId: product.id,
+    productName: product.name,
+    name: product.name,
+    quantity,
+    price: product.price,
+    lineTotal: Number((product.price * quantity).toFixed(2)),
+    imageUrl,
+    image: imageUrl,
+    imageAlt: product.name,
+    category: categoryName(product.categoryId),
+    popSize: details.size,
+    material: details.material,
+    deliveryTime: details.leadTime,
+  };
+}
+
 function renderFilters() {
   const filters = [{ id: "alles", name: "Alles" }, ...state.categories];
   filterTabs.innerHTML = filters
@@ -220,6 +260,9 @@ function renderProducts() {
     const image = card.querySelector("img");
     image.src = product.image;
     image.alt = product.name;
+    image.closest(".product-photo").setAttribute("role", "button");
+    image.closest(".product-photo").setAttribute("tabindex", "0");
+    image.closest(".product-photo").setAttribute("aria-label", `Bekijk ${product.name}`);
     image.addEventListener("error", () => {
       image.hidden = true;
       image.closest(".product-photo")?.classList.add("has-image-error");
@@ -235,6 +278,14 @@ function renderProducts() {
     card.querySelector(".product-doll-note").textContent = dollNotice(product);
     card.querySelector(".product-price").textContent = formatMoney(product.price);
     card.querySelector(".product-stock").textContent = details.stockStatus;
+    card.querySelector(".product-photo").addEventListener("click", () => openProductModal(product.id));
+    card.querySelector(".product-photo").addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        openProductModal(product.id);
+      }
+    });
+    card.querySelector("h3").addEventListener("click", () => openProductModal(product.id));
     card.querySelector(".view-button").addEventListener("click", () => openProductModal(product.id));
     const addButton = card.querySelector(".add-button");
     const canOrder = !product.soldOut && (stockQuantity(product) > 0 || product.madeToOrder);
@@ -441,6 +492,7 @@ function renderProductGallery(product) {
 
     button.addEventListener("click", () => {
       modalImage.src = src;
+      modalImage.dataset.zoomSrc = src;
       gallery.querySelectorAll("button").forEach((item) => item.classList.remove("is-active"));
       button.classList.add("is-active");
     });
@@ -457,8 +509,10 @@ function openProductModal(productId) {
 
   const details = getProductDetails(product);
   state.selectedProductId = productId;
-  productModal.querySelector("[data-modal-image]").src = product.image;
-  productModal.querySelector("[data-modal-image]").alt = product.name;
+  const modalImage = productModal.querySelector("[data-modal-image]");
+  modalImage.src = product.image;
+  modalImage.alt = product.name;
+  modalImage.dataset.zoomSrc = product.image;
   productModal.querySelector("[data-modal-category]").textContent = categoryName(product.categoryId);
   productModal.querySelector("[data-modal-title]").textContent = product.name;
   productModal.querySelector("[data-modal-price]").textContent = formatMoney(product.price);
@@ -488,6 +542,32 @@ function closeProductModal() {
   productModal.classList.remove("is-open");
   productModal.setAttribute("aria-hidden", "true");
   document.body.classList.remove("modal-open");
+}
+
+function openImageLightbox(src, alt = "") {
+  const safeSrc = String(src || "").trim();
+  if (!safeSrc) {
+    return;
+  }
+  const overlay = document.createElement("aside");
+  overlay.className = "image-lightbox is-open";
+  overlay.setAttribute("role", "dialog");
+  overlay.setAttribute("aria-modal", "true");
+  overlay.innerHTML = `
+    <button class="icon-button image-lightbox-close" type="button" aria-label="Afbeelding sluiten">x</button>
+    <img src="${escapeHtml(safeSrc)}" alt="${escapeHtml(alt)}">
+  `;
+  const close = () => {
+    overlay.remove();
+    document.body.classList.remove("modal-open");
+  };
+  overlay.addEventListener("click", (event) => {
+    if (event.target === overlay || event.target.closest(".image-lightbox-close")) {
+      close();
+    }
+  });
+  document.body.append(overlay);
+  document.body.classList.add("modal-open");
 }
 
 function addToCart(productId) {
@@ -703,7 +783,7 @@ function renderCart() {
     const productImage = escapeHtml(product.image);
     line.className = "cart-line";
     line.innerHTML = `
-      <img src="${productImage}" alt="${productName}">
+      ${productImage ? `<img src="${productImage}" alt="${productName}">` : '<span class="cart-image-placeholder">Geen afbeelding</span>'}
       <div>
         <strong>${productName}</strong>
         <span>${formatMoney(product.price)} per stuk</span>
@@ -715,6 +795,12 @@ function renderCart() {
         <button class="remove-item" type="button" data-cart-action="remove" data-product-id="${product.id}">Verwijder</button>
       </div>
     `;
+    line.querySelector("img")?.addEventListener("error", (event) => {
+      event.currentTarget.replaceWith(Object.assign(document.createElement("span"), {
+        className: "cart-image-placeholder",
+        textContent: "Geen afbeelding",
+      }));
+    });
     cartItems.append(line);
   });
 
@@ -948,8 +1034,8 @@ function orderSummary(order) {
         `Prijs per stuk: ${formatMoney(item.price)}`,
         `Totaal bedrag: ${formatMoney(item.price * item.quantity)}`,
       ];
-      if (item.image) {
-        lines.push(`Afbeelding: ${absoluteAssetUrl(item.image)}`);
+      if (item.imageUrl || item.image) {
+        lines.push("Afbeelding: zichtbaar in het productoverzicht van de mail.");
       }
       return lines.join("\n");
     })
@@ -1132,6 +1218,10 @@ document.querySelectorAll("[data-close-product]").forEach((button) => {
   button.addEventListener("click", closeProductModal);
 });
 
+productModal.querySelector("[data-modal-image]").addEventListener("click", (event) => {
+  openImageLightbox(event.currentTarget.dataset.zoomSrc || event.currentTarget.src, event.currentTarget.alt);
+});
+
 modalAddButton.addEventListener("click", () => {
   if (state.selectedProductId) {
     addToCart(state.selectedProductId);
@@ -1169,13 +1259,7 @@ checkoutForm.addEventListener("submit", async (event) => {
     return;
   }
 
-  const orderItems = entries.map(({ product, quantity }) => ({
-    productId: product.id,
-    name: product.name,
-    price: product.price,
-    quantity,
-    image: product.image,
-  }));
+  const orderItems = entries.map(({ product, quantity }) => orderItemSnapshot(product, quantity));
 
   if (state.giftWrap) {
     orderItems.push({
@@ -1376,9 +1460,11 @@ contactForm.addEventListener("submit", async (event) => {
 
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
+    document.querySelector(".image-lightbox")?.remove();
     closeCart();
     closeProductModal();
     closeMenu();
+    document.body.classList.remove("modal-open");
   }
 });
 

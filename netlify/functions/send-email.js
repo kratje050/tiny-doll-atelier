@@ -15,6 +15,7 @@ const allowedTypes = new Set([
 const rateLimits = new Map();
 const ADMIN_COOKIE_NAME = "tiny_doll_admin_session";
 const ADMIN_SESSION_MAX_AGE = 60 * 60 * 2;
+const DEFAULT_SHOP_BASE_URL = "https://tiny-doll-atelier.netlify.app";
 
 const templates = {
   "gift-card": {
@@ -182,6 +183,22 @@ function escapeHtml(value) {
   );
 }
 
+function shopBaseUrl() {
+  return String(process.env.SHOP_BASE_URL || process.env.URL || DEFAULT_SHOP_BASE_URL).replace(/\/+$/, "");
+}
+
+function publicImageUrl(value = "") {
+  const src = clean(value, 4000);
+  if (!src || /^(data|blob|file):/i.test(src)) {
+    return "";
+  }
+  try {
+    return new URL(src, `${shopBaseUrl()}/`).href;
+  } catch {
+    return "";
+  }
+}
+
 function textToHtml(value) {
   return escapeHtml(value)
     .split(/\r?\n\r?\n/)
@@ -237,10 +254,16 @@ function sanitizeOrderItems(value) {
   const items = Array.isArray(value) ? value : [];
   return items
     .map((item) => ({
-      name: clean(item.name, 180),
+      name: clean(item.name || item.productName, 180),
       quantity: Number(item.quantity) || 1,
       price: Number(item.price) || 0,
-      image: clean(item.image, 4000),
+      lineTotal: Number(item.lineTotal) || (Number(item.price) || 0) * (Number(item.quantity) || 1),
+      imageUrl: publicImageUrl(item.imageUrl || item.image),
+      imageAlt: clean(item.imageAlt || item.name || item.productName, 220),
+      category: clean(item.category, 120),
+      popSize: clean(item.popSize, 120),
+      material: clean(item.material, 160),
+      deliveryTime: clean(item.deliveryTime, 160),
     }))
     .filter((item) => item.name);
 }
@@ -262,14 +285,14 @@ function renderOrderItemsHtml(items) {
       <div style="margin-bottom:12px;color:#6f4328;font-size:13px;letter-spacing:.08em;text-transform:uppercase;font-weight:800;">Bestelling</div>
       ${items
         .map((item) => {
-          const image = item.image
+          const image = item.imageUrl
             ? `<td width="92" style="padding:0 14px 14px 0;vertical-align:top;">
-                <img src="${escapeHtml(item.image)}" alt="${escapeHtml(item.name)}" width="78" style="display:block;width:78px;max-width:78px;border-radius:8px;border:1px solid #eadbd0;background:#efe3d6;">
+                <img src="${escapeHtml(item.imageUrl)}" alt="${escapeHtml(item.imageAlt || item.name)}" width="78" height="78" style="display:block;width:78px;height:78px;object-fit:cover;border-radius:8px;border:1px solid #eadbd0;background:#efe3d6;">
               </td>`
-            : "";
-          const imageLink = item.image
-            ? `<div style="margin-top:8px;"><a href="${escapeHtml(item.image)}" style="color:#6f4328;font-weight:700;">Afbeelding openen</a></div>`
-            : "";
+            : `<td width="92" style="padding:0 14px 14px 0;vertical-align:top;">
+                <div style="display:grid;place-items:center;width:78px;height:78px;border-radius:8px;border:1px solid #eadbd0;background:#efe3d6;color:#806a59;font-size:11px;font-weight:800;text-align:center;line-height:1.15;">Geen afbeelding</div>
+              </td>`;
+          const detailLine = [item.category, item.popSize, item.material, item.deliveryTime].filter(Boolean).join(" - ");
 
           return `
             <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-bottom:1px solid #eadbd0;margin-bottom:14px;">
@@ -277,9 +300,9 @@ function renderOrderItemsHtml(items) {
                 ${image}
                 <td style="padding:0 0 14px;vertical-align:top;color:#342216;">
                   <strong style="display:block;font-size:16px;margin-bottom:7px;">${escapeHtml(item.quantity)}x ${escapeHtml(item.name)}</strong>
+                  ${detailLine ? `<div style="color:#806a59;font-size:13px;line-height:1.5;margin-bottom:4px;">${escapeHtml(detailLine)}</div>` : ""}
                   <div style="color:#806a59;font-size:14px;line-height:1.7;">Prijs per stuk: ${escapeHtml(formatEuro(item.price))}</div>
-                  <div style="color:#342216;font-size:15px;font-weight:800;line-height:1.7;">Totaal bedrag: ${escapeHtml(formatEuro(item.price * item.quantity))}</div>
-                  ${imageLink}
+                  <div style="color:#342216;font-size:15px;font-weight:800;line-height:1.7;">Totaal bedrag: ${escapeHtml(formatEuro(item.lineTotal || item.price * item.quantity))}</div>
                 </td>
               </tr>
             </table>
@@ -328,6 +351,8 @@ function renderIntroHtml({ type, audience, values }) {
       "gift-card-issued": `Hallo ${name},\n\nWat leuk, je cadeaubon is klaar. Hieronder vind je de code en alle gegevens overzichtelijk bij elkaar.`,
       "payment-instructions": `Hallo ${name},\n\nBedankt voor je aanvraag. We hebben je bestelling gecontroleerd. Hieronder vind je de informatie om de betaling persoonlijk af te stemmen.`,
       "payment-received": `Hallo ${name},\n\nBedankt voor je bestelling. We hebben je betaling ontvangen en gaan met je bestelling aan de slag.`,
+      "track-trace": `Hallo ${name},\n\nGoed nieuws, je bestelling is verzonden. Je kunt de zending volgen met de track & trace code hieronder. Heb je vragen over je bestelling? Reageer dan gerust op deze mail.`,
+      "order-status": `Hallo ${name},\n\nEr is een update over je bestelling. Hieronder vind je de huidige status en de producten van je aanvraag.`,
       return: `Hallo ${name},\n\nWe hebben je retour of annulering ontvangen. We bekijken je aanvraag en nemen zo snel mogelijk persoonlijk contact met je op.`,
       contact: `Hallo ${name},\n\nBedankt voor je bericht. We hebben het goed ontvangen en reageren zo snel mogelijk.`,
     },
@@ -337,6 +362,8 @@ function renderIntroHtml({ type, audience, values }) {
       "gift-card-issued": `De cadeaubon is opgeslagen en de gegevens zijn naar de ontvanger verzonden.`,
       "payment-instructions": `Er is een betaalinstructie naar de klant verzonden.`,
       "payment-received": `De bestelling is handmatig gemarkeerd als betaald.`,
+      "track-trace": `Er is een track & trace mail naar de klant verzonden.`,
+      "order-status": `Er is een statusmail naar de klant verzonden.`,
       return: `Er is een nieuwe retour- of annuleringsaanvraag binnengekomen via de website.`,
       contact: `Er is een nieuw contactbericht binnengekomen via de website.`,
     },
@@ -365,6 +392,8 @@ function renderEmailHtml({ subject, text, values, type, audience }) {
     "gift-card-issued": "Cadeaubon",
     "payment-instructions": "Betaalinstructie",
     "payment-received": "Betaling ontvangen",
+    "track-trace": "Verzonden",
+    "order-status": "Statusupdate",
     return: "Retour of annulering",
     contact: "Contactbericht",
   };
@@ -411,6 +440,21 @@ function renderEmailHtml({ subject, text, values, type, audience }) {
       ["Cadeaubon", values.cadeauboncode || "-"],
       ["Totaal", values.totaal],
     ],
+    "track-trace": [
+      ["Ordernummer", values.ordernummer],
+      ["Naam", values.naam],
+      ["E-mail", values.email],
+      ["Track & trace", values.tracktrace],
+      ["Totaal", values.totaal],
+    ],
+    "order-status": [
+      ["Ordernummer", values.ordernummer],
+      ["Naam", values.naam],
+      ["E-mail", values.email],
+      ["Bestelstatus", values.orderStatus],
+      ["Betaalstatus", values.paymentStatus],
+      ["Totaal", values.totaal],
+    ],
     return: [
       ["Naam", values.naam],
       ["E-mail", values.email],
@@ -442,7 +486,7 @@ function renderEmailHtml({ subject, text, values, type, audience }) {
     audience === "admin"
       ? `Nieuwe melding via ${values.webshopNaam}`
       : `Bedankt voor je bericht aan ${values.webshopNaam}`;
-  const hasOrderMail = ["order", "payment-instructions", "payment-received"].includes(type);
+  const hasOrderMail = ["order", "payment-instructions", "payment-received", "track-trace", "order-status"].includes(type);
   const orderBlock = hasOrderMail
     ? values.orderItems.length
       ? `${renderOrderItemsHtml(values.orderItems)}${renderCostOverview(values)}`
@@ -489,6 +533,11 @@ function renderEmailHtml({ subject, text, values, type, audience }) {
                     : ""
                 }
                 ${orderBlock}
+                ${
+                  audience === "customer" && type === "track-trace" && values.ordernummer
+                    ? `<p style="margin:24px 0 0;"><a href="${escapeHtml(`${shopBaseUrl()}/login?returnTo=${encodeURIComponent(`/account/order/${values.ordernummer}`)}`)}" style="display:inline-block;background:#6f4328;color:#fff;text-decoration:none;padding:13px 18px;border-radius:8px;font-weight:800;">Bekijk mijn bestelling</a></p>`
+                    : ""
+                }
                 ${messageBlock}
                 <div style="margin-top:22px;padding:18px;border-radius:10px;background:#efe3d6;color:#6f4328;font-size:14px;line-height:1.6;">
                   <strong style="display:block;margin-bottom:4px;color:#342216;">${escapeHtml(values.webshopNaam)}</strong>

@@ -276,6 +276,33 @@ function assetUrl(path) {
   }
 }
 
+function productFallbackForItem(item) {
+  return (
+    adminState.products.find((product) => product.id && product.id === item.productId) ||
+    adminState.products.find((product) => String(product.name || "").toLowerCase() === String(item.name || item.productName || "").toLowerCase()) ||
+    null
+  );
+}
+
+function orderItemName(item) {
+  return item.productName || item.name || "Product";
+}
+
+function orderItemImage(item) {
+  const product = productFallbackForItem(item);
+  return item.imageUrl || item.image || product?.image || "";
+}
+
+function orderItemDetails(item) {
+  const product = productFallbackForItem(item);
+  return [
+    item.category || (product ? categoryName(product.categoryId) : ""),
+    item.popSize || product?.size || product?.badge || "",
+    item.material || product?.material || "",
+    item.deliveryTime || product?.leadTime || "",
+  ].filter(Boolean);
+}
+
 function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>"']/g, (character) =>
     ({
@@ -324,6 +351,26 @@ function orderSummaryText(order) {
   return [productLines, costLines.join("\n")].filter(Boolean).join("\n\n");
 }
 
+function orderItemsForMail(order) {
+  return order.items.map((item) => {
+    const product = productFallbackForItem(item);
+    const details = orderItemDetails(item);
+    return {
+      ...item,
+      productId: item.productId || product?.id || "",
+      productName: orderItemName(item),
+      name: orderItemName(item),
+      imageUrl: assetUrl(orderItemImage(item)),
+      imageAlt: item.imageAlt || orderItemName(item),
+      lineTotal: item.lineTotal || item.price * item.quantity,
+      category: item.category || details[0] || "",
+      popSize: item.popSize || product?.size || product?.badge || "",
+      material: item.material || product?.material || "",
+      deliveryTime: item.deliveryTime || product?.leadTime || "",
+    };
+  });
+}
+
 async function sendOrderPaymentMail(order, type) {
   await sendEmail({
     type,
@@ -333,7 +380,7 @@ async function sendOrderPaymentMail(order, type) {
     phone: order.customer.phone || "",
     total: money(order.total),
     orderSummary: orderSummaryText(order),
-    orderItems: order.items,
+    orderItems: orderItemsForMail(order),
     paymentHolder: adminState.settings.paymentHolder || "R Stavasius",
     paymentIban: adminState.settings.paymentIban || "NL25 RABO 0316 0597 49",
     paymentDescription: order.id,
@@ -360,7 +407,7 @@ async function sendTrackTraceMail(order) {
     phone: order.customer.phone || "",
     total: money(order.total),
     orderSummary: orderSummaryText(order),
-    orderItems: order.items,
+    orderItems: orderItemsForMail(order),
     trackTrace: order.trackTrace || "",
   });
 }
@@ -373,7 +420,7 @@ async function sendOrderStatusMail(order) {
     email: order.customer.email,
     total: money(order.total),
     orderSummary: orderSummaryText(order),
-    orderItems: order.items,
+    orderItems: orderItemsForMail(order),
     orderStatus: order.status || "Aanvraag ontvangen",
     paymentStatus: order.paymentStatus || "Wacht op bevestiging",
   });
@@ -761,55 +808,249 @@ function printOrder(orderId, type) {
     return;
   }
 
+  const subtotal = order.items.reduce(
+    (sum, item) => sum + Number(item.lineTotal || item.price * item.quantity || 0),
+    0,
+  );
+  const address = [
+    order.customer.street,
+    [order.customer.postalCode, order.customer.city].filter(Boolean).join(" "),
+    order.customer.country,
+  ]
+    .filter(Boolean)
+    .join("<br>");
   const products = order.items
-    .map(
-      (item) => `
+    .map((item) => {
+      const image = orderItemImage(item);
+      const details = orderItemDetails(item);
+      const lineTotal = Number(item.lineTotal || item.price * item.quantity || 0);
+      return `
         <tr>
-          <td>${escapeHtml(item.name)}</td>
+          <td>
+            <div class="product-cell">
+              ${
+                image
+                  ? `<img src="${escapeHtml(assetUrl(image))}" alt="${escapeHtml(item.imageAlt || orderItemName(item))}">`
+                  : '<span class="print-placeholder">Geen afbeelding</span>'
+              }
+              <div>
+                <strong>${escapeHtml(orderItemName(item))}</strong>
+                ${details.length ? `<small>${escapeHtml(details.join(" | "))}</small>` : ""}
+              </div>
+            </div>
+          </td>
           <td>${item.quantity}</td>
           <td>${money(item.price)}</td>
-          ${type === "order" ? `<td>${money(item.price * item.quantity)}</td>` : ""}
+          <td>${money(lineTotal)}</td>
         </tr>
-      `,
-    )
+      `;
+    })
     .join("");
   const html = `
     <!doctype html>
     <html lang="nl">
       <head>
         <meta charset="utf-8">
-        <title>${type === "order" ? "Bestelling" : "Pakbon"} ${order.id}</title>
+        <title>${type === "order" ? "Bestelbon" : "Pakbon"} ${order.id}</title>
         <style>
-          body { font-family: Arial, sans-serif; color: #342216; padding: 28px; }
-          h1 { margin-bottom: 4px; }
-          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-          th, td { border-bottom: 1px solid #dcc8b7; padding: 10px; text-align: left; }
-          .muted { color: #806a59; }
+          @page { margin: 18mm; }
+          * { box-sizing: border-box; }
+          body {
+            margin: 0;
+            background: #f8f1ea;
+            color: #342216;
+            font-family: Arial, sans-serif;
+            line-height: 1.45;
+          }
+          .sheet {
+            max-width: 980px;
+            margin: 0 auto;
+            padding: 34px;
+            background: #fffaf5;
+          }
+          .top {
+            display: flex;
+            justify-content: space-between;
+            gap: 24px;
+            padding-bottom: 22px;
+            border-bottom: 2px solid #eadbd0;
+          }
+          .brand {
+            color: #7a482c;
+            font-size: 13px;
+            font-weight: 800;
+            letter-spacing: .14em;
+            text-transform: uppercase;
+          }
+          h1 {
+            margin: 8px 0 4px;
+            font-size: 34px;
+            line-height: 1.05;
+          }
+          .meta {
+            color: #806a59;
+            text-align: right;
+          }
+          .grid {
+            display: grid;
+            grid-template-columns: 1.3fr 1fr;
+            gap: 16px;
+            margin: 22px 0;
+          }
+          .card {
+            border: 1px solid #eadbd0;
+            border-radius: 12px;
+            padding: 16px;
+            background: #fff;
+          }
+          .card h2 {
+            margin: 0 0 10px;
+            color: #7a482c;
+            font-size: 14px;
+            letter-spacing: .1em;
+            text-transform: uppercase;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #fff;
+            border: 1px solid #eadbd0;
+            border-radius: 12px;
+            overflow: hidden;
+          }
+          th {
+            color: #7a482c;
+            font-size: 12px;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+          }
+          th, td {
+            border-bottom: 1px solid #eadbd0;
+            padding: 12px;
+            text-align: left;
+            vertical-align: top;
+          }
+          tr:last-child td { border-bottom: 0; }
+          .product-cell {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+          }
+          .product-cell img,
+          .print-placeholder {
+            width: 76px;
+            height: 76px;
+            flex: 0 0 76px;
+            border-radius: 10px;
+            border: 1px solid #eadbd0;
+            object-fit: cover;
+            background: #efe3d6;
+          }
+          .print-placeholder {
+            display: grid;
+            place-items: center;
+            padding: 8px;
+            color: #806a59;
+            font-size: 10px;
+            text-align: center;
+          }
+          small {
+            display: block;
+            margin-top: 4px;
+            color: #806a59;
+          }
+          .totals {
+            width: min(360px, 100%);
+            margin-left: auto;
+            margin-top: 16px;
+            border: 1px solid #eadbd0;
+            border-radius: 12px;
+            padding: 12px 16px;
+            background: #fff;
+          }
+          .totals div {
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 6px 0;
+          }
+          .totals strong {
+            font-size: 20px;
+          }
+          .footer {
+            margin-top: 26px;
+            padding-top: 16px;
+            border-top: 1px solid #eadbd0;
+            color: #806a59;
+            font-size: 13px;
+          }
+          @media print {
+            body { background: #fff; }
+            .sheet { max-width: none; padding: 0; }
+          }
         </style>
       </head>
       <body>
-        <h1>${type === "order" ? "Bestelling" : "Pakbon"} ${order.id}</h1>
-        <p class="muted">${new Date(order.createdAt).toLocaleString("nl-NL")}</p>
-        <p><strong>Klant:</strong> ${escapeHtml(order.customer.name)}<br>
-        <strong>E-mail:</strong> ${escapeHtml(order.customer.email)}<br>
-        <strong>Telefoon:</strong> ${escapeHtml(order.customer.phone || "-")}</p>
-        <p><strong>Status:</strong> ${escapeHtml(order.status)}<br>
-        <strong>Betaalstatus:</strong> ${escapeHtml(order.paymentStatus || "Wacht op bevestiging")}<br>
-        <strong>Verzending:</strong> ${escapeHtml(order.shippingMethod || "-")}<br>
-        <strong>Track & trace:</strong> ${escapeHtml(order.trackTrace || "-")}</p>
-        <table>
-          <thead>
-            <tr>
-              <th>Product</th>
-              <th>Aantal</th>
-              <th>Prijs</th>
-              ${type === "order" ? "<th>Totaal</th>" : ""}
-            </tr>
-          </thead>
-          <tbody>${products}</tbody>
-        </table>
-        ${type === "order" ? `<h2>Totaal: ${money(order.total)}</h2>` : ""}
-        <p><strong>Opmerking:</strong><br>${escapeHtml(order.notes || "-")}</p>
+        <main class="sheet">
+          <header class="top">
+            <div>
+              <div class="brand">Tiny Doll Atelier</div>
+              <h1>${type === "order" ? "Bestelbon" : "Pakbon"}</h1>
+              <strong>${escapeHtml(order.id)}</strong>
+            </div>
+            <div class="meta">
+              <div>${new Date(order.createdAt).toLocaleString("nl-NL")}</div>
+              <div>Status: ${escapeHtml(order.status || "-")}</div>
+              <div>Betaalstatus: ${escapeHtml(order.paymentStatus || "Wacht op bevestiging")}</div>
+            </div>
+          </header>
+          <section class="grid">
+            <article class="card">
+              <h2>Klant</h2>
+              <strong>${escapeHtml(order.customer.name || "-")}</strong><br>
+              ${escapeHtml(order.customer.email || "-")}<br>
+              ${escapeHtml(order.customer.phone || "-")}<br>
+              ${address || "-"}
+            </article>
+            <article class="card">
+              <h2>Verzending</h2>
+              <strong>${escapeHtml(order.shippingMethod || "-")}</strong><br>
+              Track & trace: ${escapeHtml(order.trackTrace || "-")}
+            </article>
+          </section>
+          <table>
+            <thead>
+              <tr>
+                <th>Product</th>
+                <th>Aantal</th>
+                <th>Prijs</th>
+                <th>Totaal bedrag</th>
+              </tr>
+            </thead>
+            <tbody>${products}</tbody>
+          </table>
+          <section class="totals">
+            <div><span>Subtotaal</span><span>${money(subtotal)}</span></div>
+            <div><span>Korting</span><span>${money(order.discountAmount || 0)}</span></div>
+            <div><span>Cadeaubon</span><span>${money(order.giftCardAmount || 0)}</span></div>
+            <div><span>Verzending</span><span>${order.freeShipping ? "Gratis" : money(order.shippingCost || 0)}</span></div>
+            <div><strong>Totaal bedrag</strong><strong>${money(order.total || subtotal)}</strong></div>
+          </section>
+          <section class="grid">
+            <article class="card">
+              <h2>Opmerking klant</h2>
+              ${escapeHtml(order.notes || "-")}
+            </article>
+            ${
+              type === "order"
+                ? `<article class="card"><h2>Interne notitie</h2>${escapeHtml(order.internalNote || "-")}</article>`
+                : ""
+            }
+          </section>
+          <footer class="footer">
+            Tiny Doll Atelier - handgemaakte poppenkleding. Contact: ${escapeHtml(adminState.settings.email || "ddytuber@gmail.com")}
+          </footer>
+        </main>
       </body>
     </html>
   `;
@@ -1405,16 +1646,24 @@ function renderOrderDetail(orderId) {
       <div class="order-lines">
         ${order.items
           .map((item) => {
-            const lineTotal = item.price * item.quantity;
-            const imageLink = item.image
-              ? `<a class="image-link" href="${assetUrl(item.image)}" target="_blank" rel="noreferrer">Afbeelding bekijken</a>`
+            const lineTotal = item.lineTotal || item.price * item.quantity;
+            const image = orderItemImage(item);
+            const name = orderItemName(item);
+            const details = orderItemDetails(item);
+            const imageLink = image
+              ? `<a class="image-link" href="${assetUrl(image)}" target="_blank" rel="noreferrer">Afbeelding bekijken</a>`
               : "";
             return `
               <article class="order-line-card">
-                ${item.image ? `<img class="order-line-image" src="${item.image}" alt="">` : ""}
+                ${
+                  image
+                    ? `<img class="order-line-image" src="${escapeAttribute(image)}" alt="${escapeAttribute(name)}" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'order-line-placeholder',textContent:'Geen afbeelding'}))">`
+                    : '<span class="order-line-placeholder">Geen afbeelding</span>'
+                }
                 <div>
-                  <strong>${item.name}</strong>
+                  <strong>${escapeHtml(name)}</strong>
                   <span>${item.quantity} x ${money(item.price)} per stuk</span>
+                  ${details.length ? `<span class="muted">${escapeHtml(details.join(" - "))}</span>` : ""}
                   ${imageLink}
                 </div>
                 <strong>${money(lineTotal)}</strong>

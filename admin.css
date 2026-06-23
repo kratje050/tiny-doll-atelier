@@ -962,6 +962,20 @@ td strong {
   object-fit: cover;
 }
 
+.order-line-placeholder {
+  display: grid;
+  width: 58px;
+  height: 58px;
+  place-items: center;
+  border-radius: 8px;
+  background: #fbf6ef;
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 900;
+  line-height: 1.1;
+  text-align: center;
+}
+
 .order-line-card strong,
 .order-line-card span {
   display: block;

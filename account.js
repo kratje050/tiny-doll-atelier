@@ -492,13 +492,25 @@ function renderOrderDetail(orderId) {
     <div class="account-lines">
       ${order.items
         .map(
-          (item) => `
+          (item) => {
+            const image = item.imageUrl || item.image || "";
+            const details = [item.category, item.popSize, item.material, item.deliveryTime].filter(Boolean).join(" - ");
+            return `
             <div class="account-line">
-              ${item.image ? `<img src="${escapeHtml(item.image)}" alt="">` : '<span class="account-line-placeholder">T</span>'}
-              <div><strong>${escapeHtml(item.name)}</strong><span class="muted">${item.quantity} x ${money(item.price)}</span></div>
-              <strong>${money(item.price * item.quantity)}</strong>
+              ${
+                image
+                  ? `<img src="${escapeHtml(image)}" alt="${escapeHtml(item.imageAlt || item.name || "Productafbeelding")}" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'account-line-placeholder',textContent:'Geen afbeelding beschikbaar'}))">`
+                  : '<span class="account-line-placeholder">Geen afbeelding beschikbaar</span>'
+              }
+              <div>
+                <strong>${escapeHtml(item.name || item.productName)}</strong>
+                <span class="muted">${item.quantity} x ${money(item.price)}</span>
+                ${details ? `<span class="muted">${escapeHtml(details)}</span>` : ""}
+              </div>
+              <strong>${money(item.lineTotal || item.price * item.quantity)}</strong>
             </div>
-          `,
+          `;
+          },
         )
         .join("")}
     </div>

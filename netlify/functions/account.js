@@ -117,7 +117,16 @@ function publicAccount(account) {
   };
 }
 
-function publicOrder(order) {
+function productFallback(data, item) {
+  const products = Array.isArray(data.products) ? data.products : [];
+  return (
+    products.find((product) => product.id && product.id === item.productId) ||
+    products.find((product) => String(product.name || "").toLowerCase() === String(item.name || item.productName || "").toLowerCase()) ||
+    null
+  );
+}
+
+function publicOrder(data, order) {
   const safeHistory = (order.statusHistory || []).filter((entry) =>
     ["created", "status", "payment", "paid", "shipping", "track"].includes(entry.type),
   );
@@ -134,10 +143,18 @@ function publicOrder(order) {
     items: Array.isArray(order.items)
       ? order.items.map((item) => ({
           productId: item.productId || "",
-          name: item.name || "",
+          productName: item.productName || item.name || "",
+          name: item.name || item.productName || "",
           quantity: Number(item.quantity || 1),
           price: Number(item.price || 0),
-          image: item.image || "",
+          lineTotal: Number(item.lineTotal || Number(item.price || 0) * Number(item.quantity || 1)),
+          imageUrl: item.imageUrl || item.image || productFallback(data, item)?.image || "",
+          image: item.image || item.imageUrl || productFallback(data, item)?.image || "",
+          imageAlt: item.imageAlt || item.name || item.productName || "",
+          category: item.category || "",
+          popSize: item.popSize || "",
+          material: item.material || "",
+          deliveryTime: item.deliveryTime || "",
         }))
       : [],
     discountCode: order.discountCode || "",
@@ -169,7 +186,7 @@ function accountOrders(data, account) {
   const email = account.email.toLowerCase();
   return (Array.isArray(data.orders) ? data.orders : [])
     .filter((order) => order.accountId === account.id || String(order.customer?.email || "").toLowerCase() === email)
-    .map(publicOrder);
+    .map((order) => publicOrder(data, order));
 }
 
 function accountGiftCards(data, account) {

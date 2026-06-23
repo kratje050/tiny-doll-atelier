@@ -542,6 +542,12 @@ h3 {
   aspect-ratio: 1 / 1;
   overflow: hidden;
   background: var(--soft);
+  cursor: pointer;
+}
+
+.product-photo:focus-visible {
+  outline: 3px solid rgba(111, 67, 40, 0.35);
+  outline-offset: 3px;
 }
 
 .product-photo img {
@@ -589,6 +595,10 @@ h3 {
   flex: 1;
   flex-direction: column;
   padding: 16px;
+}
+
+.product-info h3 {
+  cursor: pointer;
 }
 
 .product-category,
@@ -1091,8 +1101,49 @@ h3 {
   height: 100%;
   min-height: 430px;
   background: #fbf6ef;
+  cursor: zoom-in;
   object-fit: contain;
   object-position: center;
+}
+
+.image-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  padding: 22px;
+  background: rgba(52, 34, 22, 0.76);
+}
+
+.image-lightbox img {
+  display: block;
+  max-width: min(100%, 1120px);
+  max-height: calc(100svh - 72px);
+  border-radius: 8px;
+  background: #fbf6ef;
+  object-fit: contain;
+  box-shadow: var(--shadow);
+}
+
+.image-lightbox-close {
+  position: fixed;
+  top: 18px;
+  right: 18px;
+  z-index: 2;
+}
+
+.cart-image-placeholder {
+  display: grid;
+  width: 62px;
+  height: 62px;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--soft);
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-align: center;
 }
 
 .product-dialog-copy {

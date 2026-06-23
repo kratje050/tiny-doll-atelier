@@ -74,10 +74,18 @@ function sanitizeOrder(input) {
     ? input.items
         .map((item) => ({
           productId: clean(item.productId, 120),
-          name: clean(item.name, 180),
+          productName: clean(item.productName || item.name, 180),
+          name: clean(item.name || item.productName, 180),
           price: number(item.price),
           quantity: Math.max(1, Math.min(99, Math.round(number(item.quantity) || 1))),
-          image: clean(item.image, 4000),
+          lineTotal: number(item.lineTotal) || number(item.price) * Math.max(1, Math.round(number(item.quantity) || 1)),
+          imageUrl: clean(item.imageUrl || item.image, 4000),
+          image: clean(item.image || item.imageUrl, 4000),
+          imageAlt: clean(item.imageAlt || item.name || item.productName, 220),
+          category: clean(item.category, 120),
+          popSize: clean(item.popSize, 120),
+          material: clean(item.material, 160),
+          deliveryTime: clean(item.deliveryTime, 160),
         }))
         .filter((item) => item.productId && item.name && item.price >= 0)
     : [];
