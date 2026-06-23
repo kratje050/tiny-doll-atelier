@@ -117,6 +117,24 @@ function publicAccount(account) {
   };
 }
 
+function isRestrictedStatus(status = "") {
+  return ["Geblokkeerd", "Verwijderd", "Geanonimiseerd", "Verdacht / controleren"].includes(status);
+}
+
+function normalizedAccountStatus(account = {}) {
+  const status = String(account.status || "").trim();
+  if (isRestrictedStatus(status)) {
+    return status;
+  }
+  if (!status || account.accountSource === "register" || account.registrationSource === "customer" || account.lastLoginAt || account.resetUsedAt) {
+    return "Actief";
+  }
+  if (["Wachtwoordreset aangevraagd", "unconfirmed", "not_confirmed", "pending"].includes(status)) {
+    return "Actief";
+  }
+  return status === "Nog niet bevestigd" ? "Nog niet bevestigd" : "Actief";
+}
+
 function productFallback(data, item) {
   const products = Array.isArray(data.products) ? data.products : [];
   return (
@@ -230,7 +248,7 @@ function requireAccount(data, event) {
     error.statusCode = 401;
     throw error;
   }
-  if (["Geblokkeerd", "Verwijderd", "Geanonimiseerd", "Verdacht / controleren"].includes(result.account.status || "")) {
+  if (isRestrictedStatus(normalizedAccountStatus(result.account))) {
     const error = new Error("Je account is tijdelijk geblokkeerd. Neem contact op met Tiny Doll Atelier.");
     error.statusCode = 403;
     throw error;
@@ -436,6 +454,8 @@ exports.handler = async (event) => {
         city: clean(payload.city, 120),
         country: clean(payload.country, 120) || "Nederland",
         deliveryNote: clean(payload.deliveryNote, 1000),
+        status: "Actief",
+        accountSource: "register",
         createdAt: new Date().toISOString(),
       };
       data.accounts.unshift(account);
@@ -489,12 +509,14 @@ exports.handler = async (event) => {
         }
         return json(401, { ok: false, message: "E-mailadres of wachtwoord klopt niet." });
       }
-      if (["Geblokkeerd", "Verwijderd", "Geanonimiseerd", "Verdacht / controleren"].includes(account.status || "")) {
+      const nextStatus = normalizedAccountStatus(account);
+      if (isRestrictedStatus(nextStatus)) {
         return json(403, {
           ok: false,
           message: "Je account is tijdelijk geblokkeerd. Neem contact op met Tiny Doll Atelier.",
         });
       }
+      account.status = nextStatus;
       account.lastLoginAt = new Date().toISOString();
       account.failedLoginAttempts = 0;
       account.history = [
@@ -632,6 +654,7 @@ exports.handler = async (event) => {
       account.resetUsedAt = new Date().toISOString();
       account.resetTokenHash = "";
       account.resetExpiresAt = "";
+      account.status = "Actief";
       data.accountSessions = data.accountSessions.filter((session) => session.accountId !== account.id);
       await writeData(store, data);
       return json(200, { ok: true, message: "Je wachtwoord is aangepast. Je kunt nu inloggen." });

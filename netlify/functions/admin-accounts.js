@@ -139,6 +139,37 @@ function addHistory(account, action, description, actor = "admin", extra = {}) {
   };
 }
 
+function isRestrictedStatus(status = "") {
+  return ["Geblokkeerd", "Verwijderd", "Geanonimiseerd", "Verdacht / controleren"].includes(status);
+}
+
+function normalizedAccountStatus(account = {}) {
+  const status = String(account.status || "").trim();
+  if (isRestrictedStatus(status)) {
+    return status;
+  }
+  if (!status || account.accountSource === "register" || account.registrationSource === "customer" || account.lastLoginAt || account.resetUsedAt) {
+    return "Actief";
+  }
+  if (["Wachtwoordreset aangevraagd", "unconfirmed", "not_confirmed", "pending"].includes(status)) {
+    return "Actief";
+  }
+  return status === "Nog niet bevestigd" ? "Nog niet bevestigd" : "Actief";
+}
+
+function normalizeAccountStatuses(data) {
+  let changed = false;
+  data.accounts = data.accounts.map((account) => {
+    const status = normalizedAccountStatus(account);
+    if (status === account.status) {
+      return account;
+    }
+    changed = true;
+    return addHistory({ ...account, status }, "status automatisch bijgewerkt", `Status aangepast naar ${status}.`, "systeem");
+  });
+  return changed;
+}
+
 function ordersForAccount(data, account) {
   const email = String(account.email || "").toLowerCase();
   return data.orders.filter(
@@ -187,7 +218,7 @@ function accountLabels(data, account) {
   if (metrics.orderCount > 1) labels.add("Terugkerende klant");
   if (metrics.orderCount >= 5) labels.add("Vaste klant");
   if (metrics.openPayment) labels.add("Wacht op betaling");
-  if ((account.status || "Actief") === "Geblokkeerd") labels.add("Geblokkeerd");
+  if (normalizedAccountStatus(account) === "Geblokkeerd") labels.add("Geblokkeerd");
   if (metrics.giftCardCount) labels.add("Cadeaubon klant");
   return [...labels];
 }
@@ -196,7 +227,7 @@ function safeAccount(data, account) {
   const metrics = accountMetrics(data, account);
   return {
     id: account.id,
-    status: account.status || "Actief",
+    status: normalizedAccountStatus(account),
     statusReason: account.statusReason || "",
     name: account.name || "",
     firstName: account.firstName || "",
@@ -363,7 +394,7 @@ async function createReset(store, data, account, invite = false) {
   account.resetExpiresAt = new Date(Date.now() + RESET_MAX_AGE * 1000).toISOString();
   account.resetUsedAt = "";
   account.lastResetSentAt = now();
-  account.status = invite ? "Nog niet bevestigd" : "Wachtwoordreset aangevraagd";
+  account.status = invite ? "Nog niet bevestigd" : normalizedAccountStatus(account);
   const origin = process.env.URL || "https://tiny-doll-atelier.netlify.app";
   const resetLink = `${origin}/reset-password?token=${encodeURIComponent(token)}`;
   await sendMail({
@@ -429,6 +460,9 @@ exports.handler = async (event) => {
   try {
     if (!hasValidAdminSession(event)) return json(401, { ok: false, message: "Log opnieuw in bij beheer." });
     const { store, data } = await readData();
+    if (normalizeAccountStatuses(data)) {
+      await writeData(store, data);
+    }
     const params = event.rawQuery
       ? new URLSearchParams(event.rawQuery)
       : new URLSearchParams(event.queryStringParameters || {});
