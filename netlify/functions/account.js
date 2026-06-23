@@ -112,6 +112,7 @@ function publicAccount(account) {
     postalCode: account.postalCode || "",
     city: account.city || "",
     country: account.country || "Nederland",
+    deliveryNote: account.deliveryNote || "",
     createdAt: account.createdAt,
   };
 }
@@ -417,6 +418,7 @@ exports.handler = async (event) => {
         postalCode: clean(payload.postalCode, 40),
         city: clean(payload.city, 120),
         country: clean(payload.country, 120) || "Nederland",
+        deliveryNote: clean(payload.deliveryNote, 1000),
         createdAt: new Date().toISOString(),
       };
       data.accounts.unshift(account);
@@ -524,6 +526,7 @@ exports.handler = async (event) => {
               postalCode: clean(payload.postalCode, 40),
               city: clean(payload.city, 120),
               country: clean(payload.country, 120) || "Nederland",
+              deliveryNote: clean(payload.deliveryNote, 1000),
               history: [
                 {
                   at: new Date().toISOString(),

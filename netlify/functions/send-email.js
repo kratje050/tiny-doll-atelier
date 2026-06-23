@@ -580,6 +580,7 @@ function normalizePayload(payload) {
     postcode: clean(payload.postalCode, 40),
     plaats: clean(payload.city, 120),
     land: clean(payload.country, 120),
+    aflevernotitie: clean(payload.deliveryNote, 1000),
     onderwerp: clean(payload.subject, 180),
     bericht: clean(payload.message || payload.notes, 4000),
     ordernummer: clean(payload.orderNumber || payload.orderId, 80),

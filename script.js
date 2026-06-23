@@ -746,6 +746,13 @@ function renderCart() {
   checkoutForm.hidden = !state.checkoutVisible || !count;
 }
 
+function missingAccountFields() {
+  if (!state.account) {
+    return [];
+  }
+  return ["phone", "address", "postalCode", "city", "country"].filter((key) => !String(state.account[key] || "").trim());
+}
+
 function showCheckout() {
   if (!cartEntries().length) {
     return;
@@ -754,7 +761,7 @@ function showCheckout() {
   state.checkoutVisible = true;
   renderCart();
   if (state.account) {
-    ["name", "email", "phone", "address", "postalCode", "city", "country"].forEach((key) => {
+    ["name", "email", "phone", "address", "postalCode", "city", "country", "deliveryNote"].forEach((key) => {
       if (checkoutForm.elements[key] && !checkoutForm.elements[key].value) {
         checkoutForm.elements[key].value = state.account[key] || "";
       }
@@ -765,6 +772,10 @@ function showCheckout() {
   }
   if (accountCheckoutNote) {
     accountCheckoutNote.hidden = !state.account;
+    accountCheckoutNote.textContent =
+      state.account && missingAccountFields().length
+        ? "We missen nog een paar gegevens voor je aanvraag. Vul ze een keer aan en sla ze eventueel op in je account."
+        : "Je bent ingelogd. We gebruiken je accountgegevens voor deze aanvraag.";
   }
   if (guestCheckoutNote) {
     guestCheckoutNote.hidden = Boolean(state.account);
@@ -873,6 +884,7 @@ async function updateAccountFromCheckout(formData) {
       postalCode: formData.get("postalCode").trim(),
       city: formData.get("city").trim(),
       country: formData.get("country").trim(),
+      deliveryNote: formData.get("deliveryNote").trim(),
     }),
   });
   const data = await response.json().catch(() => ({ ok: false }));
@@ -899,6 +911,20 @@ async function loadAccountState() {
       ? state.account.name.split(" ")[0] || "Mijn account"
       : "Inloggen";
   }
+}
+
+function handleCartReturn() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("cart") !== "1") {
+    return;
+  }
+  openCart();
+  if (cartEntries().length) {
+    showCheckout();
+  }
+  params.delete("cart");
+  const nextQuery = params.toString();
+  history.replaceState(null, "", `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ""}${window.location.hash}`);
 }
 
 async function fetchGiftCardBalance(code) {
@@ -943,6 +969,7 @@ function orderSummary(order) {
       ? `Resterend cadeaubonsaldo na deze aanvraag: ${formatMoney(order.giftCardRemainingBalance || 0)}`
       : "",
     order.freeShipping ? "Verzending: gratis via kortingscode" : "Verzending: wordt afgestemd",
+    order.customer.deliveryNote ? `Aflevernotitie: ${order.customer.deliveryNote}` : "",
     `Totaal te bevestigen/betalen: ${formatMoney(order.total)}`,
   ].filter(Boolean);
 
@@ -990,6 +1017,8 @@ function buildMailBody(order) {
     `Naam: ${order.customer.name}`,
     `E-mail: ${order.customer.email}`,
     `Telefoon: ${order.customer.phone || "-"}`,
+    `Adres: ${[order.customer.address, order.customer.postalCode, order.customer.city, order.customer.country].filter(Boolean).join(", ") || "-"}`,
+    `Aflevernotitie: ${order.customer.deliveryNote || "-"}`,
     "",
     "OPMERKING",
     `Opmerking: ${order.notes || "-"}`,
@@ -1166,6 +1195,7 @@ checkoutForm.addEventListener("submit", async (event) => {
       postalCode: formData.get("postalCode").trim(),
       city: formData.get("city").trim(),
       country: formData.get("country").trim(),
+      deliveryNote: formData.get("deliveryNote").trim(),
     },
     discountCode: formData.get("discountCode").trim(),
     giftCardCode: formData.get("giftCardCode").trim(),
@@ -1192,6 +1222,7 @@ checkoutForm.addEventListener("submit", async (event) => {
       postalCode: order.customer.postalCode,
       city: order.customer.city,
       country: order.customer.country,
+      deliveryNote: order.customer.deliveryNote,
       total: formatMoney(order.total),
       orderSummary: orderSummary(order),
       orderItems: order.items,
@@ -1208,7 +1239,7 @@ checkoutForm.addEventListener("submit", async (event) => {
     });
     await persistOrder(order);
     orderMessage.innerHTML = state.account
-      ? "Bedankt, je aanvraag is verzonden en gekoppeld aan je account."
+      ? 'Bedankt, je aanvraag is verzonden en gekoppeld aan je account. <a href="/account">Naar mijn account</a>'
       : 'Bedankt, je aanvraag is verzonden. Wil je je aanvraag later makkelijk terugvinden? <a href="/register">Account aanmaken</a>';
     state.cart = {};
     state.checkoutVisible = false;
@@ -1367,7 +1398,7 @@ function renderShop() {
 }
 
 renderShop();
-loadAccountState();
+loadAccountState().then(handleCartReturn);
 
 TinyStore.loadCloudData()
   .then((result) => {

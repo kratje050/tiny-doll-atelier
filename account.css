@@ -1,4 +1,9 @@
 .account-body {
+  --brown: var(--sage-dark, #6f4328);
+  --cream: var(--paper, #fbf6ef);
+}
+
+.account-body {
   min-height: 100vh;
   background: var(--cream);
   color: var(--ink);
@@ -163,6 +168,19 @@
   padding: 11px 12px;
 }
 
+.account-panel textarea {
+  width: 100%;
+  min-height: 96px;
+  resize: vertical;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px;
+  padding: 11px 12px;
+}
+
 .auth-switch {
   margin: 0;
   color: var(--muted);
@@ -183,6 +201,10 @@
 
 .account-form-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.account-form-wide {
+  grid-column: 1 / -1;
 }
 
 .account-cards {
@@ -224,15 +246,23 @@
 }
 
 .account-sidebar a:hover,
-.account-sidebar a:focus-visible {
+.account-sidebar a:focus,
+.account-sidebar a:focus-visible,
+.account-sidebar a:active {
   background: var(--soft);
   color: var(--brown);
-  outline: 2px solid transparent;
+  outline: 2px solid rgba(111, 67, 40, 0.35);
+  outline-offset: 2px;
 }
 
-.account-sidebar a.is-active {
+.account-sidebar a.is-active,
+.account-sidebar a[aria-current="page"],
+.account-sidebar a.current,
+.account-sidebar a.selected,
+.account-sidebar a.active {
   background: var(--brown);
   color: #fff;
+  outline-color: transparent;
 }
 
 .overview-stack {

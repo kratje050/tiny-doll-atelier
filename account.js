@@ -69,6 +69,14 @@ function currentResetToken() {
   return new URLSearchParams(window.location.search).get("token") || "";
 }
 
+function safeReturnTo() {
+  const returnTo = new URLSearchParams(window.location.search).get("returnTo") || "";
+  if (!returnTo.startsWith("/") || returnTo.startsWith("//") || returnTo.startsWith("/admin")) {
+    return "";
+  }
+  return returnTo;
+}
+
 function setTitle(view) {
   const pageTitle = document.querySelector("[data-page-title]");
   const pageIntro = document.querySelector("[data-page-intro]");
@@ -209,6 +217,7 @@ function dashboardTemplate() {
                 <label>Postcode <input name="postalCode" autocomplete="postal-code" /></label>
                 <label>Plaats <input name="city" autocomplete="address-level2" /></label>
                 <label>Land <input name="country" autocomplete="country-name" /></label>
+                <label class="account-form-wide">Aflevernotitie <textarea name="deliveryNote" rows="3" placeholder="Bijv. neerzetten bij de voordeur of graag na 18:00 bezorgen"></textarea></label>
               </div>
               <button class="primary-action" type="submit">Gegevens opslaan</button>
             </form>
@@ -280,6 +289,11 @@ async function renderRoute() {
     showMessage("");
   }
   if (state.account && authViews.includes(view)) {
+    const returnTo = safeReturnTo();
+    if (returnTo) {
+      window.location.assign(returnTo);
+      return;
+    }
     history.replaceState(null, "", "/account");
     view = "overview";
     showMessage("");
@@ -504,7 +518,7 @@ function renderOrderDetail(orderId) {
 function renderDetails() {
   const form = document.querySelector("[data-details-form]");
   if (!state.account || !form) return;
-  ["name", "email", "phone", "address", "postalCode", "city", "country"].forEach((key) => {
+  ["name", "email", "phone", "address", "postalCode", "city", "country", "deliveryNote"].forEach((key) => {
     if (form.elements[key]) form.elements[key].value = state.account[key] || "";
   });
 }
@@ -526,6 +540,11 @@ document.addEventListener("submit", async (event) => {
     try {
       const data = await accountRequest("login", Object.fromEntries(new FormData(form)));
       setData(data);
+      const returnTo = safeReturnTo();
+      if (returnTo) {
+        window.location.assign(returnTo);
+        return;
+      }
       showMessage("Je bent ingelogd.");
       history.replaceState(null, "", "/account");
       renderRoute();

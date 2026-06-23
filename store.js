@@ -728,6 +728,7 @@ const TinyStore = (() => {
       existing.postalCode = customer.postalCode || existing.postalCode || "";
       existing.city = customer.city || existing.city || "";
       existing.country = customer.country || existing.country || "";
+      existing.deliveryNote = customer.deliveryNote || existing.deliveryNote || "";
       existing.notes = existing.notes || "";
       existing.orderCount += 1;
       existing.totalSpent = Number((existing.totalSpent + total).toFixed(2));
@@ -742,6 +743,7 @@ const TinyStore = (() => {
         postalCode: customer.postalCode || "",
         city: customer.city || "",
         country: customer.country || "",
+        deliveryNote: customer.deliveryNote || "",
         notes: "",
         orderCount: 1,
         totalSpent: total,

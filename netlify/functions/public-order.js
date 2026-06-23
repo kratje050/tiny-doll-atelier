@@ -94,6 +94,7 @@ function sanitizeOrder(input) {
     postalCode: clean(input.customer?.postalCode, 40),
     city: clean(input.customer?.city, 120),
     country: clean(input.customer?.country, 120),
+    deliveryNote: clean(input.customer?.deliveryNote, 1000),
   };
 
   if (!customer.name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customer.email)) {
@@ -148,6 +149,7 @@ function upsertCustomer(customers, order) {
     existing.postalCode = order.customer.postalCode || existing.postalCode || "";
     existing.city = order.customer.city || existing.city || "";
     existing.country = order.customer.country || existing.country || "";
+    existing.deliveryNote = order.customer.deliveryNote || existing.deliveryNote || "";
     existing.orderCount = Number(existing.orderCount || 0) + 1;
     existing.totalSpent = Number((Number(existing.totalSpent || 0) + order.total).toFixed(2));
     existing.lastOrderAt = order.createdAt.slice(0, 10);
