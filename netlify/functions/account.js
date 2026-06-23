@@ -135,6 +135,34 @@ function normalizedAccountStatus(account = {}) {
   return status === "Nog niet bevestigd" ? "Nog niet bevestigd" : "Actief";
 }
 
+function shopBaseUrl() {
+  return String(process.env.SHOP_BASE_URL || process.env.URL || "https://tiny-doll-atelier.netlify.app").replace(/\/+$/, "");
+}
+
+function publicAssetUrl(value = "") {
+  const src = String(value || "").trim();
+  if (!src || /^(data|blob|file):/i.test(src)) {
+    return src;
+  }
+  try {
+    return new URL(src, `${shopBaseUrl()}/`).href;
+  } catch {
+    return src;
+  }
+}
+
+function productPageUrl(productId = "", value = "") {
+  const url = String(value || "").trim();
+  if (url && !/^(data|blob|file):/i.test(url)) {
+    try {
+      return new URL(url, `${shopBaseUrl()}/`).href;
+    } catch {
+      // Valt terug op productId.
+    }
+  }
+  return productId ? `${shopBaseUrl()}/?product=${encodeURIComponent(productId)}` : "";
+}
+
 function productFallback(data, item) {
   const products = Array.isArray(data.products) ? data.products : [];
   return (
@@ -159,22 +187,27 @@ function publicOrder(data, order) {
     trackTraceMailSentAt: order.trackTraceMailSentAt || "",
     shippingMethod: order.shippingMethod || "Wordt afgestemd",
     items: Array.isArray(order.items)
-      ? order.items.map((item) => ({
-          productId: item.productId || "",
-          productName: item.productName || item.name || "",
-          name: item.name || item.productName || "",
-          quantity: Number(item.quantity || 1),
-          price: Number(item.price || 0),
-          lineTotal: Number(item.lineTotal || Number(item.price || 0) * Number(item.quantity || 1)),
-          imageUrl: item.imageUrl || item.image || productFallback(data, item)?.image || "",
-          image: item.image || item.imageUrl || productFallback(data, item)?.image || "",
-          productUrl: item.productUrl || (item.productId ? `/?product=${encodeURIComponent(item.productId)}` : ""),
-          imageAlt: item.imageAlt || item.name || item.productName || "",
-          category: item.category || "",
-          popSize: item.popSize || "",
-          material: item.material || "",
-          deliveryTime: item.deliveryTime || "",
-        }))
+      ? order.items.map((item) => {
+          const product = productFallback(data, item);
+          const image = publicAssetUrl(item.imageUrl || item.image || product?.image || "");
+          const productId = item.productId || product?.id || "";
+          return {
+            productId,
+            productName: item.productName || item.name || product?.name || "",
+            name: item.name || item.productName || product?.name || "",
+            quantity: Number(item.quantity || 1),
+            price: Number(item.price || 0),
+            lineTotal: Number(item.lineTotal || Number(item.price || 0) * Number(item.quantity || 1)),
+            imageUrl: image,
+            image,
+            productUrl: productPageUrl(productId, item.productUrl),
+            imageAlt: item.imageAlt || item.name || item.productName || product?.name || "",
+            category: item.category || "",
+            popSize: item.popSize || product?.size || product?.badge || "",
+            material: item.material || product?.material || "",
+            deliveryTime: item.deliveryTime || product?.leadTime || "",
+          };
+        })
       : [],
     discountCode: order.discountCode || "",
     discountAmount: Number(order.discountAmount || 0),

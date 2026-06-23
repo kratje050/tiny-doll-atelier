@@ -368,6 +368,39 @@ function renderCostOverview(values) {
   `;
 }
 
+function renderPaymentInstructionBlock(values) {
+  if (!values.paymentHolder && !values.paymentIban && !values.paymentDescription) {
+    return "";
+  }
+
+  const rows = [
+    ["Rekeninghouder", values.paymentHolder],
+    ["IBAN", values.paymentIban],
+    ["Omschrijving", values.paymentDescription || values.ordernummer],
+  ].filter(([, value]) => value);
+
+  return `
+    <div style="margin:22px 0 0;padding:18px;border-radius:10px;background:#fff6ed;border:1px solid #eadbd0;">
+      <div style="margin-bottom:10px;color:#6f4328;font-size:13px;letter-spacing:.08em;text-transform:uppercase;font-weight:800;">Betaalinstructie</div>
+      <p style="margin:0 0 12px;color:#5d4636;font-size:15px;line-height:1.7;">Je kunt het totaalbedrag overmaken naar:</p>
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+        ${rows
+          .map(
+            ([label, value]) => `
+              <tr>
+                <td style="padding:8px 0;color:#806a59;font-size:14px;font-weight:700;">${escapeHtml(label)}</td>
+                <td style="padding:8px 0;color:#342216;font-size:14px;font-weight:900;text-align:right;">${escapeHtml(value)}</td>
+              </tr>
+            `,
+          )
+          .join("")}
+      </table>
+      <p style="margin:12px 0 0;color:#6f4328;font-size:14px;line-height:1.6;font-weight:800;">Let op: vermeld altijd het ordernummer als omschrijving, zodat we je betaling goed kunnen koppelen aan je aanvraag.</p>
+      ${values.paymentExtraText ? `<p style="margin:10px 0 0;color:#806a59;font-size:14px;line-height:1.6;">${escapeHtml(values.paymentExtraText)}</p>` : ""}
+    </div>
+  `;
+}
+
 function renderIntroHtml({ type, audience, values }) {
   const name = values.naam || "daar";
   const intros = {
@@ -518,6 +551,8 @@ function renderEmailHtml({ subject, text, values, type, audience }) {
       ? `${renderOrderItemsHtml(values.orderItems)}${renderCostOverview(values)}`
       : `${renderSoftBlock("Bestelling", values.bestelling, true)}${renderCostOverview(values)}`
     : "";
+  const paymentInstructionBlock =
+    type === "payment-instructions" ? renderPaymentInstructionBlock(values) : "";
   const messageTitles = {
     order: "Opmerking",
     "gift-card": "Persoonlijk bericht",
@@ -559,6 +594,7 @@ function renderEmailHtml({ subject, text, values, type, audience }) {
                     : ""
                 }
                 ${orderBlock}
+                ${paymentInstructionBlock}
                 ${
                   audience === "customer" && type === "track-trace" && values.ordernummer
                     ? `<p style="margin:24px 0 0;"><a href="${escapeHtml(`${shopBaseUrl()}/login?returnTo=${encodeURIComponent(`/account/order/${values.ordernummer}`)}`)}" style="display:inline-block;background:#6f4328;color:#fff;text-decoration:none;padding:13px 18px;border-radius:8px;font-weight:800;">Bekijk mijn bestelling</a></p>`
