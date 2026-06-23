@@ -55,6 +55,17 @@ const PRODUCT_DETAILS = {
   },
 };
 
+const SHOP_FILTERS = [
+  { id: "alles", name: "Alles" },
+  { id: "setjes", name: "Setjes" },
+  { id: "losse-kleding", name: "Losse kleding" },
+  { id: "accessoires", name: "Accessoires" },
+  { id: "cadeaubonnen", name: "Cadeaubonnen" },
+  { id: "maatwerk", name: "Maatwerk" },
+  { id: "op-voorraad", name: "Op voorraad" },
+  { id: "op-aanvraag", name: "Op aanvraag" },
+];
+
 const SHOP_BASE_URL = "https://tiny-doll-atelier.netlify.app";
 
 const grid = document.querySelector("[data-product-grid]");
@@ -152,6 +163,74 @@ function getProductDetails(product) {
   };
 }
 
+function productSearchText(product) {
+  const details = getProductDetails(product);
+  return [
+    product.name,
+    categoryName(product.categoryId),
+    product.description,
+    product.longDescription,
+    product.badge,
+    product.stock,
+    stockLabel(product),
+    details.size,
+    details.contents,
+    details.material,
+    details.leadTime,
+    details.stockStatus,
+    details.options,
+    formatMoney(product.price),
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+}
+
+function canOrderProduct(product) {
+  return !product.soldOut && (stockQuantity(product) > 0 || product.madeToOrder);
+}
+
+function isMadeToOrder(product) {
+  const searchableText = productSearchText(product);
+  return Boolean(product.madeToOrder) || /maatwerk|op aanvraag|op bestelling/.test(searchableText);
+}
+
+function matchesProductFilter(product, filterId) {
+  if (filterId === "alles") {
+    return true;
+  }
+
+  const category = categoryName(product.categoryId).toLowerCase();
+  const searchableText = productSearchText(product);
+  const isAccessory = /accessoire|accessoires|haarband|strik|mutsje/.test(searchableText);
+  const isSet = category.includes("set") || /\bsetje?s?\b|broekset|top met broek/.test(searchableText);
+  const isGiftCard = /cadeaubon|cadeaukaart|tegoed/.test(searchableText);
+
+  if (filterId === "setjes") {
+    return isSet;
+  }
+  if (filterId === "losse-kleding") {
+    return !isSet && !isAccessory && !isGiftCard;
+  }
+  if (filterId === "accessoires") {
+    return category.includes("accessoire") || isAccessory;
+  }
+  if (filterId === "cadeaubonnen") {
+    return isGiftCard;
+  }
+  if (filterId === "maatwerk") {
+    return isMadeToOrder(product);
+  }
+  if (filterId === "op-voorraad") {
+    return !product.soldOut && stockQuantity(product) > 0;
+  }
+  if (filterId === "op-aanvraag") {
+    return isMadeToOrder(product);
+  }
+
+  return product.categoryId === filterId;
+}
+
 function escapeHtml(value) {
   return String(value).replace(/[&<>"']/g, (character) =>
     ({
@@ -222,8 +301,7 @@ function orderItemSnapshot(product, quantity) {
 }
 
 function renderFilters() {
-  const filters = [{ id: "alles", name: "Alles" }, ...state.categories];
-  filterTabs.innerHTML = filters
+  filterTabs.innerHTML = SHOP_FILTERS
     .map(
       (filter) =>
         `<button class="${filter.id === state.activeFilter ? "is-active" : ""}" type="button" data-filter="${filter.id}">${filter.name}</button>`,
@@ -233,33 +311,14 @@ function renderFilters() {
 
 function visibleProducts() {
   const query = state.searchQuery.trim().toLowerCase();
-  const filteredProducts =
-    state.activeFilter === "alles"
-      ? state.products
-      : state.products.filter((product) => product.categoryId === state.activeFilter);
+  const filteredProducts = state.products.filter((product) => matchesProductFilter(product, state.activeFilter));
 
   if (!query) {
     return filteredProducts;
   }
 
   return filteredProducts.filter((product) => {
-    const searchableText = [
-      product.name,
-      categoryName(product.categoryId),
-      product.description,
-      product.badge,
-      product.stock,
-      stockLabel(product),
-      getProductDetails(product).size,
-      getProductDetails(product).contents,
-      getProductDetails(product).material,
-      getProductDetails(product).leadTime,
-      formatMoney(product.price),
-    ]
-      .join(" ")
-      .toLowerCase();
-
-    return searchableText.includes(query);
+    return productSearchText(product).includes(query);
   });
 }
 
@@ -270,7 +329,7 @@ function renderProducts() {
   resultCount.textContent = `${products.length} ${products.length === 1 ? "product" : "producten"} gevonden`;
 
   if (!products.length) {
-    grid.innerHTML = '<p class="empty-results">Geen producten gevonden. Probeer een andere zoekterm of filter.</p>';
+    grid.innerHTML = '<p class="empty-results">Geen producten gevonden binnen deze categorie.</p>';
     return;
   }
 
@@ -308,7 +367,7 @@ function renderProducts() {
     card.querySelector("h3").addEventListener("click", () => openProductModal(product.id));
     card.querySelector(".view-button").addEventListener("click", () => openProductModal(product.id));
     const addButton = card.querySelector(".add-button");
-    const canOrder = !product.soldOut && (stockQuantity(product) > 0 || product.madeToOrder);
+    const canOrder = canOrderProduct(product);
     addButton.disabled = !canOrder;
     addButton.textContent = canOrder ? "Toevoegen aan aanvraag" : "Tijdelijk uitverkocht";
     addButton.addEventListener("click", () => addToCart(product.id));
@@ -471,7 +530,7 @@ function renderReviews() {
     return;
   }
 
-  const visibleReviews = state.reviews.filter((review) => review.visible);
+  const visibleReviews = state.reviews.filter((review) => review.visible).slice(0, 6);
   reviewGrid.innerHTML =
     visibleReviews
       .map(
@@ -483,6 +542,83 @@ function renderReviews() {
         `,
       )
       .join("") || "<article>Binnenkort delen we hier lieve reacties van klanten.</article>";
+}
+
+function homeProductCard(product) {
+  const details = getProductDetails(product);
+  const canOrder = canOrderProduct(product);
+  return `
+    <article class="home-product-card">
+      <button class="home-product-image" type="button" data-home-product="${escapeHtml(product.id)}" aria-label="Bekijk ${escapeHtml(product.name)}">
+        <img src="${escapeHtml(product.image || "")}" alt="${escapeHtml(product.name)}" />
+        <span>${escapeHtml(product.badge || categoryName(product.categoryId))}</span>
+      </button>
+      <div class="home-product-copy">
+        <p class="product-category">${escapeHtml(categoryName(product.categoryId))}</p>
+        <h3>${escapeHtml(product.name)}</h3>
+        <p>${escapeHtml(product.description || "")}</p>
+        <dl class="compact-details">
+          <div><dt>Popmaat</dt><dd>${escapeHtml(details.size)}</dd></div>
+          <div><dt>Levertijd</dt><dd>${escapeHtml(details.leadTime)}</dd></div>
+          <div><dt>Status</dt><dd>${escapeHtml(details.stockStatus)}</dd></div>
+        </dl>
+        <p class="doll-note">${escapeHtml(dollNotice(product))}</p>
+        <div class="home-product-actions">
+          <strong>${formatMoney(product.price)}</strong>
+          <button class="secondary-action" type="button" data-home-product="${escapeHtml(product.id)}">Bekijk product</button>
+          <button class="add-button" type="button" data-home-add="${escapeHtml(product.id)}" ${canOrder ? "" : "disabled"}>${canOrder ? "Toevoegen aan aanvraag" : "Tijdelijk uitverkocht"}</button>
+        </div>
+      </div>
+    </article>
+  `;
+}
+
+function renderHomepageProductGroup(sectionSelector, gridSelector, products) {
+  const section = document.querySelector(sectionSelector);
+  const homeGrid = document.querySelector(gridSelector);
+  const visible = products.filter((product) => product.active !== false).slice(0, 4);
+  if (!section || !homeGrid || visible.length < 3) {
+    if (section) {
+      section.hidden = true;
+    }
+    return;
+  }
+
+  section.hidden = false;
+  homeGrid.innerHTML = visible.map(homeProductCard).join("");
+  homeGrid.querySelectorAll("img").forEach((image) => {
+    image.addEventListener("error", () => {
+      image.closest(".home-product-image")?.classList.add("has-image-error");
+      image.hidden = true;
+    });
+  });
+  homeGrid.querySelectorAll("[data-home-product]").forEach((button) => {
+    button.addEventListener("click", () => openProductModal(button.dataset.homeProduct));
+  });
+  homeGrid.querySelectorAll("[data-home-add]").forEach((button) => {
+    button.addEventListener("click", () => addToCart(button.dataset.homeAdd));
+  });
+}
+
+function renderHomepageProducts() {
+  const products = state.products.filter((product) => product.active !== false);
+  const newestProducts = [...products].reverse();
+  const favoriteProducts = [
+    ...products.filter((product) => product.featured || product.bestseller || product.highlighted),
+    ...products.filter((product) => stockQuantity(product) > 0 && !product.soldOut),
+    ...products,
+  ].filter((product, index, list) => list.findIndex((item) => item.id === product.id) === index);
+
+  renderHomepageProductGroup(
+    '[data-home-products-section="new"]',
+    "[data-home-new-products]",
+    newestProducts,
+  );
+  renderHomepageProductGroup(
+    '[data-home-products-section="favorites"]',
+    "[data-home-favorite-products]",
+    favoriteProducts,
+  );
 }
 
 function productImages(product) {
@@ -1511,6 +1647,7 @@ function renderShop() {
   renderFilters();
   applySettings();
   renderReviews();
+  renderHomepageProducts();
   renderProducts();
   renderCart();
   openLinkedProduct();

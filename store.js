@@ -141,13 +141,13 @@ const TinyStore = (() => {
       "Wij pakken elke bestelling met zorg in. Omdat veel producten met de hand worden gemaakt of op aanvraag worden samengesteld, kan de levertijd per bestelling verschillen.",
     shippingAfterText: "Na je bestelling ontvang je een bevestiging met verdere informatie.",
     returnLabel: "Retourneren",
-    returnTitle: "Retour of annulering",
+    returnTitle: "Retour, annulering of herroeping",
     returnLine1: "Standaardproducten kunnen binnen 14 dagen worden aangemeld voor retour.",
     returnLine2: "Het product moet ongebruikt en netjes zijn.",
     returnLine3: "Retourkosten zijn voor de klant, tenzij anders afgesproken.",
     returnLine4:
       "Maatwerkproducten kunnen mogelijk niet retour als ze speciaal volgens persoonlijke wensen zijn gemaakt.",
-    returnButtonText: "Retour of annulering aanmelden",
+    returnButtonText: "Retour, annulering of herroeping aanmelden",
     faqLabel: "FAQ",
     faqTitle: "Veelgestelde vragen",
     faq1Question: "Past de kleding op elke pop?",
@@ -503,7 +503,14 @@ const TinyStore = (() => {
   }
 
   function getSettings() {
-    return { ...defaultSettings, ...visibilityDefaults, ...read(keys.settings, defaultSettings) };
+    const settings = { ...defaultSettings, ...visibilityDefaults, ...read(keys.settings, defaultSettings) };
+    if (settings.returnTitle === "Retour of annulering") {
+      settings.returnTitle = defaultSettings.returnTitle;
+    }
+    if (settings.returnButtonText === "Retour of annulering aanmelden") {
+      settings.returnButtonText = defaultSettings.returnButtonText;
+    }
+    return settings;
   }
 
   function saveSettings(settings) {

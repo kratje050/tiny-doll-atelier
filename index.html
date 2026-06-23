@@ -99,6 +99,59 @@
         </figure>
       </section>
 
+      <section class="content-band trust-band" aria-label="Waarom bestellen bij Tiny Doll Atelier">
+        <article>
+          <strong>Handgemaakt met zorg</strong>
+          <span>Elk kledingstuk wordt rustig afgewerkt in zachte atelierstijl.</span>
+        </article>
+        <article>
+          <strong>Persoonlijk afgestemd</strong>
+          <span>Bij maatwerk kijken we samen naar maat, stof, kleur en details.</span>
+        </article>
+        <article>
+          <strong>Betalen na bevestiging</strong>
+          <span>Je ontvangt eerst persoonlijk de levertijd en betaalinformatie.</span>
+        </article>
+        <article>
+          <strong>Verzonden vanuit Nederland</strong>
+          <span>Bestellingen worden zorgvuldig verpakt en afgestemd per aanvraag.</span>
+        </article>
+      </section>
+
+      <section class="content-band home-products-band" data-home-products-section="new" aria-labelledby="home-new-title" hidden>
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Nieuw in het atelier</p>
+            <h2 id="home-new-title">Net toegevoegd aan de collectie</h2>
+          </div>
+          <a class="secondary-action" href="#collectie">Bekijk alles</a>
+        </div>
+        <div class="home-product-grid" data-home-new-products></div>
+      </section>
+
+      <section class="content-band home-products-band favorites-band" data-home-products-section="favorites" aria-labelledby="home-favorites-title" hidden>
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Favorieten uit het atelier</p>
+            <h2 id="home-favorites-title">Geliefde setjes en accessoires</h2>
+          </div>
+          <a class="secondary-action" href="#collectie">Naar de collectie</a>
+        </div>
+        <div class="home-product-grid" data-home-favorite-products></div>
+      </section>
+
+      <section class="content-band gift-highlight-band" aria-labelledby="gift-highlight-title">
+        <div>
+          <p class="eyebrow">Cadeaubon geven</p>
+          <h2 id="gift-highlight-title">Een lief ateliercadeau voor later</h2>
+          <p>
+            Met een cadeaubon kan de ontvanger zelf iets moois uitzoeken. Je vraagt de bon aan,
+            ontvangt eerst betaalinformatie en na betaling sturen we de cadeauboncode per e-mail.
+          </p>
+        </div>
+        <a class="primary-action" href="#cadeaubon">Cadeaubon aanvragen</a>
+      </section>
+
       <section class="content-band intro-band" id="over-ons" aria-labelledby="over-ons-title">
         <div class="section-heading">
           <div>
@@ -222,7 +275,7 @@
       <section class="order-band" id="bestellen" aria-labelledby="bestellen-title">
         <div>
           <p class="eyebrow">Bestellen</p>
-          <h2 id="bestellen-title">Stuur een aanvraag</h2>
+          <h2 id="bestellen-title">Hoe werkt bestellen?</h2>
           <p data-order-request-text>
             Je plaatst eerst een aanvraag. Daarna controleren we voorraad, maatwerk en levertijd.
             Je ontvangt van ons persoonlijk de betaalinformatie. Je bestelling is pas definitief
@@ -232,7 +285,8 @@
             <li>Kies je favoriete setje</li>
             <li>Voeg het toe aan je aanvraag</li>
             <li>Verstuur je aanvraag</li>
-            <li>Je ontvangt van ons levertijd, keuzes en betaalinformatie</li>
+            <li>Wij controleren voorraad, maatwerk en levertijd</li>
+            <li>Je ontvangt betaalinformatie</li>
             <li>Na betaling maken of verzenden we je bestelling</li>
           </ol>
         </div>
@@ -285,24 +339,24 @@
 
         <article class="text-panel" id="retourneren" aria-labelledby="retourneren-title">
           <p class="eyebrow" data-return-label>Retourneren</p>
-          <h2 id="retourneren-title" data-return-title>Retour of annulering</h2>
+          <h2 id="retourneren-title" data-return-title>Retour, annulering of herroeping</h2>
           <ul class="check-list">
             <li data-return-line="1">Standaardproducten kunnen binnen 14 dagen worden aangemeld voor retour.</li>
             <li data-return-line="2">Het product moet ongebruikt en netjes zijn.</li>
             <li data-return-line="3">Retourkosten zijn voor de klant, tenzij anders afgesproken.</li>
             <li data-return-line="4">Maatwerkproducten kunnen mogelijk niet retour als ze speciaal volgens persoonlijke wensen zijn gemaakt.</li>
           </ul>
-          <a class="secondary-action" href="#retourformulier" data-return-button-text>Retour of annulering aanmelden</a>
+          <a class="secondary-action" href="#retourformulier" data-return-button-text>Retour, annulering of herroeping aanmelden</a>
         </article>
       </section>
 
       <section class="content-band form-section" id="retourformulier" aria-labelledby="retourformulier-title">
         <div>
           <p class="eyebrow">Formulier</p>
-          <h2 id="retourformulier-title">Retourformulier</h2>
+          <h2 id="retourformulier-title">Retour, annulering of herroeping aanmelden</h2>
           <p class="section-note">
-            Vul dit formulier in als je een retour of annulering wilt aanmelden. We nemen zo snel
-            mogelijk contact met je op.
+            Vul dit formulier in als je een retour, annulering of herroeping wilt aanmelden. We
+            nemen zo snel mogelijk contact met je op.
           </p>
           <p class="section-note">
             Let op: maatwerkproducten kunnen mogelijk niet retour als ze speciaal volgens
@@ -318,7 +372,7 @@
           <label>Reden van retour, optioneel <input name="reason" /></label>
           <label>Bericht <textarea name="message" rows="4" required></textarea></label>
           <p class="form-note" data-return-message></p>
-          <button class="primary-action" type="submit">Retour of annulering aanmelden</button>
+          <button class="primary-action" type="submit">Retour, annulering of herroeping aanmelden</button>
         </form>
       </section>
 
@@ -337,6 +391,7 @@
           <details><summary data-faq-question="5">Kan ik mijn bestelling retourneren?</summary><p data-faq-answer="5">Standaardproducten kunnen binnen 14 dagen worden aangemeld voor retour. Maatwerkproducten kunnen mogelijk niet retour als ze speciaal volgens jouw wensen zijn gemaakt.</p></details>
           <details><summary data-faq-question="6">Kan ik een bestelling cadeau laten verpakken?</summary><p data-faq-answer="6">Ja, cadeauverpakking kan als extra optie worden toegevoegd.</p></details>
           <details><summary data-faq-question="7">Hebben jullie cadeaubonnen?</summary><p data-faq-answer="7">Ja, via de cadeaubonsectie kun je een cadeaubon aanvragen.</p></details>
+          <details><summary>Wat als er iets mis is met mijn bestelling?</summary><p>Voor alle producten geldt de wettelijke garantie. Dat betekent dat een product moet zijn zoals je redelijkerwijs mag verwachten. Is er iets mis met je bestelling? Neem dan contact met ons op, liefst met foto's, zodat we persoonlijk kunnen meekijken naar een passende oplossing.</p></details>
         </div>
       </section>
 
@@ -347,6 +402,7 @@
           <p data-contact-text>Heb je een vraag over een setje, maatwerk of een bestelling? Stuur gerust een bericht.</p>
           <ul class="contact-list">
             <li>E-mail: <span data-public-email>ddytuber@gmail.com</span></li>
+            <li>Reactietijd: meestal binnen 1 tot 2 werkdagen.</li>
             <li>
               Instagram:
               <a class="instagram-icon-link" href="https://www.instagram.com/tinydoll.atelier/" target="_blank" rel="noreferrer" aria-label="Tiny Doll Atelier op Instagram">
@@ -401,12 +457,12 @@
             <p>Levering hangt af van voorraad, maatwerk en de afgesproken levertijd.</p>
             <h3>4. Maatwerk</h3>
             <p>Maatwerk wordt vooraf afgestemd op maat, stof, kleur en afwerking.</p>
-            <h3>5. Retourneren</h3>
+            <h3>5. Retourneren / herroeping</h3>
             <p>Retourneren kan voor standaardproducten binnen 14 dagen na aanmelding. Maatwerkproducten kunnen mogelijk niet retour als ze speciaal volgens persoonlijke wensen zijn gemaakt.</p>
             <h3>6. Cadeaubonnen</h3>
             <p>Cadeaubonnen worden na betaling aangemaakt en per e-mail verstuurd. De cadeaubon is te gebruiken voor producten van Tiny Doll Atelier. De geldigheidsdatum staat op de cadeaubon vermeld.</p>
-            <h3>7. Klachten</h3>
-            <p>Klachten lossen we graag zorgvuldig en persoonlijk op.</p>
+            <h3>7. Garantie en klachten</h3>
+            <p>Voor alle producten geldt de wettelijke garantie. Dat betekent dat een product moet zijn zoals je redelijkerwijs mag verwachten. Is er iets mis met je bestelling? Neem dan contact met ons op, liefst met foto's, zodat we persoonlijk kunnen meekijken naar een passende oplossing.</p>
             <h3>8. Aansprakelijkheid</h3>
             <p>Aansprakelijkheid is beperkt tot het bedrag van de betreffende bestelling.</p>
             <h3>9. Contact</h3>
@@ -421,6 +477,7 @@
         <strong>Tiny Doll Atelier</strong>
         <p>Handgemaakte poppenkleding in zachte atelierstijl.</p>
         <p>E-mail: <span data-public-email>ddytuber@gmail.com</span></p>
+        <p>Reactietijd: meestal binnen 1 tot 2 werkdagen.</p>
         <p>
           Instagram:
           <a class="instagram-icon-link footer-instagram" href="https://www.instagram.com/tinydoll.atelier/" target="_blank" rel="noreferrer" aria-label="Tiny Doll Atelier op Instagram">
@@ -433,7 +490,7 @@
         <a href="#contact">Contact</a>
         <a href="#veelgestelde-vragen">Veelgestelde vragen</a>
         <a href="#verzenden">Verzenden</a>
-        <a href="#retourneren">Retourneren</a>
+        <a href="#retourneren">Retourneren / herroeping</a>
         <a href="/account">Mijn account</a>
         <a href="#privacyverklaring">Privacyverklaring</a>
         <a href="#algemene-voorwaarden">Algemene voorwaarden</a>
