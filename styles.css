@@ -67,7 +67,7 @@ button {
   top: 0;
   z-index: 20;
   display: grid;
-  grid-template-columns: minmax(190px, 1fr) auto auto;
+  grid-template-columns: minmax(190px, 1fr) auto auto auto;
   align-items: center;
   gap: 20px;
   padding: 14px clamp(16px, 4vw, 56px);
@@ -112,6 +112,7 @@ button {
 }
 
 .cart-button,
+.account-button,
 .menu-button,
 .primary-action,
 .secondary-action,
@@ -131,6 +132,31 @@ button {
   background: var(--ink);
   color: #fff;
   white-space: nowrap;
+}
+
+.account-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  border: 1px solid var(--line);
+  background: rgba(255, 250, 244, 0.84);
+  color: var(--sage-dark);
+  font-weight: 900;
+  padding: 10px 14px;
+  white-space: nowrap;
+}
+
+.account-icon {
+  display: grid;
+  min-width: 24px;
+  height: 24px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--soft);
+  color: var(--sage-dark);
+  font-size: 0.78rem;
+  font-weight: 900;
 }
 
 .menu-button {
@@ -1473,6 +1499,7 @@ h3 {
   }
 
   .site-header {
+    grid-template-columns: minmax(0, 1fr) auto auto auto;
     gap: 10px;
     padding: 10px 12px 9px;
   }
@@ -1494,6 +1521,24 @@ h3 {
     gap: 7px;
     padding-inline: 10px;
     font-size: 0.86rem;
+  }
+
+  .account-button {
+    width: 44px;
+    padding-inline: 0;
+  }
+
+  .account-button-text {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+
+  .account-icon {
+    min-width: 22px;
+    height: 22px;
   }
 
   .cart-dot {
