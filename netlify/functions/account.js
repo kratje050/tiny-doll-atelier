@@ -167,7 +167,7 @@ function publicGiftCard(giftCard) {
 function accountOrders(data, account) {
   const email = account.email.toLowerCase();
   return (Array.isArray(data.orders) ? data.orders : [])
-    .filter((order) => String(order.customer?.email || "").toLowerCase() === email)
+    .filter((order) => order.accountId === account.id || String(order.customer?.email || "").toLowerCase() === email)
     .map(publicOrder);
 }
 
@@ -210,6 +210,11 @@ function requireAccount(data, event) {
   if (!result.account) {
     const error = new Error("Log eerst in om je account te bekijken.");
     error.statusCode = 401;
+    throw error;
+  }
+  if (["Geblokkeerd", "Verwijderd", "Geanonimiseerd", "Verdacht / controleren"].includes(result.account.status || "")) {
+    const error = new Error("Je account is tijdelijk geblokkeerd. Neem contact op met Tiny Doll Atelier.");
+    error.statusCode = 403;
     throw error;
   }
   return result.account;
@@ -313,12 +318,15 @@ exports.handler = async (event) => {
     const { store, data } = await readData();
     data.accounts = Array.isArray(data.accounts) ? data.accounts : [];
     data.accountSessions = Array.isArray(data.accountSessions) ? data.accountSessions : [];
-    const action = new URLSearchParams(event.rawQuery || "").get("action") || "me";
+    const params = event.rawQuery
+      ? new URLSearchParams(event.rawQuery)
+      : new URLSearchParams(event.queryStringParameters || {});
+    const action = params.get("action") || "me";
 
     if (event.httpMethod === "GET") {
       const account = requireAccount(data, event);
       if (action === "order") {
-        const orderId = clean(new URLSearchParams(event.rawQuery || "").get("id"), 100);
+        const orderId = clean(params.get("id"), 100);
         const order = accountOrders(data, account).find((item) => item.id === orderId);
         if (!order) {
           return json(404, { ok: false, message: "Deze bestelling is niet gevonden bij jouw account." });
@@ -390,8 +398,30 @@ exports.handler = async (event) => {
       const email = clean(payload.email, 220).toLowerCase();
       const account = data.accounts.find((item) => item.email === email);
       if (!account || !verifyPassword(String(payload.password || ""), account.passwordHash)) {
+        if (account) {
+          account.failedLoginAttempts = Number(account.failedLoginAttempts || 0) + 1;
+          account.lastFailedLoginAt = new Date().toISOString();
+          await writeData(store, data);
+        }
         return json(401, { ok: false, message: "E-mailadres of wachtwoord klopt niet." });
       }
+      if (["Geblokkeerd", "Verwijderd", "Geanonimiseerd", "Verdacht / controleren"].includes(account.status || "")) {
+        return json(403, {
+          ok: false,
+          message: "Je account is tijdelijk geblokkeerd. Neem contact op met Tiny Doll Atelier.",
+        });
+      }
+      account.lastLoginAt = new Date().toISOString();
+      account.failedLoginAttempts = 0;
+      account.history = [
+        {
+          at: account.lastLoginAt,
+          actor: "klant",
+          action: "klant ingelogd",
+          description: "Klant is ingelogd.",
+        },
+        ...(Array.isArray(account.history) ? account.history : []),
+      ].slice(0, 200);
       const sessionId = `sess-${Date.now()}-${randomToken(5)}`;
       const token = randomToken();
       data.accountSessions = [

@@ -278,6 +278,48 @@ const TinyStore = (() => {
       body: "Hallo {{customerName}},\n\nGebruik deze link om je wachtwoord opnieuw in te stellen: {{resetLink}}\n\nDeze link is tijdelijk geldig.\n\nLiefs,\nTiny Doll Atelier",
     },
     {
+      id: "account-invite",
+      title: "Account uitnodiging",
+      subject: "Je account bij Tiny Doll Atelier",
+      body: "Hallo {{customerName}},\n\nEr is een account voor je aangemaakt bij Tiny Doll Atelier. Via onderstaande link kun je zelf veilig een wachtwoord instellen:\n\n{{inviteLink}}\n\nDe link is tijdelijk geldig. Heb je dit niet verwacht? Dan hoef je niets te doen.\n\nLiefs,\nTiny Doll Atelier",
+    },
+    {
+      id: "account-blocked",
+      title: "Account geblokkeerd",
+      subject: "Update over je Tiny Doll Atelier account",
+      body: "Hallo {{customerName}},\n\nJe account is tijdelijk geblokkeerd. Neem gerust contact op via {{contactEmail}} als je hierover vragen hebt.\n\nLiefs,\nTiny Doll Atelier",
+    },
+    {
+      id: "account-unblocked",
+      title: "Account gedeblokkeerd",
+      subject: "Je Tiny Doll Atelier account is weer actief",
+      body: "Hallo {{customerName}},\n\nJe account is weer actief. Je kunt opnieuw inloggen en je gegevens bekijken.\n\nLiefs,\nTiny Doll Atelier",
+    },
+    {
+      id: "account-updated",
+      title: "Klantgegevens aangepast",
+      subject: "Je accountgegevens zijn aangepast",
+      body: "Hallo {{customerName}},\n\nJe accountgegevens bij Tiny Doll Atelier zijn aangepast. Klopt er iets niet? Reageer dan gerust op deze mail.\n\nLiefs,\nTiny Doll Atelier",
+    },
+    {
+      id: "customer-general",
+      title: "Algemene klantmail",
+      subject: "Bericht van Tiny Doll Atelier",
+      body: "Hallo {{customerName}},\n\n{{message}}\n\nLiefs,\nTiny Doll Atelier",
+    },
+    {
+      id: "custom-work",
+      title: "Maatwerk afstemmen",
+      subject: "Maatwerk afstemmen voor je aanvraag",
+      body: "Hallo {{customerName}},\n\nIk stem graag nog even de maat, stof, kleur en afwerking met je af. Reageer gerust op deze mail met je wensen.\n\nLiefs,\nTiny Doll Atelier",
+    },
+    {
+      id: "gift-card-info",
+      title: "Cadeaubon informatie",
+      subject: "Informatie over je cadeaubon",
+      body: "Hallo {{customerName}},\n\nHierbij ontvang je informatie over je cadeaubon van Tiny Doll Atelier.\n\nCode: {{giftCardCode}}\nSaldo: {{giftCardBalance}}\n\nLiefs,\nTiny Doll Atelier",
+    },
+    {
       id: "track-trace",
       title: "Track & trace verzonden",
       subject: "Je bestelling van Tiny Doll Atelier is verzonden",

@@ -16,6 +16,16 @@ const adminState = {
   selectedOrderId: "",
   orderFilter: "alles",
   customerSearch: "",
+  accountAccounts: [],
+  accountDuplicates: [],
+  accountStatuses: [],
+  accountDetail: null,
+  accountSearch: "",
+  accountStatusFilter: "alles",
+  accountTypeFilter: "alles",
+  accountSort: "created-desc",
+  accountOpenPaymentOnly: false,
+  accountCreatedThisMonthOnly: false,
 };
 
 const money = TinyStore.formatMoney;
@@ -99,6 +109,7 @@ const discountForm = document.querySelector("[data-discount-form]");
 const giftCardForm = document.querySelector("[data-gift-card-form]");
 const reviewForm = document.querySelector("[data-review-form]");
 const settingsForm = document.querySelector("[data-settings-form]");
+const accountCreateForm = document.querySelector("[data-account-create-form]");
 const productUpload = document.querySelector("[data-product-upload]");
 const extraImageUpload = document.querySelector("[data-extra-image-upload]");
 const uploadName = document.querySelector("[data-upload-name]");
@@ -368,6 +379,325 @@ async function sendOrderStatusMail(order) {
   });
 }
 
+async function accountAdminRequest(action, payload = null, method = "POST") {
+  const query = action.includes("&") ? `action=${action}` : `action=${encodeURIComponent(action)}`;
+  const response = await fetch(`/.netlify/functions/admin-accounts?${query}`, {
+    method,
+    credentials: "same-origin",
+    headers: payload ? { "Content-Type": "application/json" } : undefined,
+    body: payload ? JSON.stringify(payload) : undefined,
+  });
+  const data = await response.json().catch(() => ({ message: "Klantaccountactie is mislukt." }));
+  if (!response.ok || !data.ok) {
+    throw new Error(data.message || "Klantaccountactie is mislukt.");
+  }
+  return data;
+}
+
+async function refreshAccountAccounts(options = {}) {
+  try {
+    const data = await accountAdminRequest("list", null, "GET");
+    adminState.accountAccounts = data.accounts || [];
+    adminState.accountDuplicates = data.duplicates || [];
+    adminState.accountStatuses = data.statuses || [];
+    fillAccountStatusFilter();
+    if (options.detailId) {
+      await loadAccountDetail(options.detailId);
+    } else {
+      renderAccountManagement();
+    }
+  } catch (error) {
+    const table = document.querySelector("[data-account-table]");
+    if (table) {
+      table.innerHTML = `<tr><td colspan="7">${escapeHtml(error.message)}</td></tr>`;
+    }
+  }
+}
+
+function fillAccountStatusFilter() {
+  const filter = document.querySelector("[data-account-status-filter]");
+  if (!filter || filter.dataset.loaded === "1") {
+    return;
+  }
+  filter.innerHTML = '<option value="alles">Alle statussen</option>' + adminState.accountStatuses
+    .map((status) => `<option value="${escapeAttribute(status)}">${escapeHtml(status)}</option>`)
+    .join("");
+  filter.dataset.loaded = "1";
+}
+
+function accountMatchesSearch(account) {
+  const query = adminState.accountSearch.toLowerCase();
+  if (!query) {
+    return true;
+  }
+  const fields = [
+    account.name,
+    account.email,
+    account.phone,
+    account.address,
+    account.city,
+    account.postalCode,
+    account.statusReason,
+    ...(account.labels || []),
+    ...(account.notes || []).flatMap((note) => [note.title, note.text, note.label]),
+    account.metrics?.latestOrderId,
+  ];
+  return fields.some((value) => String(value || "").toLowerCase().includes(query));
+}
+
+function filteredAccounts() {
+  const monthPrefix = new Date().toISOString().slice(0, 7);
+  return adminState.accountAccounts
+    .filter(accountMatchesSearch)
+    .filter((account) => adminState.accountStatusFilter === "alles" || account.status === adminState.accountStatusFilter)
+    .filter((account) => {
+      const count = Number(account.metrics?.orderCount || 0);
+      if (adminState.accountTypeFilter === "nieuw") return count === 0;
+      if (adminState.accountTypeFilter === "terugkerend") return count > 1;
+      if (adminState.accountTypeFilter === "zonder-bestellingen") return count === 0;
+      if (adminState.accountTypeFilter === "met-bestellingen") return count > 0;
+      return true;
+    })
+    .filter((account) => !adminState.accountOpenPaymentOnly || account.metrics?.openPayment)
+    .filter((account) => !adminState.accountCreatedThisMonthOnly || String(account.createdAt || "").startsWith(monthPrefix))
+    .sort((a, b) => {
+      if (adminState.accountSort === "name") return String(a.name).localeCompare(String(b.name));
+      if (adminState.accountSort === "email") return String(a.email).localeCompare(String(b.email));
+      if (adminState.accountSort === "spent-desc") return Number(b.metrics?.totalSpent || 0) - Number(a.metrics?.totalSpent || 0);
+      if (adminState.accountSort === "latest-desc") return new Date(b.metrics?.latestOrderAt || 0) - new Date(a.metrics?.latestOrderAt || 0);
+      if (adminState.accountSort === "login-desc") return new Date(b.lastLoginAt || 0) - new Date(a.lastLoginAt || 0);
+      return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
+    });
+}
+
+function renderAccountManagement() {
+  const table = document.querySelector("[data-account-table]");
+  if (!table) {
+    return;
+  }
+  const accounts = filteredAccounts();
+  document.querySelector("[data-account-admin-summary]").textContent =
+    `${accounts.length} van ${adminState.accountAccounts.length} accounts` +
+    (adminState.accountDuplicates.length ? ` - ${adminState.accountDuplicates.length} mogelijke duplicaatgroep(en)` : "");
+
+  table.innerHTML = accounts.length
+    ? accounts
+        .map((account) => {
+          const labels = (account.labels || []).slice(0, 4);
+          return `
+            <tr>
+              <td data-label="Klant">
+                <strong>${escapeHtml(account.name || "-")}</strong>
+                <span class="muted">${escapeHtml(account.email || "-")}</span>
+                <span class="muted">${escapeHtml(account.phone || "")}</span>
+              </td>
+              <td data-label="Status"><span class="status-pill">${escapeHtml(account.status || "Actief")}</span></td>
+              <td data-label="Bestellingen">${account.metrics?.orderCount || 0}<span class="muted">Laatste: ${escapeHtml(account.metrics?.latestOrderId || "-")}</span></td>
+              <td data-label="Omzet">${money(account.metrics?.totalSpent || 0)}<span class="muted">Open: ${money(account.metrics?.openAmount || 0)}</span></td>
+              <td data-label="Laatst actief">${account.lastLoginAt ? new Date(account.lastLoginAt).toLocaleDateString("nl-NL") : "-"}</td>
+              <td data-label="Labels">
+                <div class="tag-list">${labels.map((label) => `<span>${escapeHtml(label)}</span>`).join("")}</div>
+              </td>
+              <td data-label="Acties">
+                <div class="table-actions">
+                  <button class="row-button" type="button" data-account-detail-id="${account.id}">Bekijk</button>
+                </div>
+              </td>
+            </tr>
+          `;
+        })
+        .join("")
+    : '<tr><td colspan="7">Geen klantaccounts gevonden.</td></tr>';
+}
+
+async function loadAccountDetail(accountId) {
+  const data = await accountAdminRequest(`detail&id=${encodeURIComponent(accountId)}`, null, "GET");
+  adminState.accountDetail = data;
+  renderAccountDetail();
+}
+
+function renderAccountDetail() {
+  const detail = document.querySelector("[data-account-detail]");
+  if (!detail || !adminState.accountDetail?.account) {
+    return;
+  }
+  const { account, orders = [], giftCards = [], suggestions = [] } = adminState.accountDetail;
+  const resetText = account.resetActive
+    ? `Resetlink actief. Laatste resetmail: ${account.lastResetSentAt ? new Date(account.lastResetSentAt).toLocaleString("nl-NL") : "-"}`
+    : `Geen actieve resetlink. Laatste resetmail: ${account.lastResetSentAt ? new Date(account.lastResetSentAt).toLocaleString("nl-NL") : "-"}`;
+
+  detail.innerHTML = `
+    <div class="panel-heading">
+      <div>
+        <h2>${escapeHtml(account.name || "Klantaccount")}</h2>
+        <span class="muted">${escapeHtml(account.email)} - ${escapeHtml(account.id)}</span>
+      </div>
+      <button class="ghost-button" type="button" data-account-export="${account.id}">Export klantgegevens</button>
+    </div>
+    <div class="account-detail-tabs">
+      <a href="#account-overview">Overzicht</a>
+      <a href="#account-data">Gegevens</a>
+      <a href="#account-orders">Bestellingen</a>
+      <a href="#account-notes">Notities</a>
+      <a href="#account-security">Beveiliging</a>
+      <a href="#account-history">Geschiedenis</a>
+    </div>
+
+    <section id="account-overview" class="detail-card">
+      <h3>Overzicht</h3>
+      <dl class="detail-list">
+        <div><dt>Status</dt><dd>${escapeHtml(account.status)}</dd></div>
+        <div><dt>Aangemaakt</dt><dd>${account.createdAt ? new Date(account.createdAt).toLocaleString("nl-NL") : "-"}</dd></div>
+        <div><dt>Laatst ingelogd</dt><dd>${account.lastLoginAt ? new Date(account.lastLoginAt).toLocaleString("nl-NL") : "-"}</dd></div>
+        <div><dt>Bestellingen</dt><dd>${account.metrics.orderCount}</dd></div>
+        <div><dt>Totaal uitgegeven</dt><dd>${money(account.metrics.totalSpent)}</dd></div>
+        <div><dt>Gemiddeld orderbedrag</dt><dd>${money(account.metrics.averageOrder)}</dd></div>
+        <div><dt>Openstaand bedrag</dt><dd>${money(account.metrics.openAmount)}</dd></div>
+        <div><dt>Cadeaubonnen</dt><dd>${account.metrics.giftCardCount}</dd></div>
+      </dl>
+      <div class="tag-list">${(account.labels || []).map((label) => `<span>${escapeHtml(label)}</span>`).join("")}</div>
+    </section>
+
+    <form id="account-data" class="detail-card" data-account-edit-form>
+      <h3>Gegevens aanpassen</h3>
+      <input name="id" type="hidden" value="${escapeAttribute(account.id)}" />
+      <div class="settings-grid">
+        <label>Volledige naam <input name="name" value="${escapeAttribute(account.name)}" required /></label>
+        <label>E-mail <input name="email" type="email" value="${escapeAttribute(account.email)}" required /></label>
+        <label>Voornaam <input name="firstName" value="${escapeAttribute(account.firstName)}" /></label>
+        <label>Achternaam <input name="lastName" value="${escapeAttribute(account.lastName)}" /></label>
+        <label>Telefoon <input name="phone" value="${escapeAttribute(account.phone)}" /></label>
+        <label>Geboortedatum <input name="birthday" type="date" value="${escapeAttribute(account.birthday)}" /></label>
+        <label>Voorkeurscontact <input name="preferredContact" value="${escapeAttribute(account.preferredContact)}" /></label>
+        <label>Status
+          <select name="status">
+            ${adminState.accountStatuses.map((status) => `<option ${status === account.status ? "selected" : ""}>${escapeHtml(status)}</option>`).join("")}
+          </select>
+        </label>
+        <label>Blokkade/status reden <input name="statusReason" value="${escapeAttribute(account.statusReason)}" /></label>
+        <label>Labels <input name="labels" value="${escapeAttribute((account.labels || []).join(", "))}" /></label>
+        <label>Straat <input name="street" value="${escapeAttribute(account.street)}" /></label>
+        <label>Huisnummer <input name="houseNumber" value="${escapeAttribute(account.houseNumber)}" /></label>
+        <label>Toevoeging <input name="addition" value="${escapeAttribute(account.addition)}" /></label>
+        <label>Postcode <input name="postalCode" value="${escapeAttribute(account.postalCode)}" /></label>
+        <label>Plaats <input name="city" value="${escapeAttribute(account.city)}" /></label>
+        <label>Land <input name="country" value="${escapeAttribute(account.country)}" /></label>
+      </div>
+      <label>Adresregel <input name="address" value="${escapeAttribute(account.address)}" /></label>
+      <label>Afleverinstructie <textarea name="deliveryInstructions" rows="2">${escapeHtml(account.deliveryInstructions)}</textarea></label>
+      <label>Standaard verzendadres <textarea name="shippingAddress" rows="2">${escapeHtml(account.shippingAddress)}</textarea></label>
+      <label>Extra adres <textarea name="extraAddress" rows="2">${escapeHtml(account.extraAddress)}</textarea></label>
+      <label>Aflevernotitie <textarea name="deliveryNote" rows="2">${escapeHtml(account.deliveryNote)}</textarea></label>
+      <label>Cadeauvoorkeuren <textarea name="giftPreferences" rows="2">${escapeHtml(account.giftPreferences)}</textarea></label>
+      <button class="primary-button" type="submit">Gegevens opslaan</button>
+    </form>
+
+    <section id="account-orders" class="detail-card">
+      <h3>Bestellingen en cadeaubonnen</h3>
+      ${orders.length ? orders.map((order) => `
+        <article class="account-order-admin">
+          <strong>${escapeHtml(order.id)}</strong>
+          <span>${order.createdAt ? new Date(order.createdAt).toLocaleDateString("nl-NL") : "-"} - ${money(order.total)} - ${escapeHtml(order.status || "-")} - ${escapeHtml(order.paymentStatus || "-")}</span>
+          <span>${escapeHtml(order.productNames || "")}</span>
+          <button class="row-button" type="button" data-unlink-order="${order.id}" data-account-id="${account.id}">Ontkoppel</button>
+        </article>
+      `).join("") : '<p class="muted">Deze klant heeft nog geen bestellingen.</p>'}
+      <h4>Voorstellen met hetzelfde e-mailadres</h4>
+      ${
+        suggestions.length
+          ? `<button class="row-button" type="button" data-link-all-suggestions="${account.id}">Alles koppelen</button>`
+          : ""
+      }
+      ${suggestions.length ? suggestions.map((order) => `
+        <article class="account-order-admin">
+          <strong>${escapeHtml(order.id)}</strong>
+          <span>${money(order.total)} - ${escapeHtml(order.status || "-")}</span>
+          <button class="row-button" type="button" data-link-order="${order.id}" data-account-id="${account.id}">Koppel</button>
+        </article>
+      `).join("") : '<p class="muted">Geen losse bestellingen gevonden met hetzelfde e-mailadres.</p>'}
+      <form class="inline-form" data-manual-link-form>
+        <input name="accountId" type="hidden" value="${escapeAttribute(account.id)}" />
+        <label>Ordernummer handmatig koppelen <input name="orderId" /></label>
+        <button class="row-button" type="submit">Koppel bestelling</button>
+      </form>
+      <h4>Cadeaubonnen</h4>
+      ${giftCards.length ? giftCards.map((card) => `<p><strong>${escapeHtml(card.code)}</strong> - ${money(card.balance)} saldo - ${escapeHtml(card.paymentStatus || "Actief")}</p>`).join("") : '<p class="muted">Geen cadeaubonnen gekoppeld.</p>'}
+    </section>
+
+    <section id="account-notes" class="detail-card">
+      <h3>Interne notities</h3>
+      <form data-account-note-form>
+        <input name="id" type="hidden" value="${escapeAttribute(account.id)}" />
+        <div class="settings-grid">
+          <label>Titel <input name="title" /></label>
+          <label>Label
+            <select name="label">
+              ${["Belangrijk", "Wacht op reactie", "Voorkeur", "Probleem", "Betaling", "Maatwerk", "Cadeaubon", "Retour"].map((label) => `<option>${label}</option>`).join("")}
+            </select>
+          </label>
+        </div>
+        <label>Tekst <textarea name="text" rows="3" required></textarea></label>
+        <button class="row-button" type="submit">Notitie toevoegen</button>
+      </form>
+      <div class="history-list">
+        ${(account.notes || []).map((note) => `
+          <article>
+            <strong>${escapeHtml(note.label || "Notitie")} ${note.title ? `- ${escapeHtml(note.title)}` : ""}</strong>
+            <span>${note.createdAt ? new Date(note.createdAt).toLocaleString("nl-NL") : "-"}</span>
+            <p>${escapeHtml(note.text || "")}</p>
+          </article>
+        `).join("") || '<p class="muted">Nog geen interne notities.</p>'}
+      </div>
+    </section>
+
+    <section id="account-security" class="detail-card">
+      <h3>Beveiliging en privacy</h3>
+      <p class="muted">${escapeHtml(resetText)} Mislukte loginpogingen: ${account.failedLoginAttempts || 0}</p>
+      <div class="manual-payment-actions">
+        <button class="row-button" type="button" data-send-account-reset="${account.id}">Wachtwoordreset sturen</button>
+        <button class="row-button" type="button" data-send-account-invite="${account.id}">Uitnodigingsmail sturen</button>
+        <button class="row-button" type="button" data-invalidate-account-reset="${account.id}">Resetlink ongeldig maken</button>
+        <button class="row-button" type="button" data-account-block="${account.id}">Blokkeren</button>
+        <button class="row-button" type="button" data-account-unblock="${account.id}">Deblokkeren</button>
+        <button class="row-button" type="button" data-account-anonymize="${account.id}">Anonimiseren</button>
+        <button class="row-button" type="button" data-print-account>Print klantoverzicht</button>
+      </div>
+      <form data-account-mail-form>
+        <h4>Klantmail sturen</h4>
+        <label>Template
+          <select name="template">
+            <option>Algemene mail</option>
+            <option>Vraag over bestelling</option>
+            <option>Betaalinstructie</option>
+            <option>Betaling ontvangen</option>
+            <option>Maatwerk afstemmen</option>
+            <option>Bestelling in productie</option>
+            <option>Bestelling verzonden</option>
+            <option>Cadeaubon informatie</option>
+            <option>Retour/annulering</option>
+          </select>
+        </label>
+        <label>Onderwerp <input name="subject" value="Bericht van Tiny Doll Atelier" required /></label>
+        <label>Bericht <textarea name="text" rows="5" required>Hallo ${escapeHtml(account.name)},&#10;&#10;</textarea></label>
+        <button class="primary-button" type="submit">Klantmail sturen</button>
+      </form>
+    </section>
+
+    <section id="account-history" class="detail-card">
+      <h3>Accountgeschiedenis</h3>
+      <div class="history-list">
+        ${(account.history || []).map((entry) => `
+          <article>
+            <strong>${escapeHtml(entry.action || "-")} <span class="muted">(${escapeHtml(entry.actor || "systeem")})</span></strong>
+            <span>${entry.at ? new Date(entry.at).toLocaleString("nl-NL") : "-"}</span>
+            <p>${escapeHtml(entry.description || "")}</p>
+          </article>
+        `).join("") || '<p class="muted">Nog geen accountgeschiedenis.</p>'}
+      </div>
+    </section>
+  `;
+}
+
 async function sendEmail(payload) {
   const response = await fetch("/.netlify/functions/send-email", {
     method: "POST",
@@ -499,6 +829,9 @@ function setView(viewName, options = {}) {
 
   if (options.refresh !== false) {
     refreshViewFromCloud(viewName);
+  }
+  if (viewName === "customeraccounts") {
+    refreshAccountAccounts();
   }
 }
 
@@ -1184,6 +1517,7 @@ function renderAll() {
   renderEmailTemplates();
   renderSettings();
   renderCustomers();
+  renderAccountManagement();
   renderOrders();
   if (adminState.selectedOrderId) {
     renderOrderDetail(adminState.selectedOrderId);
@@ -1423,6 +1757,18 @@ document.addEventListener("click", async (event) => {
   const printOrderButton = event.target.closest("[data-print-order]");
   const printPackingSlipButton = event.target.closest("[data-print-packing-slip]");
   const exportButton = event.target.closest("[data-export-key]");
+  const accountDetailButton = event.target.closest("[data-account-detail-id]");
+  const sendAccountReset = event.target.closest("[data-send-account-reset]");
+  const sendAccountInvite = event.target.closest("[data-send-account-invite]");
+  const invalidateAccountReset = event.target.closest("[data-invalidate-account-reset]");
+  const accountBlock = event.target.closest("[data-account-block]");
+  const accountUnblock = event.target.closest("[data-account-unblock]");
+  const accountAnonymize = event.target.closest("[data-account-anonymize]");
+  const accountExport = event.target.closest("[data-account-export]");
+  const linkOrder = event.target.closest("[data-link-order]");
+  const linkAllSuggestions = event.target.closest("[data-link-all-suggestions]");
+  const unlinkOrder = event.target.closest("[data-unlink-order]");
+  const printAccount = event.target.closest("[data-print-account]");
 
   if (editProduct) {
     const product = adminState.products.find((item) => item.id === editProduct.dataset.editProduct);
@@ -1821,6 +2167,192 @@ document.addEventListener("click", async (event) => {
     const backup = TinyStore.getBackupData();
     const key = exportButton.dataset.exportKey;
     downloadJson(`tiny-doll-${key}.json`, backup[key]);
+  }
+
+  if (accountDetailButton) {
+    await loadAccountDetail(accountDetailButton.dataset.accountDetailId);
+  }
+
+  if (sendAccountReset || sendAccountInvite || invalidateAccountReset) {
+    const id =
+      sendAccountReset?.dataset.sendAccountReset ||
+      sendAccountInvite?.dataset.sendAccountInvite ||
+      invalidateAccountReset?.dataset.invalidateAccountReset;
+    const action = sendAccountInvite ? "send-invite" : invalidateAccountReset ? "invalidate-reset" : "send-reset";
+    try {
+      await accountAdminRequest(action, { id });
+      await refreshAccountAccounts({ detailId: id });
+      alert(action === "invalidate-reset" ? "Resetlink is ongeldig gemaakt." : "Mail is verzonden.");
+    } catch (error) {
+      alert(error.message);
+    }
+  }
+
+  if (accountBlock || accountUnblock) {
+    const id = accountBlock?.dataset.accountBlock || accountUnblock?.dataset.accountUnblock;
+    const account = adminState.accountAccounts.find((item) => item.id === id) || adminState.accountDetail?.account;
+    const reason = accountBlock ? prompt("Waarom blokkeer je dit account?") || "Geblokkeerd door admin" : "";
+    try {
+      await accountAdminRequest("update", {
+        ...(account || {}),
+        id,
+        status: accountBlock ? "Geblokkeerd" : "Actief",
+        statusReason: reason,
+      });
+      await refreshAccountAccounts({ detailId: id });
+    } catch (error) {
+      alert(error.message);
+    }
+  }
+
+  if (accountAnonymize) {
+    const id = accountAnonymize.dataset.accountAnonymize;
+    if (!confirm("Weet je zeker dat je dit account wilt anonimiseren? Persoonsgegevens worden vervangen, bestellingen blijven voor statistieken bestaan.")) {
+      return;
+    }
+    try {
+      await accountAdminRequest("anonymize", { id });
+      await refreshAccountAccounts({ detailId: id });
+    } catch (error) {
+      alert(error.message);
+    }
+  }
+
+  if (accountExport) {
+    try {
+      const data = await accountAdminRequest(`export&id=${encodeURIComponent(accountExport.dataset.accountExport)}`, null, "GET");
+      downloadJson(`tiny-doll-account-${accountExport.dataset.accountExport}.json`, data.export);
+    } catch (error) {
+      alert(error.message);
+    }
+  }
+
+  if (linkOrder || unlinkOrder) {
+    const action = linkOrder ? "link-order" : "unlink-order";
+    const button = linkOrder || unlinkOrder;
+    try {
+      await accountAdminRequest(action, {
+        id: button.dataset.accountId,
+        orderId: button.dataset.linkOrder || button.dataset.unlinkOrder,
+      });
+      await refreshAccountAccounts({ detailId: button.dataset.accountId });
+    } catch (error) {
+      alert(error.message);
+    }
+  }
+
+  if (linkAllSuggestions) {
+    const id = linkAllSuggestions.dataset.linkAllSuggestions;
+    try {
+      const data = await accountAdminRequest("link-suggestions", { id });
+      await refreshAccountAccounts({ detailId: id });
+      alert(`${data.linked || 0} bestelling(en) gekoppeld.`);
+    } catch (error) {
+      alert(error.message);
+    }
+  }
+
+  if (printAccount) {
+    window.print();
+  }
+});
+
+document.addEventListener("submit", async (event) => {
+  const accountEditForm = event.target.closest("[data-account-edit-form]");
+  const accountNoteForm = event.target.closest("[data-account-note-form]");
+  const accountMailForm = event.target.closest("[data-account-mail-form]");
+  const manualLinkForm = event.target.closest("[data-manual-link-form]");
+
+  if (accountEditForm) {
+    event.preventDefault();
+    const payload = Object.fromEntries(new FormData(accountEditForm));
+    try {
+      await accountAdminRequest("update", payload);
+      await refreshAccountAccounts({ detailId: payload.id });
+      alert("Klantgegevens opgeslagen.");
+    } catch (error) {
+      alert(error.message);
+    }
+  }
+
+  if (accountNoteForm) {
+    event.preventDefault();
+    const payload = Object.fromEntries(new FormData(accountNoteForm));
+    try {
+      await accountAdminRequest("add-note", payload);
+      await refreshAccountAccounts({ detailId: payload.id });
+    } catch (error) {
+      alert(error.message);
+    }
+  }
+
+  if (accountMailForm) {
+    event.preventDefault();
+    const accountId = adminState.accountDetail?.account?.id;
+    const payload = Object.fromEntries(new FormData(accountMailForm));
+    try {
+      await accountAdminRequest("send-mail", { id: accountId, ...payload });
+      await refreshAccountAccounts({ detailId: accountId });
+      alert("Klantmail is verzonden.");
+    } catch (error) {
+      alert(error.message);
+    }
+  }
+
+  if (manualLinkForm) {
+    event.preventDefault();
+    const payload = Object.fromEntries(new FormData(manualLinkForm));
+    try {
+      await accountAdminRequest("link-order", { id: payload.accountId, orderId: payload.orderId });
+      await refreshAccountAccounts({ detailId: payload.accountId });
+    } catch (error) {
+      alert(error.message);
+    }
+  }
+});
+
+document.querySelector("[data-account-search]")?.addEventListener("input", (event) => {
+  adminState.accountSearch = event.target.value;
+  renderAccountManagement();
+});
+
+document.querySelector("[data-account-status-filter]")?.addEventListener("change", (event) => {
+  adminState.accountStatusFilter = event.target.value;
+  renderAccountManagement();
+});
+
+document.querySelector("[data-account-type-filter]")?.addEventListener("change", (event) => {
+  adminState.accountTypeFilter = event.target.value;
+  renderAccountManagement();
+});
+
+document.querySelector("[data-account-sort]")?.addEventListener("change", (event) => {
+  adminState.accountSort = event.target.value;
+  renderAccountManagement();
+});
+
+document.querySelector("[data-account-open-payment]")?.addEventListener("change", (event) => {
+  adminState.accountOpenPaymentOnly = event.target.checked;
+  renderAccountManagement();
+});
+
+document.querySelector("[data-account-active-this-month]")?.addEventListener("change", (event) => {
+  adminState.accountCreatedThisMonthOnly = event.target.checked;
+  renderAccountManagement();
+});
+
+accountCreateForm?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const data = Object.fromEntries(new FormData(accountCreateForm));
+  data.sendInvite = accountCreateForm.elements.sendInvite.checked;
+  try {
+    await accountAdminRequest("create", data);
+    accountCreateForm.reset();
+    accountCreateForm.elements.sendInvite.checked = true;
+    document.querySelector("[data-account-create-message]").textContent = "Account aangemaakt.";
+    await refreshAccountAccounts();
+  } catch (error) {
+    document.querySelector("[data-account-create-message]").textContent = error.message;
   }
 });
 

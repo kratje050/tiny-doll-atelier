@@ -87,6 +87,108 @@ body {
   margin-top: 14px;
 }
 
+.account-detail-panel {
+  align-self: start;
+}
+
+.account-detail-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 8px 0 18px;
+}
+
+.account-detail-tabs a,
+.tag-list span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--brown-dark);
+  font-size: 0.86rem;
+  font-weight: 900;
+}
+
+.account-detail-tabs a:hover {
+  border-color: var(--brown);
+}
+
+.tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.account-order-admin,
+.note-card,
+.history-list article {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.account-order-admin header,
+.note-card header,
+.history-list article header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.account-order-admin p,
+.note-card p,
+.history-list p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.inline-form {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.inline-form label {
+  display: grid;
+  gap: 7px;
+  color: var(--muted);
+  font-weight: 900;
+}
+
+.inline-form input,
+.inline-form select,
+.inline-form textarea {
+  width: 100%;
+}
+
+.account-warning {
+  padding: 12px 14px;
+  border: 1px solid rgba(143, 47, 36, 0.28);
+  border-radius: 8px;
+  background: rgba(143, 47, 36, 0.08);
+  color: #8f2f24;
+  font-weight: 900;
+}
+
+.account-safe-box {
+  padding: 12px 14px;
+  border: 1px solid rgba(95, 123, 77, 0.28);
+  border-radius: 8px;
+  background: rgba(95, 123, 77, 0.08);
+  color: var(--ok);
+  font-weight: 900;
+}
+
 body.admin-locked {
   display: block;
   overflow: hidden;

@@ -22,6 +22,7 @@
         <button type="button" data-view-button="reviews">Reviews</button>
         <button type="button" data-view-button="emailtemplates">E-mailteksten</button>
         <button type="button" data-view-button="customers">Klanten</button>
+        <button type="button" data-view-button="customeraccounts">Klantaccounts</button>
         <button type="button" data-view-button="orders">Bestellingen</button>
         <button type="button" data-view-button="settings">Instellingen</button>
         <button type="button" data-view-button="backup">Back-up</button>
@@ -287,6 +288,89 @@
               <h2>Klantdetail</h2>
             </div>
             <p class="muted">Klik op bewerk bij een klant om gegevens en notities aan te passen.</p>
+          </section>
+        </div>
+      </section>
+
+      <section class="admin-view" data-view="customeraccounts">
+        <div class="panel form-panel">
+          <div class="panel-heading">
+            <h2>Klantaccounts</h2>
+            <span class="muted" data-account-admin-summary></span>
+          </div>
+          <div class="settings-grid">
+            <label>Zoeken <input data-account-search placeholder="Naam, e-mail, telefoon, ordernummer, adres..." /></label>
+            <label>
+              Status
+              <select data-account-status-filter>
+                <option value="alles">Alle statussen</option>
+              </select>
+            </label>
+            <label>
+              Klanttype
+              <select data-account-type-filter>
+                <option value="alles">Alle klanten</option>
+                <option value="nieuw">Nieuwe klanten</option>
+                <option value="terugkerend">Terugkerende klanten</option>
+                <option value="zonder-bestellingen">Zonder bestellingen</option>
+                <option value="met-bestellingen">Met bestellingen</option>
+              </select>
+            </label>
+            <label>
+              Sorteren
+              <select data-account-sort>
+                <option value="created-desc">Nieuwste account</option>
+                <option value="name">Naam</option>
+                <option value="email">E-mail</option>
+                <option value="spent-desc">Totaalbedrag</option>
+                <option value="latest-desc">Laatste bestelling</option>
+                <option value="login-desc">Laatst ingelogd</option>
+              </select>
+            </label>
+          </div>
+          <div class="visibility-grid">
+            <label class="check-row"><input data-account-open-payment type="checkbox" /> Alleen openstaande betaling</label>
+            <label class="check-row"><input data-account-active-this-month type="checkbox" /> Aangemaakt deze maand</label>
+          </div>
+          <div class="table-wrap account-table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Klant</th>
+                  <th>Status</th>
+                  <th>Bestellingen</th>
+                  <th>Omzet</th>
+                  <th>Laatst actief</th>
+                  <th>Labels</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody data-account-table></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="work-grid">
+          <form class="panel form-panel" data-account-create-form>
+            <div class="panel-heading">
+              <h2>Account aanmaken</h2>
+            </div>
+            <label>Naam <input name="name" required /></label>
+            <label>E-mail <input name="email" type="email" required /></label>
+            <label>Telefoon <input name="phone" /></label>
+            <label>Adres <input name="address" /></label>
+            <label>Labels <input name="labels" placeholder="Nieuwe klant, Maatwerk klant" /></label>
+            <label>Interne notitie <textarea name="note" rows="3"></textarea></label>
+            <label class="check-row"><input name="sendInvite" type="checkbox" checked /> Uitnodigingsmail sturen</label>
+            <button class="primary-button" type="submit">Account opslaan</button>
+            <p class="form-note" data-account-create-message></p>
+          </form>
+
+          <section class="panel form-panel account-detail-panel" data-account-detail>
+            <div class="panel-heading">
+              <h2>Klantaccount detail</h2>
+            </div>
+            <p class="muted">Klik op bekijk bij een klantaccount om gegevens, bestellingen, notities en beveiliging te beheren.</p>
           </section>
         </div>
       </section>
