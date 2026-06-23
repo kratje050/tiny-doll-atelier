@@ -4,6 +4,10 @@
   color: var(--ink);
 }
 
+[hidden] {
+  display: none !important;
+}
+
 .account-loading .account-main {
   visibility: hidden;
 }
@@ -91,6 +95,11 @@
 
 .auth-flow {
   grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+}
+
+.auth-page {
+  display: grid;
   justify-items: center;
 }
 

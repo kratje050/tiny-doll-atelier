@@ -7,16 +7,11 @@ const state = {
   resetTokenValid: false,
 };
 
+const routeRoot = document.querySelector("[data-route-root]");
 const messageBox = document.querySelector("[data-account-message]");
-const authForms = document.querySelector("[data-auth-forms]");
-const loginForm = document.querySelector("[data-login-form]");
-const registerForm = document.querySelector("[data-register-form]");
-const dashboard = document.querySelector("[data-account-dashboard]");
-const forgotPanel = document.querySelector("[data-forgot-panel]");
-const resetPanel = document.querySelector("[data-reset-panel]");
-const resetInvalidPanel = document.querySelector("[data-reset-invalid-panel]");
 const logoutButton = document.querySelector("[data-logout]");
 const accountOnlyViews = ["overview", "orders", "details", "giftcards", "contact", "order"];
+const authViews = ["login", "register", "forgot", "reset", "expired"];
 
 function money(value) {
   return new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(Number(value || 0));
@@ -74,13 +69,174 @@ function currentResetToken() {
   return new URLSearchParams(window.location.search).get("token") || "";
 }
 
-function authMode() {
-  const view = currentView();
-  if (view === "login") return "login";
-  if (view === "forgot") return "forgot";
-  if (view === "reset") return "reset";
-  if (view === "expired") return "expired";
-  return "register";
+function setTitle(view) {
+  const pageTitle = document.querySelector("[data-page-title]");
+  const pageIntro = document.querySelector("[data-page-intro]");
+  const titles = {
+    login: ["Inloggen", "Log in om je aanvragen en betaalstatus terug te vinden."],
+    register: ["Account aanmaken", "Maak een account aan om je aanvragen later makkelijk terug te vinden."],
+    forgot: ["Wachtwoord resetten", "Vul je e-mailadres in. Als het bekend is, sturen we een tijdelijke resetlink."],
+    reset: ["Nieuw wachtwoord kiezen", "Stel veilig een nieuw wachtwoord in."],
+    expired: ["Resetlink verlopen", "Vraag een nieuwe tijdelijke resetlink aan."],
+    account: ["Mijn account", "Bekijk je aanvragen, betaalstatus en verzending."],
+  };
+  const [title, intro] = titles[view] || titles.account;
+  pageTitle.textContent = title;
+  pageIntro.textContent = intro;
+  document.title = `${title} - Tiny Doll Atelier`;
+}
+
+function authCard(content) {
+  return `<section class="auth-page"><div class="account-panel auth-card">${content}</div></section>`;
+}
+
+function loginTemplate() {
+  return authCard(`
+    <form data-login-form>
+      <h2>Inloggen</h2>
+      <p class="muted">Log in om je aanvragen, bestellingen en cadeaubonnen terug te vinden.</p>
+      <label>E-mail <input name="email" type="email" autocomplete="email" required /></label>
+      <label>Wachtwoord <input name="password" type="password" autocomplete="current-password" required /></label>
+      <button class="primary-action" type="submit">Inloggen</button>
+      <p class="auth-switch">Nog geen account? <button type="button" data-auth-link="/register">Maak hier een account aan</button></p>
+      <p class="auth-switch"><button type="button" data-auth-link="/forgot-password">Wachtwoord vergeten?</button></p>
+    </form>
+  `);
+}
+
+function registerTemplate() {
+  return authCard(`
+    <form data-register-form>
+      <h2>Account aanmaken</h2>
+      <p class="muted">Maak een account aan om je aanvragen, bestellingen en cadeaubonnen later makkelijk terug te vinden.</p>
+      <label>Naam <input name="name" autocomplete="name" required /></label>
+      <label>E-mail <input name="email" type="email" autocomplete="email" required /></label>
+      <label>Wachtwoord <input name="password" type="password" autocomplete="new-password" minlength="8" required /></label>
+      <p class="muted">Gebruik hetzelfde e-mailadres als je eerdere aanvragen. Dan worden die automatisch aan je account gekoppeld.</p>
+      <button class="primary-action" type="submit">Account aanmaken</button>
+      <p class="auth-switch">Heb je al een account? <button type="button" data-auth-link="/login">Log dan hier in</button></p>
+    </form>
+  `);
+}
+
+function forgotTemplate() {
+  return authCard(`
+    <form data-forgot-form>
+      <h2>Wachtwoord resetten</h2>
+      <p class="muted">Vul je e-mailadres in. Als het bekend is, sturen we een tijdelijke resetlink.</p>
+      <label>E-mail <input name="email" type="email" autocomplete="email" required /></label>
+      <button class="primary-action" type="submit">Resetlink aanvragen</button>
+      <p class="auth-switch"><button type="button" data-auth-link="/login">Terug naar inloggen</button></p>
+    </form>
+  `);
+}
+
+function resetTemplate() {
+  return authCard(`
+    <form data-reset-form>
+      <h2>Nieuw wachtwoord kiezen</h2>
+      <p class="muted">Kies een nieuw wachtwoord voor je Tiny Doll Atelier account.</p>
+      <label>Nieuw wachtwoord <input name="password" type="password" autocomplete="new-password" minlength="8" required /></label>
+      <label>Herhaal nieuw wachtwoord <input name="passwordConfirm" type="password" autocomplete="new-password" minlength="8" required /></label>
+      <button class="primary-action" type="submit">Wachtwoord opslaan</button>
+    </form>
+  `);
+}
+
+function expiredTemplate() {
+  return authCard(`
+    <h2>Resetlink verlopen</h2>
+    <p class="muted">Deze resetlink is ongeldig of verlopen. Vraag een nieuwe resetlink aan.</p>
+    <button class="primary-action" type="button" data-auth-link="/forgot-password">Nieuwe resetlink aanvragen</button>
+  `);
+}
+
+function dashboardTemplate() {
+  return `
+    <section class="account-dashboard" data-account-dashboard>
+      <div class="account-cards">
+        <article>
+          <span>Openstaande aanvragen</span>
+          <strong data-open-orders>0</strong>
+        </article>
+        <article>
+          <span>Wacht op betaling</span>
+          <strong data-payment-orders>0</strong>
+        </article>
+        <article>
+          <span>In productie</span>
+          <strong data-production-orders>0</strong>
+        </article>
+        <article>
+          <span>Cadeaubonnen</span>
+          <strong data-gift-card-count>0</strong>
+        </article>
+      </div>
+
+      <div class="account-layout">
+        <aside class="account-sidebar">
+          <a href="/account">Overzicht</a>
+          <a href="/account/orders">Mijn bestellingen</a>
+          <a href="/account/details">Mijn gegevens</a>
+          <a href="/account/giftcards">Mijn cadeaubonnen</a>
+          <a href="/account/contact">Contact</a>
+        </aside>
+
+        <div class="account-content">
+          <section class="account-panel" data-overview-view>
+            <h2 data-welcome-title>Welkom</h2>
+            <p class="muted">Hier zie je je aanvragen, betaalstatus en verzending.</p>
+            <div data-latest-order></div>
+          </section>
+
+          <section class="account-panel" data-orders-view hidden>
+            <h2>Mijn bestellingen</h2>
+            <div class="order-list" data-account-orders></div>
+          </section>
+
+          <section class="account-panel" data-order-detail-view hidden>
+            <div data-account-order-detail></div>
+          </section>
+
+          <section class="account-panel" data-details-view hidden>
+            <form data-details-form>
+              <h2>Mijn gegevens</h2>
+              <div class="account-form-grid">
+                <label>Naam <input name="name" autocomplete="name" required /></label>
+                <label>E-mail <input name="email" type="email" disabled /></label>
+                <label>Telefoon <input name="phone" autocomplete="tel" /></label>
+                <label>Adres <input name="address" autocomplete="street-address" /></label>
+                <label>Postcode <input name="postalCode" autocomplete="postal-code" /></label>
+                <label>Plaats <input name="city" autocomplete="address-level2" /></label>
+                <label>Land <input name="country" autocomplete="country-name" /></label>
+              </div>
+              <button class="primary-action" type="submit">Gegevens opslaan</button>
+            </form>
+            <form class="password-form" data-password-form>
+              <h3>Wachtwoord wijzigen</h3>
+              <label>Huidig wachtwoord <input name="currentPassword" type="password" autocomplete="current-password" required /></label>
+              <label>Nieuw wachtwoord <input name="newPassword" type="password" autocomplete="new-password" minlength="8" required /></label>
+              <button class="secondary-action" type="submit">Wachtwoord wijzigen</button>
+            </form>
+            <button class="link-button" type="button" data-delete-request>Account verwijderen aanvragen</button>
+            <p class="muted">Je gegevens zijn alleen zichtbaar voor jou en Tiny Doll Atelier. Bestellingen worden gekoppeld op je e-mailadres.</p>
+          </section>
+
+          <section class="account-panel" data-giftcards-view hidden>
+            <h2>Mijn cadeaubonnen</h2>
+            <div data-account-giftcards></div>
+          </section>
+
+          <section class="account-panel" data-contact-view hidden>
+            <h2>Contact</h2>
+            <p class="muted">Heb je een vraag over een aanvraag, betaling, cadeaubon of verzending? Neem gerust contact op.</p>
+            <a class="primary-action" href="/#contact">Contactformulier openen</a>
+            <a class="secondary-action" href="/account/orders">Vraag over bestelling bekijken</a>
+          </section>
+        </div>
+      </div>
+    </section>
+  `;
 }
 
 function orderStatusText(order) {
@@ -90,63 +246,6 @@ function orderStatusText(order) {
 
 function paymentText(order) {
   return order.paymentStatus || "Wacht op bevestiging";
-}
-
-function renderShell() {
-  const view = currentView();
-  const mode = authMode();
-  const authView = !state.account && ["login", "register"].includes(view);
-  const forgotView = view === "forgot";
-  const resetView = view === "reset";
-  const expiredView = view === "expired";
-  const accountView = Boolean(state.account);
-
-  authForms.hidden = !authView;
-  loginForm.hidden = mode !== "login" || Boolean(state.account);
-  registerForm.hidden = mode !== "register" || Boolean(state.account);
-  forgotPanel.hidden = !forgotView || Boolean(state.account);
-  resetPanel.hidden = !resetView || Boolean(state.account) || !state.resetTokenValid;
-  resetInvalidPanel.hidden =
-    (!resetView && !expiredView) || Boolean(state.account) || (resetView && state.resetTokenValid) || (resetView && !state.resetTokenChecked);
-  dashboard.hidden = !accountView;
-  logoutButton.hidden = !state.account;
-
-  const pageTitle = document.querySelector("[data-page-title]");
-  const pageIntro = document.querySelector("[data-page-intro]");
-  if (state.account) {
-    pageTitle.textContent = "Mijn account";
-    pageIntro.textContent = "Bekijk je aanvragen, betaalstatus en verzending.";
-  } else if (mode === "login") {
-    pageTitle.textContent = "Inloggen";
-    pageIntro.textContent = "Bekijk je aanvragen, betaalstatus en track & trace.";
-  } else if (mode === "forgot") {
-    pageTitle.textContent = "Wachtwoord resetten";
-    pageIntro.textContent = "Vraag een tijdelijke resetlink aan voor je account.";
-  } else if (mode === "reset") {
-    pageTitle.textContent = "Nieuw wachtwoord kiezen";
-    pageIntro.textContent = state.resetTokenValid
-      ? "Stel hieronder veilig een nieuw wachtwoord in."
-      : "We controleren eerst of deze resetlink nog geldig is.";
-  } else if (mode === "expired") {
-    pageTitle.textContent = "Resetlink verlopen";
-    pageIntro.textContent = "Vraag een nieuwe tijdelijke resetlink aan.";
-  } else {
-    pageTitle.textContent = "Account aanmaken";
-    pageIntro.textContent = "Maak een account aan om je aanvragen, bestellingen en cadeaubonnen later makkelijk terug te vinden.";
-  }
-  document.body.classList.remove("account-loading");
-
-  if (state.account) {
-    renderDashboard();
-  }
-}
-
-function goToAuth(path) {
-  showMessage("");
-  state.resetTokenChecked = false;
-  state.resetTokenValid = false;
-  history.pushState(null, "", path);
-  renderRoute();
 }
 
 async function validateResetRoute() {
@@ -160,7 +259,6 @@ async function validateResetRoute() {
   state.resetTokenChecked = true;
   if (!token) {
     history.replaceState(null, "", "/forgot-password");
-    showMessage("Vraag een nieuwe resetlink aan om je wachtwoord te wijzigen.", true);
     return;
   }
   try {
@@ -175,18 +273,53 @@ async function validateResetRoute() {
 }
 
 async function renderRoute() {
-  const view = currentView();
+  let view = currentView();
   if (!state.account && accountOnlyViews.includes(view)) {
     history.replaceState(null, "", "/login");
+    view = "login";
     showMessage("");
   }
-  if (state.account && ["login", "register", "forgot", "reset", "expired"].includes(currentView())) {
+  if (state.account && authViews.includes(view)) {
     history.replaceState(null, "", "/account");
+    view = "overview";
+    showMessage("");
   }
-  if (!state.account && currentView() === "reset") {
+  if (!state.account && view === "reset") {
     await validateResetRoute();
+    view = currentView();
   }
-  renderShell();
+  renderShell(view);
+}
+
+function renderShell(view) {
+  logoutButton.hidden = !state.account;
+  document.body.classList.remove("account-loading");
+
+  if (state.account) {
+    setTitle("account");
+    routeRoot.innerHTML = dashboardTemplate();
+    renderDashboard();
+    return;
+  }
+
+  const templateByView = {
+    login: loginTemplate,
+    register: registerTemplate,
+    forgot: forgotTemplate,
+    reset: () => (state.resetTokenValid ? resetTemplate() : ""),
+    expired: expiredTemplate,
+  };
+  const safeView = templateByView[view] ? view : "login";
+  setTitle(safeView);
+  routeRoot.innerHTML = templateByView[safeView]();
+}
+
+function goToAuth(path) {
+  showMessage("");
+  state.resetTokenChecked = false;
+  state.resetTokenValid = false;
+  history.pushState(null, "", path);
+  renderRoute();
 }
 
 function showAccountView(name) {
@@ -270,29 +403,6 @@ function renderOrders() {
   document.querySelector("[data-account-orders]").innerHTML = state.orders.length
     ? state.orders.map(renderOrderCard).join("")
     : '<p class="muted">Je hebt nog geen aanvragen geplaatst. Bekijk de collectie en voeg je favoriete setje toe aan je aanvraag.</p><a class="primary-action" href="/#collectie">Bekijk collectie</a>';
-}
-
-function renderGiftCards() {
-  if (!state.giftCards.length) {
-    return "";
-  }
-  return `
-    <div class="account-detail-card" id="cadeaubonnen">
-      <h3>Cadeaubonnen</h3>
-      <div class="detail-list">
-        ${state.giftCards
-          .map(
-            (giftCard) => `
-              <div>
-                <dt>${escapeHtml(giftCard.code)}</dt>
-                <dd>${money(giftCard.balance)} saldo - ${escapeHtml(giftCard.paymentStatus || "Actief")}</dd>
-              </div>
-            `,
-          )
-          .join("")}
-      </div>
-    </div>
-  `;
 }
 
 function renderGiftCardsView() {
@@ -409,91 +519,104 @@ async function loadAccount() {
   await renderRoute();
 }
 
-document.querySelector("[data-login-form]").addEventListener("submit", async (event) => {
-  event.preventDefault();
-  try {
-    const data = await accountRequest("login", Object.fromEntries(new FormData(event.currentTarget)));
-    setData(data);
-    showMessage("Je bent ingelogd.");
-    history.replaceState(null, "", "/account");
-    renderRoute();
-  } catch (error) {
-    showMessage(error.message, true);
+document.addEventListener("submit", async (event) => {
+  const form = event.target;
+  if (form.matches("[data-login-form]")) {
+    event.preventDefault();
+    try {
+      const data = await accountRequest("login", Object.fromEntries(new FormData(form)));
+      setData(data);
+      showMessage("Je bent ingelogd.");
+      history.replaceState(null, "", "/account");
+      renderRoute();
+    } catch (error) {
+      showMessage(error.message, true);
+    }
+  }
+
+  if (form.matches("[data-register-form]")) {
+    event.preventDefault();
+    try {
+      const data = await accountRequest("register", Object.fromEntries(new FormData(form)));
+      setData(data);
+      showMessage("Je account is aangemaakt. Je kunt nu je aanvragen en bestellingen bekijken.");
+      history.replaceState(null, "", "/account");
+      renderRoute();
+    } catch (error) {
+      showMessage(error.message, true);
+    }
+  }
+
+  if (form.matches("[data-forgot-form]")) {
+    event.preventDefault();
+    try {
+      const data = await accountRequest("forgot-password", Object.fromEntries(new FormData(form)));
+      showMessage(data.message || "Controleer je e-mail.");
+    } catch (error) {
+      showMessage(error.message, true);
+    }
+  }
+
+  if (form.matches("[data-reset-form]")) {
+    event.preventDefault();
+    const payload = Object.fromEntries(new FormData(form));
+    if (payload.password !== payload.passwordConfirm) {
+      showMessage("De twee wachtwoorden zijn niet hetzelfde.", true);
+      return;
+    }
+    payload.token = currentResetToken();
+    delete payload.passwordConfirm;
+    try {
+      const data = await accountRequest("reset-password", payload);
+      showMessage(data.message || "Je wachtwoord is aangepast.");
+      history.replaceState(null, "", "/login");
+      renderRoute();
+    } catch (error) {
+      showMessage(error.message, true);
+    }
+  }
+
+  if (form.matches("[data-details-form]")) {
+    event.preventDefault();
+    try {
+      const data = await accountRequest("update", Object.fromEntries(new FormData(form)));
+      setData(data);
+      showMessage("Je gegevens zijn opgeslagen.");
+      renderRoute();
+    } catch (error) {
+      showMessage(error.message, true);
+    }
+  }
+
+  if (form.matches("[data-password-form]")) {
+    event.preventDefault();
+    try {
+      const data = await accountRequest("change-password", Object.fromEntries(new FormData(form)));
+      form.reset();
+      showMessage(data.message || "Wachtwoord gewijzigd.");
+    } catch (error) {
+      showMessage(error.message, true);
+    }
   }
 });
 
-document.querySelector("[data-register-form]").addEventListener("submit", async (event) => {
-  event.preventDefault();
-  try {
-    const data = await accountRequest("register", Object.fromEntries(new FormData(event.currentTarget)));
-    setData(data);
-    showMessage("Je account is aangemaakt. Je kunt nu je aanvragen en bestellingen bekijken.");
-    history.replaceState(null, "", "/account");
-    renderRoute();
-  } catch (error) {
-    showMessage(error.message, true);
-  }
-});
-
-document.querySelector("[data-forgot-form]").addEventListener("submit", async (event) => {
-  event.preventDefault();
-  try {
-    const data = await accountRequest("forgot-password", Object.fromEntries(new FormData(event.currentTarget)));
-    showMessage(data.message || "Controleer je e-mail.");
-  } catch (error) {
-    showMessage(error.message, true);
-  }
-});
-
-document.querySelector("[data-reset-form]").addEventListener("submit", async (event) => {
-  event.preventDefault();
-  const payload = Object.fromEntries(new FormData(event.currentTarget));
-  if (payload.password !== payload.passwordConfirm) {
-    showMessage("De twee wachtwoorden zijn niet hetzelfde.", true);
+document.addEventListener("click", async (event) => {
+  const authLink = event.target.closest("[data-auth-link]");
+  if (authLink) {
+    event.preventDefault();
+    goToAuth(authLink.dataset.authLink);
     return;
   }
-  payload.token = currentResetToken();
-  delete payload.passwordConfirm;
-  try {
-    const data = await accountRequest("reset-password", payload);
-    showMessage(data.message || "Je wachtwoord is aangepast.");
-    history.replaceState(null, "", "/login");
-    renderRoute();
-  } catch (error) {
-    showMessage(error.message, true);
-  }
-});
 
-document.querySelector("[data-details-form]").addEventListener("submit", async (event) => {
-  event.preventDefault();
-  try {
-    const data = await accountRequest("update", Object.fromEntries(new FormData(event.currentTarget)));
-    setData(data);
-    showMessage("Je gegevens zijn opgeslagen.");
-    renderRoute();
-  } catch (error) {
-    showMessage(error.message, true);
-  }
-});
-
-document.querySelector("[data-password-form]").addEventListener("submit", async (event) => {
-  event.preventDefault();
-  try {
-    const data = await accountRequest("change-password", Object.fromEntries(new FormData(event.currentTarget)));
-    event.currentTarget.reset();
-    showMessage(data.message || "Wachtwoord gewijzigd.");
-  } catch (error) {
-    showMessage(error.message, true);
-  }
-});
-
-document.querySelector("[data-delete-request]").addEventListener("click", async () => {
-  if (!confirm("Wil je een verzoek sturen om je account te laten verwijderen?")) return;
-  try {
-    const data = await accountRequest("delete-request", {});
-    showMessage(data.message || "Verzoek verzonden.");
-  } catch (error) {
-    showMessage(error.message, true);
+  const deleteRequest = event.target.closest("[data-delete-request]");
+  if (deleteRequest) {
+    if (!confirm("Wil je een verzoek sturen om je account te laten verwijderen?")) return;
+    try {
+      const data = await accountRequest("delete-request", {});
+      showMessage(data.message || "Verzoek verzonden.");
+    } catch (error) {
+      showMessage(error.message, true);
+    }
   }
 });
 
@@ -505,15 +628,6 @@ logoutButton.addEventListener("click", async () => {
   showMessage("Je bent uitgelogd.");
   history.replaceState(null, "", "/login");
   renderRoute();
-});
-
-document.addEventListener("click", (event) => {
-  const link = event.target.closest("[data-auth-link]");
-  if (!link) {
-    return;
-  }
-  event.preventDefault();
-  goToAuth(link.dataset.authLink);
 });
 
 window.addEventListener("popstate", () => {
