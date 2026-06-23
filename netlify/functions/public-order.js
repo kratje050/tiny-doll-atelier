@@ -1,5 +1,7 @@
 const STORE_NAME = "tiny-doll-atelier";
 const DATA_KEY = "site-data";
+const crypto = require("node:crypto");
+const ACCOUNT_COOKIE_NAME = "tiny_doll_account_session";
 
 function json(statusCode, body) {
   return {
@@ -19,6 +21,36 @@ function clean(value = "", max = 500) {
 function number(value) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function hashToken(value) {
+  return crypto.createHash("sha256").update(String(value || "")).digest("hex");
+}
+
+function parseCookies(header = "") {
+  return Object.fromEntries(
+    header
+      .split(";")
+      .map((item) => item.trim().split("="))
+      .filter(([key, value]) => key && value)
+      .map(([key, value]) => [key, decodeURIComponent(value)]),
+  );
+}
+
+function getAccountFromSession(data, event) {
+  const cookies = parseCookies(event.headers.cookie || event.headers.Cookie || "");
+  const rawSession = cookies[ACCOUNT_COOKIE_NAME];
+  if (!rawSession) return null;
+  const [sessionId, token] = rawSession.split(".");
+  if (!sessionId || !token) return null;
+  const session = (Array.isArray(data.accountSessions) ? data.accountSessions : []).find(
+    (item) =>
+      item.id === sessionId &&
+      item.tokenHash === hashToken(token) &&
+      new Date(item.expiresAt).getTime() > Date.now(),
+  );
+  if (!session) return null;
+  return (Array.isArray(data.accounts) ? data.accounts : []).find((account) => account.id === session.accountId) || null;
 }
 
 async function getBlobStore() {
@@ -159,6 +191,11 @@ exports.handler = async (event) => {
     const order = sanitizeOrder(payload.order);
     const store = await getBlobStore();
     const data = (await store.get(DATA_KEY, { type: "json" })) || {};
+    const account = getAccountFromSession(data, event);
+    if (account) {
+      order.accountId = account.id;
+      order.customer.email = account.email;
+    }
     const orders = Array.isArray(data.orders) ? data.orders : [];
 
     if (orders.some((item) => item.id === order.id)) {

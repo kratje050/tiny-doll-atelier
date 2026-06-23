@@ -4,7 +4,7 @@ const tls = require("node:tls");
 const STORE_NAME = "tiny-doll-atelier";
 const DATA_KEY = "site-data";
 const COOKIE_NAME = "tiny_doll_account_session";
-const SESSION_MAX_AGE = 60 * 60 * 24 * 14;
+const SESSION_MAX_AGE = 60 * 60 * 24 * 30;
 const RESET_MAX_AGE = 60 * 60;
 
 function json(statusCode, body, extraHeaders = {}) {
@@ -256,20 +256,59 @@ function smtpClient({ host, port }) {
   return { wait, command, close: () => socket.end() };
 }
 
-function composeMail({ from, to, subject, text, replyTo }) {
+function escapeMailHtml(value = "") {
+  return String(value).replace(/[&<>"']/g, (character) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character],
+  );
+}
+
+function accountMailHtml({ title, intro, buttonText = "", buttonUrl = "", footer = "" }) {
+  const paragraphs = String(intro || "")
+    .split(/\n{2,}/)
+    .map((part) => `<p>${escapeMailHtml(part).replace(/\n/g, "<br>")}</p>`)
+    .join("");
+  const button = buttonUrl
+    ? `<p style="margin:28px 0 10px"><a href="${escapeMailHtml(buttonUrl)}" style="display:inline-block;background:#6f4328;color:#fff;text-decoration:none;padding:13px 18px;border-radius:8px;font-weight:800">${escapeMailHtml(buttonText || "Openen")}</a></p>`
+    : "";
+  return `<!doctype html>
+<html lang="nl">
+  <body style="margin:0;background:#fbf6ef;color:#342216;font-family:Arial,sans-serif">
+    <div style="padding:28px 14px">
+      <div style="max-width:620px;margin:0 auto;background:#fffaf4;border:1px solid #dcc8b7;border-radius:10px;overflow:hidden">
+        <div style="background:#6f4328;color:#fff;padding:22px 26px">
+          <p style="margin:0 0 6px;font-size:13px;letter-spacing:.12em;text-transform:uppercase">Tiny Doll Atelier</p>
+          <h1 style="margin:0;font-size:28px;line-height:1.15">${escapeMailHtml(title)}</h1>
+        </div>
+        <div style="padding:26px;line-height:1.65;font-size:16px">
+          ${paragraphs}
+          ${button}
+          <p>Liefs,<br>Tiny Doll Atelier</p>
+        </div>
+        <div style="border-top:1px solid #dcc8b7;padding:16px 26px;color:#806a59;font-size:13px">
+          ${escapeMailHtml(footer || "Je ontvangt deze mail van Tiny Doll Atelier.")}
+        </div>
+      </div>
+    </div>
+  </body>
+</html>`;
+}
+
+function composeMail({ from, to, subject, text, html, replyTo }) {
+  const boundary = `tiny-${randomToken(12)}`;
   const headers = [
     `From: ${from}`,
     `To: ${to}`,
     `Subject: =?UTF-8?B?${Buffer.from(subject).toString("base64")}?=`,
     `Reply-To: ${replyTo || from}`,
     "MIME-Version: 1.0",
-    "Content-Type: text/plain; charset=UTF-8",
-    "Content-Transfer-Encoding: 8bit",
   ];
-  return `${headers.join("\r\n")}\r\n\r\n${text.replace(/\n/g, "\r\n")}`;
+  if (!html) {
+    return `${headers.join("\r\n")}\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: 8bit\r\n\r\n${text.replace(/\n/g, "\r\n")}`;
+  }
+  return `${headers.join("\r\n")}\r\nContent-Type: multipart/alternative; boundary="${boundary}"\r\n\r\n--${boundary}\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: 8bit\r\n\r\n${text.replace(/\n/g, "\r\n")}\r\n\r\n--${boundary}\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Transfer-Encoding: 8bit\r\n\r\n${html}\r\n\r\n--${boundary}--`;
 }
 
-async function sendAccountMail({ to, subject, text }) {
+async function sendAccountMail({ to, subject, text, html }) {
   const host = process.env.SMTP_HOST || "smtp.gmail.com";
   const port = Number(process.env.SMTP_PORT || 465);
   const user = process.env.SMTP_USER;
@@ -291,7 +330,7 @@ async function sendAccountMail({ to, subject, text }) {
     await client.command(`MAIL FROM:<${getEmailAddress(from)}>`, [250]);
     await client.command(`RCPT TO:<${to}>`, [250, 251]);
     await client.command("DATA", [354]);
-    await client.command(`${composeMail({ from, to, subject, text, replyTo: adminEmail })}\r\n.`, [250]);
+    await client.command(`${composeMail({ from, to, subject, text, html, replyTo: adminEmail })}\r\n.`, [250]);
     await client.command("QUIT", [221]);
   } finally {
     client.close();
@@ -401,7 +440,18 @@ exports.handler = async (event) => {
           text:
             `Hallo ${account.name},\n\n` +
             "Je account is aangemaakt. Je kunt nu je aanvragen, betaalstatus en track & trace bekijken.\n\n" +
+            "Gebruik hetzelfde e-mailadres als bij je aanvragen, zodat we je bestellingen automatisch aan je account kunnen koppelen.\n\n" +
             "Liefs,\nTiny Doll Atelier",
+          html: accountMailHtml({
+            title: "Welkom bij Tiny Doll Atelier",
+            intro:
+              `Hallo ${account.name},\n\n` +
+              "Je account is aangemaakt. Je kunt vanaf nu je aanvragen, betaalstatus, cadeaubonnen en track & trace makkelijk terugvinden.\n\n" +
+              "Gebruik hetzelfde e-mailadres als bij je aanvragen, zodat we je bestellingen automatisch aan je account kunnen koppelen.",
+            buttonText: "Naar mijn account",
+            buttonUrl: `${process.env.URL || "https://tiny-doll-atelier.netlify.app"}/account`,
+            footer: "Je ontvangt deze mail omdat er een account is aangemaakt bij Tiny Doll Atelier.",
+          }),
         });
       } catch {
         // Account aanmaken blijft leidend; een tijdelijke mailstoring mag registratie niet blokkeren.
@@ -474,6 +524,15 @@ exports.handler = async (event) => {
               postalCode: clean(payload.postalCode, 40),
               city: clean(payload.city, 120),
               country: clean(payload.country, 120) || "Nederland",
+              history: [
+                {
+                  at: new Date().toISOString(),
+                  actor: "klant",
+                  action: "klantgegevens aangepast",
+                  description: "Klant heeft eigen gegevens aangepast.",
+                },
+                ...(Array.isArray(account.history) ? account.history : []),
+              ].slice(0, 200),
             }
           : account,
       );
@@ -517,6 +576,17 @@ exports.handler = async (event) => {
             `Hallo ${account.name},\n\n` +
             `Met deze link kun je je wachtwoord opnieuw instellen:\n${resetUrl}\n\n` +
             "Deze link is 1 uur geldig en kan maar een keer gebruikt worden.\n\nLiefs,\nTiny Doll Atelier",
+          html: accountMailHtml({
+            title: "Wachtwoord opnieuw instellen",
+            intro:
+              `Hallo ${account.name},\n\n` +
+              "We hebben een verzoek ontvangen om je wachtwoord opnieuw in te stellen.\n\n" +
+              "Klik op de knop hieronder om een nieuw wachtwoord te kiezen.\n\n" +
+              "Deze link is tijdelijk geldig. Heb je dit niet aangevraagd? Dan hoef je niets te doen.",
+            buttonText: "Wachtwoord opnieuw instellen",
+            buttonUrl: resetUrl,
+            footer: "Deze mail bevat geen wachtwoord. De resetlink is tijdelijk geldig.",
+          }),
         });
       }
       return json(200, { ok: true, message: "Als dit e-mailadres bekend is, sturen we een resetlink." });

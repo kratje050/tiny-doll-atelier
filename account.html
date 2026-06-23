@@ -111,8 +111,8 @@
             <a href="/account">Overzicht</a>
             <a href="/account/orders">Mijn bestellingen</a>
             <a href="/account/details">Mijn gegevens</a>
-            <a href="/account#cadeaubonnen">Mijn cadeaubonnen</a>
-            <a href="/#contact">Contact</a>
+            <a href="/account/giftcards">Mijn cadeaubonnen</a>
+            <a href="/account/contact">Contact</a>
           </aside>
 
           <div class="account-content">
@@ -153,6 +153,18 @@
               </form>
               <button class="link-button" type="button" data-delete-request>Account verwijderen aanvragen</button>
               <p class="muted">Je gegevens zijn alleen zichtbaar voor jou en Tiny Doll Atelier. Bestellingen worden gekoppeld op je e-mailadres.</p>
+            </section>
+
+            <section class="account-panel" data-giftcards-view hidden>
+              <h2>Mijn cadeaubonnen</h2>
+              <div data-account-giftcards></div>
+            </section>
+
+            <section class="account-panel" data-contact-view hidden>
+              <h2>Contact</h2>
+              <p class="muted">Heb je een vraag over een aanvraag, betaling, cadeaubon of verzending? Neem gerust contact op.</p>
+              <a class="primary-action" href="/#contact">Contactformulier openen</a>
+              <a class="secondary-action" href="/account/orders">Vraag over bestelling bekijken</a>
             </section>
           </div>
         </div>

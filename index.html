@@ -465,6 +465,12 @@
         </div>
         <form class="checkout-form" data-checkout-form hidden>
           <label class="honeypot-field">Laat dit veld leeg <input name="website" autocomplete="off" tabindex="-1" /></label>
+          <p class="checkout-note account-checkout-note" data-account-checkout-note hidden>
+            Je bent ingelogd. We gebruiken je accountgegevens voor deze aanvraag.
+          </p>
+          <p class="checkout-note guest-checkout-note" data-guest-checkout-note>
+            Heb je al een account? <a href="/login">Log in</a> om je gegevens automatisch in te vullen.
+          </p>
           <p class="checkout-note">
             Tiny Doll Atelier werkt met persoonlijke aanvragen. Omdat veel producten handgemaakt of
             op aanvraag worden samengesteld, ontvang je eerst een bevestiging met levertijd en
@@ -494,6 +500,10 @@
           <label>Postcode <input name="postalCode" autocomplete="postal-code" /></label>
           <label>Plaats <input name="city" autocomplete="address-level2" /></label>
           <label>Land <input name="country" autocomplete="country-name" value="Nederland" /></label>
+          <label class="check-row" data-save-account-row hidden>
+            <input name="saveAccountData" type="checkbox" />
+            Deze gegevens opslaan in mijn account
+          </label>
           <label>
             Kortingscode
             <input name="discountCode" autocomplete="off" data-discount-code />

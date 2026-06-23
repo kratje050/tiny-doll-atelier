@@ -214,9 +214,27 @@
   text-decoration: none;
 }
 
+.account-sidebar a:hover,
+.account-sidebar a:focus-visible {
+  background: var(--soft);
+  color: var(--brown);
+  outline: 2px solid transparent;
+}
+
 .account-sidebar a.is-active {
   background: var(--brown);
   color: #fff;
+}
+
+.overview-stack {
+  display: grid;
+  gap: 12px;
+}
+
+.overview-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .order-list {
@@ -237,6 +255,11 @@
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 12px;
   align-items: center;
+}
+
+.account-order-card strong,
+.account-order-card span {
+  overflow-wrap: anywhere;
 }
 
 .status-badges {
@@ -275,6 +298,17 @@
   height: 54px;
   border-radius: 8px;
   object-fit: cover;
+}
+
+.account-line-placeholder {
+  display: grid;
+  width: 54px;
+  height: 54px;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--soft);
+  color: var(--brown);
+  font-weight: 900;
 }
 
 .payment-box {

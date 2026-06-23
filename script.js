@@ -71,6 +71,9 @@ const checkoutToggle = document.querySelector("[data-show-checkout]");
 const giftWrapInput = document.querySelector("[data-gift-wrap]");
 const giftMessageInput = document.querySelector("[data-gift-message]");
 const orderMessage = document.querySelector("[data-order-message]");
+const accountCheckoutNote = document.querySelector("[data-account-checkout-note]");
+const guestCheckoutNote = document.querySelector("[data-guest-checkout-note]");
+const saveAccountRow = document.querySelector("[data-save-account-row]");
 const discountFeedback = document.querySelector("[data-discount-feedback]");
 const giftCardFeedback = document.querySelector("[data-gift-card-feedback]");
 const giftCardOrderForm = document.querySelector("[data-gift-card-order-form]");
@@ -756,6 +759,18 @@ function showCheckout() {
         checkoutForm.elements[key].value = state.account[key] || "";
       }
     });
+    if (checkoutForm.elements.email) {
+      checkoutForm.elements.email.value = state.account.email || checkoutForm.elements.email.value;
+    }
+  }
+  if (accountCheckoutNote) {
+    accountCheckoutNote.hidden = !state.account;
+  }
+  if (guestCheckoutNote) {
+    guestCheckoutNote.hidden = Boolean(state.account);
+  }
+  if (saveAccountRow) {
+    saveAccountRow.hidden = !state.account;
   }
   checkoutForm.querySelector("input")?.focus();
 }
@@ -834,11 +849,35 @@ async function persistOrder(order) {
   try {
     await fetch("/.netlify/functions/public-order", {
       method: "POST",
+      credentials: "same-origin",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ order }),
     });
   } catch {
     // De e-mail blijft leidend; online dashboardopslag is een extra synchronisatie.
+  }
+}
+
+async function updateAccountFromCheckout(formData) {
+  if (!state.account || formData.get("saveAccountData") !== "on") {
+    return;
+  }
+  const response = await fetch("/.netlify/functions/account?action=update", {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      name: formData.get("name").trim(),
+      phone: formData.get("phone").trim(),
+      address: formData.get("address").trim(),
+      postalCode: formData.get("postalCode").trim(),
+      city: formData.get("city").trim(),
+      country: formData.get("country").trim(),
+    }),
+  });
+  const data = await response.json().catch(() => ({ ok: false }));
+  if (response.ok && data.ok) {
+    state.account = data.account;
   }
 }
 
@@ -856,6 +895,9 @@ async function loadAccountState() {
   }
   if (accountButton) {
     accountButton.href = state.account ? "/account" : "/login";
+    accountButton.querySelector(".account-button-text").textContent = state.account
+      ? state.account.name.split(" ")[0] || "Mijn account"
+      : "Inloggen";
   }
 }
 
@@ -1118,7 +1160,7 @@ checkoutForm.addEventListener("submit", async (event) => {
   const order = TinyStore.createOrder({
     customer: {
       name: formData.get("name").trim(),
-      email: formData.get("email").trim(),
+      email: state.account?.email || formData.get("email").trim(),
       phone: formData.get("phone").trim(),
       address: formData.get("address").trim(),
       postalCode: formData.get("postalCode").trim(),
@@ -1132,9 +1174,13 @@ checkoutForm.addEventListener("submit", async (event) => {
       .join("\n"),
     items: orderItems,
   });
+  if (state.account) {
+    order.accountId = state.account.id;
+  }
 
   try {
     orderMessage.textContent = "Je aanvraag wordt verzonden...";
+    await updateAccountFromCheckout(formData).catch(() => {});
     await sendEmail({
       type: "order",
       website: formData.get("website"),

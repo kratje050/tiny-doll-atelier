@@ -16,7 +16,7 @@ const forgotPanel = document.querySelector("[data-forgot-panel]");
 const resetPanel = document.querySelector("[data-reset-panel]");
 const resetInvalidPanel = document.querySelector("[data-reset-invalid-panel]");
 const logoutButton = document.querySelector("[data-logout]");
-const accountOnlyViews = ["overview", "orders", "details", "order"];
+const accountOnlyViews = ["overview", "orders", "details", "giftcards", "contact", "order"];
 
 function money(value) {
   return new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(Number(value || 0));
@@ -60,6 +60,8 @@ function currentView() {
   if (path.startsWith("/account/order/")) return "order";
   if (path.startsWith("/account/orders")) return "orders";
   if (path.startsWith("/account/details")) return "details";
+  if (path.startsWith("/account/giftcards")) return "giftcards";
+  if (path.startsWith("/account/contact")) return "contact";
   if (path.startsWith("/forgot-password")) return "forgot";
   if (path.startsWith("/reset-password-expired")) return "expired";
   if (path.startsWith("/reset-password")) return "reset";
@@ -112,7 +114,7 @@ function renderShell() {
   const pageTitle = document.querySelector("[data-page-title]");
   const pageIntro = document.querySelector("[data-page-intro]");
   if (state.account) {
-    pageTitle.textContent = `Welkom, ${state.account.name}`;
+    pageTitle.textContent = "Mijn account";
     pageIntro.textContent = "Bekijk je aanvragen, betaalstatus en verzending.";
   } else if (mode === "login") {
     pageTitle.textContent = "Inloggen";
@@ -188,12 +190,14 @@ async function renderRoute() {
 }
 
 function showAccountView(name) {
-  ["overview", "orders", "order-detail", "details"].forEach((view) => {
+  ["overview", "orders", "order-detail", "details", "giftcards", "contact"].forEach((view) => {
     const element = document.querySelector(`[data-${view}-view]`);
     if (element) element.hidden = view !== name;
   });
   document.querySelectorAll(".account-sidebar a").forEach((link) => {
-    link.classList.toggle("is-active", link.getAttribute("href") === window.location.pathname);
+    const href = link.getAttribute("href");
+    const isOrders = name === "order-detail" && href === "/account/orders";
+    link.classList.toggle("is-active", href === window.location.pathname || isOrders);
   });
 }
 
@@ -209,17 +213,34 @@ function renderDashboard() {
 
   renderOrders();
   renderDetails();
+  renderGiftCardsView();
 
-  const latest = state.orders[0];
-  document.querySelector("[data-latest-order]").innerHTML = latest
-    ? `${renderOrderCard(latest)}${renderGiftCards()}`
-    : `<p class="muted">Je hebt nog geen aanvragen geplaatst. Bekijk de collectie en voeg je favoriete setje toe aan je aanvraag.</p><a class="primary-action" href="/#collectie">Bekijk collectie</a>${renderGiftCards()}`;
+  const recentOrders = state.orders.slice(0, 2);
+  const openPayment = state.orders.find((order) => ["Betaalinstructie verstuurd", "Wacht op betaling"].includes(paymentText(order)));
+  const latestTrack = state.orders.find((order) => order.trackTrace);
+  document.querySelector("[data-latest-order]").innerHTML = recentOrders.length
+    ? `
+      <div class="overview-stack">
+        ${openPayment ? `<div class="payment-box"><strong>Openstaande betaling</strong><p>Voor ${escapeHtml(openPayment.id)} wacht de betaling nog op afronding.</p></div>` : ""}
+        ${latestTrack ? `<div class="payment-box"><strong>Track & trace</strong><p>${escapeHtml(latestTrack.id)}: ${escapeHtml(latestTrack.trackTrace)}</p></div>` : ""}
+        ${recentOrders.map(renderOrderCard).join("")}
+        <div class="overview-actions">
+          <a class="primary-action" href="/account/orders">Bekijk alle bestellingen</a>
+          <a class="secondary-action" href="/#collectie">Bekijk collectie</a>
+        </div>
+      </div>
+    `
+    : `<p class="muted">Je hebt nog geen aanvragen geplaatst. Bekijk de collectie en voeg je favoriete setje toe aan je aanvraag.</p><a class="primary-action" href="/#collectie">Bekijk collectie</a>`;
 
   const view = currentView();
   if (view === "orders") {
     showAccountView("orders");
   } else if (view === "details") {
     showAccountView("details");
+  } else if (view === "giftcards") {
+    showAccountView("giftcards");
+  } else if (view === "contact") {
+    showAccountView("contact");
   } else if (view === "order") {
     renderOrderDetail(decodeURIComponent(window.location.pathname.split("/").pop() || ""));
     showAccountView("order-detail");
@@ -274,6 +295,33 @@ function renderGiftCards() {
   `;
 }
 
+function renderGiftCardsView() {
+  const target = document.querySelector("[data-account-giftcards]");
+  if (!target) return;
+  target.innerHTML = state.giftCards.length
+    ? `
+      <div class="order-list">
+        ${state.giftCards
+          .map(
+            (giftCard) => `
+              <article class="account-order-card">
+                <div>
+                  <strong>${giftCard.paymentStatus === "Cadeaubon verstuurd" ? escapeHtml(giftCard.code) : "Cadeaubonaanvraag"}</strong>
+                  <span class="muted">Ontvanger: ${escapeHtml(giftCard.recipient || "-")}</span>
+                  <div class="status-badges">
+                    <span>${escapeHtml(giftCard.paymentStatus || "Aangevraagd")}</span>
+                    <span>${money(giftCard.balance || giftCard.initialValue || 0)}</span>
+                  </div>
+                </div>
+              </article>
+            `,
+          )
+          .join("")}
+      </div>
+    `
+    : '<p class="muted">Je hebt nog geen cadeaubonnen aangevraagd.</p><a class="primary-action" href="/#cadeaubon">Cadeaubon aanvragen</a>';
+}
+
 function renderOrderDetail(orderId) {
   const order = state.orders.find((item) => item.id === orderId);
   const holder = state.paymentSettings.holder || "R Stavasius";
@@ -322,7 +370,7 @@ function renderOrderDetail(orderId) {
         .map(
           (item) => `
             <div class="account-line">
-              ${item.image ? `<img src="${escapeHtml(item.image)}" alt="">` : "<span></span>"}
+              ${item.image ? `<img src="${escapeHtml(item.image)}" alt="">` : '<span class="account-line-placeholder">T</span>'}
               <div><strong>${escapeHtml(item.name)}</strong><span class="muted">${item.quantity} x ${money(item.price)}</span></div>
               <strong>${money(item.price * item.quantity)}</strong>
             </div>

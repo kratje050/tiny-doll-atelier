@@ -414,6 +414,15 @@ async function refreshAccountAccounts(options = {}) {
   }
 }
 
+async function getAccountBackupData() {
+  try {
+    const data = await accountAdminRequest("backup", null, "GET");
+    return data.accountBackup || { accounts: [] };
+  } catch {
+    return { accounts: [], note: "Klantaccounts konden niet uit online opslag worden opgehaald." };
+  }
+}
+
 function fillAccountStatusFilter() {
   const filter = document.querySelector("[data-account-status-filter]");
   if (!filter || filter.dataset.loaded === "1") {
@@ -492,8 +501,14 @@ function renderAccountManagement() {
                 <span class="muted">${escapeHtml(account.phone || "")}</span>
               </td>
               <td data-label="Status"><span class="status-pill">${escapeHtml(account.status || "Actief")}</span></td>
-              <td data-label="Bestellingen">${account.metrics?.orderCount || 0}<span class="muted">Laatste: ${escapeHtml(account.metrics?.latestOrderId || "-")}</span></td>
-              <td data-label="Omzet">${money(account.metrics?.totalSpent || 0)}<span class="muted">Open: ${money(account.metrics?.openAmount || 0)}</span></td>
+              <td data-label="Bestellingen">
+                <strong>${account.metrics?.orderCount || 0}</strong>
+                <span class="muted">Laatste bestelling: ${escapeHtml(account.metrics?.latestOrderId || "Geen")}</span>
+              </td>
+              <td data-label="Omzet">
+                <strong>${money(account.metrics?.totalSpent || 0)}</strong>
+                <span class="muted">Openstaand: ${money(account.metrics?.openAmount || 0)}</span>
+              </td>
               <td data-label="Laatst actief">${account.lastLoginAt ? new Date(account.lastLoginAt).toLocaleDateString("nl-NL") : "-"}</td>
               <td data-label="Labels">
                 <div class="tag-list">${labels.map((label) => `<span>${escapeHtml(label)}</span>`).join("")}</div>
@@ -2166,7 +2181,11 @@ document.addEventListener("click", async (event) => {
   if (exportButton) {
     const backup = TinyStore.getBackupData();
     const key = exportButton.dataset.exportKey;
-    downloadJson(`tiny-doll-${key}.json`, backup[key]);
+    if (key === "accountBackup") {
+      downloadJson("tiny-doll-klantaccounts.json", await getAccountBackupData());
+    } else {
+      downloadJson(`tiny-doll-${key}.json`, backup[key]);
+    }
   }
 
   if (accountDetailButton) {
@@ -2593,8 +2612,10 @@ document.querySelector("[data-save-email-templates]").addEventListener("click", 
   renderAll();
 });
 
-document.querySelector("[data-download-backup]").addEventListener("click", () => {
-  downloadJson(`tiny-doll-backup-${new Date().toISOString().slice(0, 10)}.json`, TinyStore.getBackupData());
+document.querySelector("[data-download-backup]").addEventListener("click", async () => {
+  const backup = TinyStore.getBackupData();
+  backup.accountBackup = await getAccountBackupData();
+  downloadJson(`tiny-doll-backup-${new Date().toISOString().slice(0, 10)}.json`, backup);
 });
 
 document.querySelector("[data-import-backup]").addEventListener("change", (event) => {

@@ -300,20 +300,39 @@ function smtpClient({ host, port }) {
   return { wait, command, close: () => socket.end() };
 }
 
-function composeMail({ from, to, subject, text, replyTo }) {
+function escapeMailHtml(value = "") {
+  return String(value).replace(/[&<>"']/g, (character) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character],
+  );
+}
+
+function accountMailHtml({ title, intro, buttonText = "", buttonUrl = "", footer = "" }) {
+  const paragraphs = String(intro || "")
+    .split(/\n{2,}/)
+    .map((part) => `<p>${escapeMailHtml(part).replace(/\n/g, "<br>")}</p>`)
+    .join("");
+  const button = buttonUrl
+    ? `<p style="margin:28px 0 10px"><a href="${escapeMailHtml(buttonUrl)}" style="display:inline-block;background:#6f4328;color:#fff;text-decoration:none;padding:13px 18px;border-radius:8px;font-weight:800">${escapeMailHtml(buttonText || "Openen")}</a></p>`
+    : "";
+  return `<!doctype html><html lang="nl"><body style="margin:0;background:#fbf6ef;color:#342216;font-family:Arial,sans-serif"><div style="padding:28px 14px"><div style="max-width:620px;margin:0 auto;background:#fffaf4;border:1px solid #dcc8b7;border-radius:10px;overflow:hidden"><div style="background:#6f4328;color:#fff;padding:22px 26px"><p style="margin:0 0 6px;font-size:13px;letter-spacing:.12em;text-transform:uppercase">Tiny Doll Atelier</p><h1 style="margin:0;font-size:28px;line-height:1.15">${escapeMailHtml(title)}</h1></div><div style="padding:26px;line-height:1.65;font-size:16px">${paragraphs}${button}<p>Liefs,<br>Tiny Doll Atelier</p></div><div style="border-top:1px solid #dcc8b7;padding:16px 26px;color:#806a59;font-size:13px">${escapeMailHtml(footer || "Je ontvangt deze mail van Tiny Doll Atelier.")}</div></div></div></body></html>`;
+}
+
+function composeMail({ from, to, subject, text, html, replyTo }) {
+  const boundary = `tiny-${randomToken(12)}`;
   const headers = [
     `From: ${from}`,
     `To: ${to}`,
     `Subject: =?UTF-8?B?${Buffer.from(subject).toString("base64")}?=`,
     `Reply-To: ${replyTo || from}`,
     "MIME-Version: 1.0",
-    "Content-Type: text/plain; charset=UTF-8",
-    "Content-Transfer-Encoding: 8bit",
   ];
-  return `${headers.join("\r\n")}\r\n\r\n${text.replace(/\n/g, "\r\n")}`;
+  if (!html) {
+    return `${headers.join("\r\n")}\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: 8bit\r\n\r\n${text.replace(/\n/g, "\r\n")}`;
+  }
+  return `${headers.join("\r\n")}\r\nContent-Type: multipart/alternative; boundary="${boundary}"\r\n\r\n--${boundary}\r\nContent-Type: text/plain; charset=UTF-8\r\nContent-Transfer-Encoding: 8bit\r\n\r\n${text.replace(/\n/g, "\r\n")}\r\n\r\n--${boundary}\r\nContent-Type: text/html; charset=UTF-8\r\nContent-Transfer-Encoding: 8bit\r\n\r\n${html}\r\n\r\n--${boundary}--`;
 }
 
-async function sendMail({ to, subject, text }) {
+async function sendMail({ to, subject, text, html }) {
   const host = process.env.SMTP_HOST || "smtp.gmail.com";
   const port = Number(process.env.SMTP_PORT || 465);
   const user = process.env.SMTP_USER;
@@ -331,7 +350,7 @@ async function sendMail({ to, subject, text }) {
     await client.command(`MAIL FROM:<${getEmailAddress(from)}>`, [250]);
     await client.command(`RCPT TO:<${to}>`, [250, 251]);
     await client.command("DATA", [354]);
-    await client.command(`${composeMail({ from, to, subject, text, replyTo: adminEmail })}\r\n.`, [250]);
+    await client.command(`${composeMail({ from, to, subject, text, html, replyTo: adminEmail })}\r\n.`, [250]);
     await client.command("QUIT", [221]);
   } finally {
     client.close();
@@ -353,6 +372,15 @@ async function createReset(store, data, account, invite = false) {
     text: invite
       ? `Hallo ${account.name},\n\nEr is een account voor je aangemaakt bij Tiny Doll Atelier. Via onderstaande link kun je zelf veilig een wachtwoord instellen.\n\n${resetLink}\n\nDeze link is tijdelijk geldig.\n\nLiefs,\nTiny Doll Atelier`
       : `Hallo ${account.name},\n\nVia onderstaande link kun je je wachtwoord opnieuw instellen.\n\n${resetLink}\n\nDeze link is tijdelijk geldig en kan maar een keer gebruikt worden. Heb je dit niet aangevraagd? Dan hoef je niets te doen.\n\nLiefs,\nTiny Doll Atelier`,
+    html: accountMailHtml({
+      title: invite ? "Je account bij Tiny Doll Atelier" : "Wachtwoord opnieuw instellen",
+      intro: invite
+        ? `Hallo ${account.name},\n\nEr is een account voor je aangemaakt bij Tiny Doll Atelier. Via je account kun je je aanvragen, betaalstatus, cadeaubonnen en track & trace bekijken.\n\nKlik op de knop hieronder om je account veilig in te stellen.\n\nGebruik hetzelfde e-mailadres als bij je aanvragen, zodat we je bestellingen automatisch aan je account kunnen koppelen.`
+        : `Hallo ${account.name},\n\nWe hebben een verzoek ontvangen om je wachtwoord opnieuw in te stellen.\n\nKlik op de knop hieronder om een nieuw wachtwoord te kiezen.\n\nDeze link is tijdelijk geldig. Heb je dit niet aangevraagd? Dan hoef je niets te doen.`,
+      buttonText: invite ? "Account instellen" : "Wachtwoord opnieuw instellen",
+      buttonUrl: resetLink,
+      footer: "Deze mail bevat geen wachtwoord en geen beheerinformatie.",
+    }),
   });
   data.accounts = data.accounts.map((item) =>
     item.id === account.id
@@ -415,6 +443,17 @@ exports.handler = async (event) => {
             account: safeAccount(data, account),
             orders: ordersForAccount(data, account).map(safeOrder),
             giftCards: giftCardsForAccount(data, account),
+          },
+        });
+      }
+      if (action === "backup") {
+        return json(200, {
+          ok: true,
+          accountBackup: {
+            exportedAt: now(),
+            accounts: data.accounts.map((account) => safeAccount(data, account)),
+            accountCount: data.accounts.length,
+            note: "Deze export bevat geen wachtwoorden, password hashes, reset tokens, sessietokens of server secrets.",
           },
         });
       }
