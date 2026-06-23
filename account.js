@@ -3,13 +3,18 @@ const state = {
   orders: [],
   giftCards: [],
   paymentSettings: {},
+  resetTokenChecked: false,
+  resetTokenValid: false,
 };
 
 const messageBox = document.querySelector("[data-account-message]");
 const authForms = document.querySelector("[data-auth-forms]");
+const loginForm = document.querySelector("[data-login-form]");
+const registerForm = document.querySelector("[data-register-form]");
 const dashboard = document.querySelector("[data-account-dashboard]");
 const forgotPanel = document.querySelector("[data-forgot-panel]");
 const resetPanel = document.querySelector("[data-reset-panel]");
+const resetInvalidPanel = document.querySelector("[data-reset-invalid-panel]");
 const logoutButton = document.querySelector("[data-logout]");
 
 function money(value) {
@@ -61,6 +66,18 @@ function currentView() {
   return "overview";
 }
 
+function currentResetToken() {
+  return new URLSearchParams(window.location.search).get("token") || "";
+}
+
+function authMode() {
+  const view = currentView();
+  if (view === "login") return "login";
+  if (view === "forgot") return "forgot";
+  if (view === "reset") return "reset";
+  return "register";
+}
+
 function orderStatusText(order) {
   if (order.status === "Nieuw") return "Aanvraag ontvangen";
   return order.status || "Aanvraag ontvangen";
@@ -72,27 +89,85 @@ function paymentText(order) {
 
 function renderShell() {
   const view = currentView();
-  const authView = ["login", "register"].includes(view) || (!state.account && !["forgot", "reset"].includes(view));
+  const mode = authMode();
+  const authView = !state.account && !["forgot", "reset"].includes(view);
   const forgotView = view === "forgot";
   const resetView = view === "reset";
-  const accountView = Boolean(state.account) && !authView && !forgotView && !resetView;
+  const accountView = Boolean(state.account);
 
-  authForms.hidden = !authView || Boolean(state.account);
-  forgotPanel.hidden = !forgotView;
-  resetPanel.hidden = !resetView;
+  authForms.hidden = !authView;
+  loginForm.hidden = mode !== "login" || Boolean(state.account);
+  registerForm.hidden = mode !== "register" || Boolean(state.account);
+  forgotPanel.hidden = !forgotView || Boolean(state.account);
+  resetPanel.hidden = !resetView || Boolean(state.account) || !state.resetTokenValid;
+  resetInvalidPanel.hidden =
+    !resetView || Boolean(state.account) || state.resetTokenValid || !state.resetTokenChecked;
   dashboard.hidden = !accountView;
   logoutButton.hidden = !state.account;
 
-  document.querySelector("[data-page-title]").textContent = state.account
-    ? `Welkom, ${state.account.name}`
-    : "Welkom bij Tiny Doll Atelier";
-  document.querySelector("[data-page-intro]").textContent = state.account
-    ? "Bekijk je aanvragen, betaalstatus en verzending."
-    : "Log in of maak een account aan om je aanvragen makkelijk terug te vinden.";
+  const pageTitle = document.querySelector("[data-page-title]");
+  const pageIntro = document.querySelector("[data-page-intro]");
+  if (state.account) {
+    pageTitle.textContent = `Welkom, ${state.account.name}`;
+    pageIntro.textContent = "Bekijk je aanvragen, betaalstatus en verzending.";
+  } else if (mode === "login") {
+    pageTitle.textContent = "Inloggen";
+    pageIntro.textContent = "Bekijk je aanvragen, betaalstatus en track & trace.";
+  } else if (mode === "forgot") {
+    pageTitle.textContent = "Wachtwoord resetten";
+    pageIntro.textContent = "Vraag een tijdelijke resetlink aan voor je account.";
+  } else if (mode === "reset") {
+    pageTitle.textContent = "Nieuw wachtwoord kiezen";
+    pageIntro.textContent = state.resetTokenValid
+      ? "Stel hieronder veilig een nieuw wachtwoord in."
+      : "We controleren eerst of deze resetlink nog geldig is.";
+  } else {
+    pageTitle.textContent = "Account aanmaken";
+    pageIntro.textContent = "Maak een account aan om je aanvragen, bestellingen en cadeaubonnen later makkelijk terug te vinden.";
+  }
 
   if (state.account) {
     renderDashboard();
   }
+}
+
+function goToAuth(path) {
+  showMessage("");
+  state.resetTokenChecked = false;
+  state.resetTokenValid = false;
+  history.pushState(null, "", path);
+  renderRoute();
+}
+
+async function validateResetRoute() {
+  if (currentView() !== "reset") {
+    state.resetTokenChecked = false;
+    state.resetTokenValid = false;
+    return;
+  }
+  const token = currentResetToken();
+  state.resetTokenValid = false;
+  state.resetTokenChecked = true;
+  if (!token) {
+    showMessage("Deze resetlink is ongeldig of verlopen. Vraag een nieuwe resetlink aan.", true);
+    renderShell();
+    return;
+  }
+  try {
+    await accountRequest("validate-reset", { token });
+    state.resetTokenValid = true;
+    showMessage("");
+  } catch {
+    state.resetTokenValid = false;
+    showMessage("Deze resetlink is ongeldig of verlopen. Vraag een nieuwe resetlink aan.", true);
+  }
+}
+
+async function renderRoute() {
+  if (!state.account && currentView() === "reset") {
+    await validateResetRoute();
+  }
+  renderShell();
 }
 
 function showAccountView(name) {
@@ -164,7 +239,7 @@ function renderGiftCards() {
     return "";
   }
   return `
-    <div class="account-detail-card">
+    <div class="account-detail-card" id="cadeaubonnen">
       <h3>Cadeaubonnen</h3>
       <div class="detail-list">
         ${state.giftCards
@@ -266,7 +341,7 @@ async function loadAccount() {
   } catch {
     state.account = null;
   }
-  renderShell();
+  await renderRoute();
 }
 
 document.querySelector("[data-login-form]").addEventListener("submit", async (event) => {
@@ -276,7 +351,7 @@ document.querySelector("[data-login-form]").addEventListener("submit", async (ev
     setData(data);
     showMessage("Je bent ingelogd.");
     history.replaceState(null, "", "/account");
-    renderShell();
+    renderRoute();
   } catch (error) {
     showMessage(error.message, true);
   }
@@ -287,9 +362,9 @@ document.querySelector("[data-register-form]").addEventListener("submit", async 
   try {
     const data = await accountRequest("register", Object.fromEntries(new FormData(event.currentTarget)));
     setData(data);
-    showMessage("Je account is aangemaakt. Eerdere aanvragen met dit e-mailadres zijn gekoppeld.");
+    showMessage("Je account is aangemaakt. Je kunt nu je aanvragen en bestellingen bekijken.");
     history.replaceState(null, "", "/account");
-    renderShell();
+    renderRoute();
   } catch (error) {
     showMessage(error.message, true);
   }
@@ -308,12 +383,17 @@ document.querySelector("[data-forgot-form]").addEventListener("submit", async (e
 document.querySelector("[data-reset-form]").addEventListener("submit", async (event) => {
   event.preventDefault();
   const payload = Object.fromEntries(new FormData(event.currentTarget));
-  payload.token = new URLSearchParams(window.location.search).get("token") || "";
+  if (payload.password !== payload.passwordConfirm) {
+    showMessage("De twee wachtwoorden zijn niet hetzelfde.", true);
+    return;
+  }
+  payload.token = currentResetToken();
+  delete payload.passwordConfirm;
   try {
     const data = await accountRequest("reset-password", payload);
     showMessage(data.message || "Je wachtwoord is aangepast.");
     history.replaceState(null, "", "/login");
-    renderShell();
+    renderRoute();
   } catch (error) {
     showMessage(error.message, true);
   }
@@ -325,7 +405,7 @@ document.querySelector("[data-details-form]").addEventListener("submit", async (
     const data = await accountRequest("update", Object.fromEntries(new FormData(event.currentTarget)));
     setData(data);
     showMessage("Je gegevens zijn opgeslagen.");
-    renderShell();
+    renderRoute();
   } catch (error) {
     showMessage(error.message, true);
   }
@@ -358,8 +438,21 @@ logoutButton.addEventListener("click", async () => {
   state.orders = [];
   state.giftCards = [];
   showMessage("Je bent uitgelogd.");
-  history.replaceState(null, "", "/login");
-  renderShell();
+  history.replaceState(null, "", "/account");
+  renderRoute();
+});
+
+document.addEventListener("click", (event) => {
+  const link = event.target.closest("[data-auth-link]");
+  if (!link) {
+    return;
+  }
+  event.preventDefault();
+  goToAuth(link.dataset.authLink);
+});
+
+window.addEventListener("popstate", () => {
+  renderRoute();
 });
 
 loadAccount();

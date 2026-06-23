@@ -342,6 +342,21 @@ exports.handler = async (event) => {
 
     const payload = JSON.parse(event.body || "{}");
 
+    if (action === "validate-reset") {
+      const tokenHash = hashToken(clean(payload.token, 500));
+      const valid = data.accounts.some(
+        (item) =>
+          item.resetTokenHash === tokenHash &&
+          item.resetExpiresAt &&
+          new Date(item.resetExpiresAt).getTime() > Date.now() &&
+          !item.resetUsedAt,
+      );
+      if (!valid) {
+        return json(400, { ok: false, message: "Deze resetlink is ongeldig of verlopen." });
+      }
+      return json(200, { ok: true });
+    }
+
     if (action === "register") {
       const email = clean(payload.email, 220).toLowerCase();
       const name = clean(payload.name, 160);
