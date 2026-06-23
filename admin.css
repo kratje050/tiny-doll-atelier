@@ -634,6 +634,11 @@ textarea {
   box-shadow: inset 0 0 0 1px var(--line);
 }
 
+.row-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
 .form-note {
   margin: 0;
   color: var(--muted);
@@ -677,6 +682,15 @@ td strong {
   flex-wrap: wrap;
   gap: 8px;
   justify-content: flex-end;
+}
+
+.product-order-actions {
+  justify-content: flex-start;
+}
+
+.product-order-actions .muted {
+  min-width: 34px;
+  font-weight: 900;
 }
 
 .status-pill {

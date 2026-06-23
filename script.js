@@ -18,7 +18,7 @@ const savedCollectionState = readCollectionState();
 const state = {
   activeFilter: savedCollectionState.activeFilter || "alles",
   searchQuery: savedCollectionState.searchQuery || "",
-  sortOption: savedCollectionState.sortOption || "newest",
+  sortOption: savedCollectionState.sortOption || "manual",
   visibleProductCount: Math.max(collectionPageSize(), Number(savedCollectionState.visibleProductCount) || 0),
   cart: JSON.parse(localStorage.getItem("poppenatelier-cart") || "{}"),
   products: TinyStore.getProducts().filter((product) => product.active),
@@ -87,8 +87,8 @@ if (!SHOP_FILTERS.some((filter) => filter.id === state.activeFilter)) {
   state.activeFilter = "alles";
 }
 
-if (!["newest", "price-asc", "price-desc", "name-asc"].includes(state.sortOption)) {
-  state.sortOption = "newest";
+if (!["manual", "newest", "price-asc", "price-desc", "name-asc"].includes(state.sortOption)) {
+  state.sortOption = "manual";
 }
 
 const SHOP_BASE_URL = "https://tiny-doll-atelier.netlify.app";
@@ -364,6 +364,9 @@ function renderFilters() {
 
 function sortProducts(products) {
   const sortedProducts = [...products];
+  if (state.sortOption === "newest") {
+    return sortedProducts.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+  }
   if (state.sortOption === "price-asc") {
     return sortedProducts.sort((a, b) => Number(a.price || 0) - Number(b.price || 0));
   }

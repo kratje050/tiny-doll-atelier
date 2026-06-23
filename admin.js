@@ -1189,6 +1189,25 @@ function setExtraImagePreview(images = extraImageList(), label = "") {
   });
 }
 
+function moveProductInCollection(productId, direction) {
+  const currentIndex = adminState.products.findIndex((product) => product.id === productId);
+  if (currentIndex < 0) {
+    return;
+  }
+
+  const nextIndex = currentIndex + direction;
+  if (nextIndex < 0 || nextIndex >= adminState.products.length) {
+    return;
+  }
+
+  const products = [...adminState.products];
+  const [product] = products.splice(currentIndex, 1);
+  products.splice(nextIndex, 0, product);
+  TinyStore.saveProducts(products);
+  setCloudStatus("Productvolgorde opgeslagen. Online opslaan...");
+  renderAll();
+}
+
 function fileToDataUrl(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -1257,7 +1276,7 @@ function renderProducts() {
   document.querySelector("[data-product-count]").textContent =
     `${adminState.products.length} producten`;
   document.querySelector("[data-product-table]").innerHTML = adminState.products
-    .map((product) => {
+    .map((product, index) => {
       const quantity = stockQuantity(product);
       const stockStatus = product.soldOut
         ? "Tijdelijk uitverkocht"
@@ -1274,6 +1293,13 @@ function renderProducts() {
       ].filter(Boolean);
       return `
         <tr>
+          <td data-label="Volgorde">
+            <div class="table-actions product-order-actions">
+              <span class="muted">#${index + 1}</span>
+              <button class="row-button" type="button" data-move-product-up="${product.id}" ${index === 0 ? "disabled" : ""}>Omhoog</button>
+              <button class="row-button" type="button" data-move-product-down="${product.id}" ${index === adminState.products.length - 1 ? "disabled" : ""}>Omlaag</button>
+            </div>
+          </td>
           <td data-label="Product">
             <strong>${product.name}</strong>
             <span class="muted">${tags.length ? tags.join(" / ") : product.stock}</span>
@@ -1907,6 +1933,7 @@ productForm.addEventListener("submit", (event) => {
   try {
     const data = new FormData(productForm);
     const id = data.get("id") || TinyStore.slugify(data.get("name"));
+    const existingProduct = adminState.products.find((item) => item.id === id);
     const product = {
       id,
       name: data.get("name").trim(),
@@ -1932,9 +1959,14 @@ productForm.addEventListener("submit", (event) => {
       madeToOrder: data.get("madeToOrder") === "on",
       soldOut: data.get("soldOut") === "on",
       active: data.get("active") === "on",
+      createdAt: existingProduct?.createdAt || new Date().toISOString(),
     };
-    const products = adminState.products.filter((item) => item.id !== id);
-    TinyStore.saveProducts([product, ...products]);
+    const existingIndex = adminState.products.findIndex((item) => item.id === id);
+    const products =
+      existingIndex >= 0
+        ? adminState.products.map((item) => (item.id === id ? product : item))
+        : [product, ...adminState.products];
+    TinyStore.saveProducts(products);
     productForm.reset();
     productForm.elements.active.checked = true;
     productForm.elements.featured.checked = false;
@@ -2037,6 +2069,8 @@ productForm.elements.extraImages.addEventListener("input", () => {
 document.addEventListener("click", async (event) => {
   const editProduct = event.target.closest("[data-edit-product]");
   const deleteProduct = event.target.closest("[data-delete-product]");
+  const moveProductUp = event.target.closest("[data-move-product-up]");
+  const moveProductDown = event.target.closest("[data-move-product-down]");
   const deleteCategory = event.target.closest("[data-delete-category]");
   const toggleDiscount = event.target.closest("[data-toggle-discount]");
   const deleteDiscount = event.target.closest("[data-delete-discount]");
@@ -2114,6 +2148,14 @@ document.addEventListener("click", async (event) => {
       adminState.products.filter((product) => product.id !== deleteProduct.dataset.deleteProduct),
     );
     renderAll();
+  }
+
+  if (moveProductUp) {
+    moveProductInCollection(moveProductUp.dataset.moveProductUp, -1);
+  }
+
+  if (moveProductDown) {
+    moveProductInCollection(moveProductDown.dataset.moveProductDown, 1);
   }
 
   if (deleteCategory) {
