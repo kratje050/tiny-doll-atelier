@@ -506,16 +506,22 @@ function renderOrderDetail(orderId) {
           .map(
             (item) => {
               const image = item.imageUrl || item.image || "";
+              const productUrl = item.productUrl || "";
+              const productName = item.name || item.productName || "Product";
               const details = [item.category, item.popSize, item.material, item.deliveryTime].filter(Boolean).join(" - ");
               return `
               <div class="account-line">
                 ${
                   image
-                    ? `<img src="${escapeHtml(image)}" alt="${escapeHtml(item.imageAlt || item.name || "Productafbeelding")}" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'account-line-placeholder',textContent:'Geen afbeelding beschikbaar'}))">`
+                    ? `${productUrl ? `<a class="account-line-image-link" href="${escapeHtml(productUrl)}">` : ""}<img src="${escapeHtml(image)}" alt="${escapeHtml(item.imageAlt || productName || "Productafbeelding")}" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'account-line-placeholder',textContent:'Geen afbeelding beschikbaar'}))">${productUrl ? "</a>" : ""}`
                     : '<span class="account-line-placeholder">Geen afbeelding beschikbaar</span>'
                 }
                 <div>
-                  <strong>${escapeHtml(item.name || item.productName)}</strong>
+                  <strong>${
+                    productUrl
+                      ? `<a class="account-line-product-link" href="${escapeHtml(productUrl)}">${escapeHtml(productName)}</a>`
+                      : escapeHtml(productName)
+                  }</strong>
                   <span class="muted">${item.quantity} x ${money(item.price)}</span>
                   ${details ? `<span class="muted">${escapeHtml(details)}</span>` : ""}
                 </div>

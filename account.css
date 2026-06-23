@@ -378,6 +378,31 @@
   object-fit: cover;
 }
 
+.account-line-image-link {
+  display: inline-flex;
+  width: 54px;
+  height: 54px;
+  border-radius: 8px;
+}
+
+.account-line-image-link:focus-visible,
+.account-line-product-link:focus-visible {
+  outline: 2px solid var(--brown);
+  outline-offset: 3px;
+}
+
+.account-line-product-link {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: rgba(111, 67, 40, 0.28);
+  text-underline-offset: 3px;
+}
+
+.account-line-product-link:hover {
+  color: var(--brown);
+  text-decoration-color: currentColor;
+}
+
 .account-line-placeholder {
   display: grid;
   width: 54px;
