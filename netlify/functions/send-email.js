@@ -372,6 +372,15 @@ function renderPaymentInstructionBlock(values) {
   if (!values.paymentHolder && !values.paymentIban && !values.paymentDescription) {
     return "";
   }
+  const standardNote =
+    "Let op: vermeld altijd het ordernummer als omschrijving, zodat we je betaling goed kunnen koppelen aan je aanvraag.";
+  const normalizedStandardNote = standardNote.replace(/^Let op:\s*/i, "").replace(/[.!]+$/g, "").toLowerCase();
+  const normalizedExtraText = String(values.paymentExtraText || "")
+    .replace(/^Let op:\s*/i, "")
+    .replace(/[.!]+$/g, "")
+    .toLowerCase();
+  const extraPaymentText =
+    normalizedExtraText && normalizedExtraText !== normalizedStandardNote ? values.paymentExtraText : "";
 
   const rows = [
     ["Totaalbedrag", values.totaal],
@@ -396,8 +405,8 @@ function renderPaymentInstructionBlock(values) {
           )
           .join("")}
       </table>
-      <p style="margin:12px 0 0;color:#6f4328;font-size:14px;line-height:1.6;font-weight:800;">Let op: vermeld altijd het ordernummer als omschrijving, zodat we je betaling goed kunnen koppelen aan je aanvraag.</p>
-      ${values.paymentExtraText ? `<p style="margin:10px 0 0;color:#806a59;font-size:14px;line-height:1.6;">${escapeHtml(values.paymentExtraText)}</p>` : ""}
+      <p style="margin:12px 0 0;color:#6f4328;font-size:14px;line-height:1.6;font-weight:800;">${escapeHtml(standardNote)}</p>
+      ${extraPaymentText ? `<p style="margin:10px 0 0;color:#806a59;font-size:14px;line-height:1.6;">${escapeHtml(extraPaymentText)}</p>` : ""}
     </div>
   `;
 }
