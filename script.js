@@ -551,83 +551,6 @@ function renderReviews() {
       .join("") || "<article>Binnenkort delen we hier lieve reacties van klanten.</article>";
 }
 
-function homeProductCard(product) {
-  const details = getProductDetails(product);
-  const canOrder = canOrderProduct(product);
-  return `
-    <article class="home-product-card">
-      <button class="home-product-image" type="button" data-home-product="${escapeHtml(product.id)}" aria-label="Bekijk ${escapeHtml(product.name)}">
-        <img src="${escapeHtml(product.image || "")}" alt="${escapeHtml(product.name)}" />
-        <span>${escapeHtml(product.badge || categoryName(product.categoryId))}</span>
-      </button>
-      <div class="home-product-copy">
-        <p class="product-category">${escapeHtml(categoryName(product.categoryId))}</p>
-        <h3>${escapeHtml(product.name)}</h3>
-        <p>${escapeHtml(product.description || "")}</p>
-        <dl class="compact-details">
-          <div><dt>Popmaat</dt><dd>${escapeHtml(details.size)}</dd></div>
-          <div><dt>Levertijd</dt><dd>${escapeHtml(details.leadTime)}</dd></div>
-          <div><dt>Status</dt><dd>${escapeHtml(details.stockStatus)}</dd></div>
-        </dl>
-        <p class="doll-note">${escapeHtml(dollNotice(product))}</p>
-        <div class="home-product-actions">
-          <strong>${formatMoney(product.price)}</strong>
-          <button class="secondary-action" type="button" data-home-product="${escapeHtml(product.id)}">Bekijk product</button>
-          <button class="add-button" type="button" data-home-add="${escapeHtml(product.id)}" ${canOrder ? "" : "disabled"}>${canOrder ? "Toevoegen aan aanvraag" : "Tijdelijk uitverkocht"}</button>
-        </div>
-      </div>
-    </article>
-  `;
-}
-
-function renderHomepageProductGroup(sectionSelector, gridSelector, products) {
-  const section = document.querySelector(sectionSelector);
-  const homeGrid = document.querySelector(gridSelector);
-  const visible = products.filter((product) => product.active !== false).slice(0, 4);
-  if (!section || !homeGrid || visible.length < 3) {
-    if (section) {
-      section.hidden = true;
-    }
-    return;
-  }
-
-  section.hidden = false;
-  homeGrid.innerHTML = visible.map(homeProductCard).join("");
-  homeGrid.querySelectorAll("img").forEach((image) => {
-    image.addEventListener("error", () => {
-      image.closest(".home-product-image")?.classList.add("has-image-error");
-      image.hidden = true;
-    });
-  });
-  homeGrid.querySelectorAll("[data-home-product]").forEach((button) => {
-    button.addEventListener("click", () => openProductModal(button.dataset.homeProduct));
-  });
-  homeGrid.querySelectorAll("[data-home-add]").forEach((button) => {
-    button.addEventListener("click", () => addToCart(button.dataset.homeAdd));
-  });
-}
-
-function renderHomepageProducts() {
-  const products = state.products.filter((product) => product.active !== false && product.categoryId !== "cadeaubonnen");
-  const newestProducts = [...products].reverse();
-  const favoriteProducts = [
-    ...products.filter((product) => product.featured || product.bestseller || product.highlighted),
-    ...products.filter((product) => stockQuantity(product) > 0 && !product.soldOut),
-    ...products,
-  ].filter((product, index, list) => list.findIndex((item) => item.id === product.id) === index);
-
-  renderHomepageProductGroup(
-    '[data-home-products-section="new"]',
-    "[data-home-new-products]",
-    newestProducts,
-  );
-  renderHomepageProductGroup(
-    '[data-home-products-section="favorites"]',
-    "[data-home-favorite-products]",
-    favoriteProducts,
-  );
-}
-
 function productImages(product) {
   return [
     product.image,
@@ -1654,7 +1577,6 @@ function renderShop() {
   renderFilters();
   applySettings();
   renderReviews();
-  renderHomepageProducts();
   renderProducts();
   renderCart();
   openLinkedProduct();
