@@ -1,8 +1,25 @@
 const formatMoney = TinyStore.formatMoney;
+const COLLECTION_STATE_KEY = "tiny-doll-collection-state";
+
+function collectionPageSize() {
+  return window.matchMedia("(max-width: 640px)").matches ? 6 : 8;
+}
+
+function readCollectionState() {
+  try {
+    return JSON.parse(sessionStorage.getItem(COLLECTION_STATE_KEY) || "{}");
+  } catch {
+    return {};
+  }
+}
+
+const savedCollectionState = readCollectionState();
 
 const state = {
-  activeFilter: "alles",
-  searchQuery: "",
+  activeFilter: savedCollectionState.activeFilter || "alles",
+  searchQuery: savedCollectionState.searchQuery || "",
+  sortOption: savedCollectionState.sortOption || "newest",
+  visibleProductCount: Math.max(collectionPageSize(), Number(savedCollectionState.visibleProductCount) || 0),
   cart: JSON.parse(localStorage.getItem("poppenatelier-cart") || "{}"),
   products: TinyStore.getProducts().filter((product) => product.active),
   categories: TinyStore.getCategories(),
@@ -66,13 +83,24 @@ const SHOP_FILTERS = [
   { id: "op-aanvraag", name: "Op aanvraag" },
 ];
 
+if (!SHOP_FILTERS.some((filter) => filter.id === state.activeFilter)) {
+  state.activeFilter = "alles";
+}
+
+if (!["newest", "price-asc", "price-desc", "name-asc"].includes(state.sortOption)) {
+  state.sortOption = "newest";
+}
+
 const SHOP_BASE_URL = "https://tiny-doll-atelier.netlify.app";
 
 const grid = document.querySelector("[data-product-grid]");
 const productTemplate = document.querySelector("#product-card-template");
 const filterTabs = document.querySelector("[data-filter-tabs]");
 const productSearch = document.querySelector("[data-product-search]");
+const productSort = document.querySelector("[data-product-sort]");
 const resultCount = document.querySelector("[data-result-count]");
+const loadMoreProducts = document.querySelector("[data-load-more-products]");
+const allProductsLoaded = document.querySelector("[data-all-products-loaded]");
 const cartPanel = document.querySelector("[data-cart-panel]");
 const menuOverlay = document.querySelector("[data-menu-overlay]");
 const openMenuButton = document.querySelector("[data-open-menu]");
@@ -105,6 +133,24 @@ let giftCardLookupTimer = null;
 
 function saveCart() {
   localStorage.setItem("poppenatelier-cart", JSON.stringify(state.cart));
+}
+
+function saveCollectionState() {
+  try {
+    sessionStorage.setItem(
+      COLLECTION_STATE_KEY,
+      JSON.stringify({
+        activeFilter: state.activeFilter,
+        searchQuery: state.searchQuery,
+        sortOption: state.sortOption,
+        visibleProductCount: state.visibleProductCount,
+      }),
+    );
+  } catch {}
+}
+
+function resetVisibleProducts() {
+  state.visibleProductCount = collectionPageSize();
 }
 
 function categoryName(categoryId) {
@@ -316,31 +362,52 @@ function renderFilters() {
     .join("");
 }
 
+function sortProducts(products) {
+  const sortedProducts = [...products];
+  if (state.sortOption === "price-asc") {
+    return sortedProducts.sort((a, b) => Number(a.price || 0) - Number(b.price || 0));
+  }
+  if (state.sortOption === "price-desc") {
+    return sortedProducts.sort((a, b) => Number(b.price || 0) - Number(a.price || 0));
+  }
+  if (state.sortOption === "name-asc") {
+    return sortedProducts.sort((a, b) => String(a.name || "").localeCompare(String(b.name || ""), "nl"));
+  }
+  return sortedProducts;
+}
+
 function visibleProducts() {
   const query = state.searchQuery.trim().toLowerCase();
   const filteredProducts = state.products.filter((product) => matchesProductFilter(product, state.activeFilter));
 
   if (!query) {
-    return filteredProducts;
+    return sortProducts(filteredProducts);
   }
 
-  return filteredProducts.filter((product) => {
+  return sortProducts(filteredProducts.filter((product) => {
     return productSearchText(product).includes(query);
-  });
+  }));
 }
 
 function renderProducts() {
   grid.innerHTML = "";
   const products = visibleProducts();
+  const visibleCount = Math.min(state.visibleProductCount, products.length);
+  const shownProducts = products.slice(0, visibleCount);
 
-  resultCount.textContent = `${products.length} ${products.length === 1 ? "product" : "producten"} gevonden`;
+  resultCount.textContent = products.length
+    ? `${visibleCount} van ${products.length} ${products.length === 1 ? "product" : "producten"} zichtbaar`
+    : "0 producten gevonden";
 
   if (!products.length) {
-    grid.innerHTML = '<p class="empty-results">Geen producten gevonden binnen deze categorie.</p>';
+    grid.innerHTML = '<p class="empty-results">Geen producten gevonden binnen deze categorie of zoekopdracht.</p>';
+    loadMoreProducts.hidden = true;
+    allProductsLoaded.hidden = true;
+    saveCollectionState();
     return;
   }
 
-  products.forEach((product) => {
+  shownProducts.forEach((product) => {
     const card = productTemplate.content.firstElementChild.cloneNode(true);
     const details = getProductDetails(product);
     const image = card.querySelector("img");
@@ -380,6 +447,10 @@ function renderProducts() {
     addButton.addEventListener("click", () => addToCart(product.id));
     grid.append(card);
   });
+
+  loadMoreProducts.hidden = visibleCount >= products.length;
+  allProductsLoaded.hidden = products.length <= collectionPageSize() || visibleCount < products.length;
+  saveCollectionState();
 }
 
 function applySettings() {
@@ -1213,6 +1284,9 @@ function buildMailBody(order) {
   ].join("\n");
 }
 
+productSearch.value = state.searchQuery;
+productSort.value = state.sortOption;
+
 filterTabs.addEventListener("click", (event) => {
   const button = event.target.closest("[data-filter]");
   if (!button) {
@@ -1220,12 +1294,25 @@ filterTabs.addEventListener("click", (event) => {
   }
 
   state.activeFilter = button.dataset.filter;
+  resetVisibleProducts();
   renderFilters();
   renderProducts();
 });
 
 productSearch.addEventListener("input", (event) => {
   state.searchQuery = event.target.value;
+  resetVisibleProducts();
+  renderProducts();
+});
+
+productSort.addEventListener("change", (event) => {
+  state.sortOption = event.target.value;
+  resetVisibleProducts();
+  renderProducts();
+});
+
+loadMoreProducts.addEventListener("click", () => {
+  state.visibleProductCount += collectionPageSize();
   renderProducts();
 });
 

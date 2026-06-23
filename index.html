@@ -158,12 +158,25 @@
                 autocomplete="off"
               />
             </label>
+            <label class="sort-box">
+              <span>Sorteren</span>
+              <select data-product-sort>
+                <option value="newest">Nieuwste eerst</option>
+                <option value="price-asc">Prijs laag naar hoog</option>
+                <option value="price-desc">Prijs hoog naar laag</option>
+                <option value="name-asc">Naam A-Z</option>
+              </select>
+            </label>
             <div class="filter-tabs" aria-label="Filter collectie" data-filter-tabs></div>
           </div>
         </div>
 
         <p class="result-count" data-result-count></p>
         <div class="product-grid" data-product-grid></div>
+        <div class="collection-more">
+          <button class="secondary-action" type="button" data-load-more-products hidden>Laad meer</button>
+          <p class="result-count" data-all-products-loaded hidden>Alle producten zijn geladen.</p>
+        </div>
       </section>
 
       <section class="service-band" id="maatwerk" aria-labelledby="maatwerk-title">
