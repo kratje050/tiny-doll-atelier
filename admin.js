@@ -323,6 +323,12 @@ async function sendOrderPaymentMail(order, type) {
     total: money(order.total),
     orderSummary: orderSummaryText(order),
     orderItems: order.items,
+    paymentHolder: adminState.settings.paymentHolder || "R Stavasius",
+    paymentIban: adminState.settings.paymentIban || "NL25 RABO 0316 0597 49",
+    paymentDescription: order.id,
+    paymentExtraText:
+      adminState.settings.paymentExtraText ||
+      "Vermeld altijd het ordernummer als omschrijving, zodat we je betaling goed kunnen koppelen aan je aanvraag.",
     subtotal: money(order.items.reduce((sum, item) => sum + item.price * item.quantity, 0)),
     discountCode: order.discountCode || "",
     discountAmount: money(order.discountAmount || 0),
@@ -331,6 +337,34 @@ async function sendOrderPaymentMail(order, type) {
     giftCardRemainingBalance: order.giftCardCode ? money(order.giftCardRemainingBalance || 0) : "",
     freeShipping: order.freeShipping ? "Ja" : "Nee",
     message: order.notes || "-",
+  });
+}
+
+async function sendTrackTraceMail(order) {
+  await sendEmail({
+    type: "track-trace",
+    orderId: order.id,
+    name: order.customer.name,
+    email: order.customer.email,
+    phone: order.customer.phone || "",
+    total: money(order.total),
+    orderSummary: orderSummaryText(order),
+    orderItems: order.items,
+    trackTrace: order.trackTrace || "",
+  });
+}
+
+async function sendOrderStatusMail(order) {
+  await sendEmail({
+    type: "order-status",
+    orderId: order.id,
+    name: order.customer.name,
+    email: order.customer.email,
+    total: money(order.total),
+    orderSummary: orderSummaryText(order),
+    orderItems: order.items,
+    orderStatus: order.status || "Aanvraag ontvangen",
+    paymentStatus: order.paymentStatus || "Wacht op bevestiging",
   });
 }
 
@@ -959,13 +993,26 @@ function renderOrderDetail(orderId) {
         <dl class="detail-list">
           <div><dt>Status</dt><dd>${order.status}</dd></div>
           <div><dt>Betaalstatus</dt><dd>${paymentStatus}</dd></div>
+          <div><dt>Betaalinstructie verstuurd</dt><dd>${order.paymentInstructionsSentAt ? "Ja" : "Nee"}</dd></div>
+          <div><dt>Betaalinstructie op</dt><dd>${order.paymentInstructionsSentAt ? new Date(order.paymentInstructionsSentAt).toLocaleString("nl-NL") : "-"}</dd></div>
           <div><dt>Betaaldatum</dt><dd>${order.paidAt ? new Date(order.paidAt).toLocaleString("nl-NL") : "-"}</dd></div>
+          <div><dt>Track mail verstuurd</dt><dd>${order.trackTraceMailSentAt ? "Ja" : "Nee"}</dd></div>
+          <div><dt>Track mail op</dt><dd>${order.trackTraceMailSentAt ? new Date(order.trackTraceMailSentAt).toLocaleString("nl-NL") : "-"}</dd></div>
           <div><dt>Productregels</dt><dd>${order.items.length}</dd></div>
           <div><dt>Aantal items</dt><dd>${itemCount}</dd></div>
           <div><dt>Volgende stap</dt><dd>${order.status === "Nieuw" ? "Stem levertijd en betaling af." : "Werk status, betaling en verzending bij."}</dd></div>
         </dl>
       </section>
     </div>
+
+    <section class="detail-card">
+      <h3>Betaalgegevens voor klant</h3>
+      <dl class="detail-list">
+        <div><dt>Rekeninghouder</dt><dd>${escapeHtml(adminState.settings.paymentHolder || "R Stavasius")}</dd></div>
+        <div><dt>IBAN</dt><dd>${escapeHtml(adminState.settings.paymentIban || "NL25 RABO 0316 0597 49")}</dd></div>
+        <div><dt>Omschrijving</dt><dd>${escapeHtml(order.id)}</dd></div>
+      </dl>
+    </section>
 
     <section class="detail-card">
       <h3>Beheeracties</h3>
@@ -995,6 +1042,9 @@ function renderOrderDetail(orderId) {
       <div class="manual-payment-actions">
         <button class="row-button" type="button" data-send-payment-instructions="${order.id}">Betaalinstructie versturen</button>
         <button class="row-button" type="button" data-mark-paid="${order.id}">Markeer als betaald</button>
+        <button class="row-button" type="button" data-resend-track="${order.id}">Track & trace mail opnieuw versturen</button>
+        <button class="row-button" type="button" data-mark-shipped="${order.id}">Markeer als verzonden</button>
+        <button class="row-button" type="button" data-send-status-mail="${order.id}">Klantmail sturen</button>
       </div>
       <p class="form-note">${order.paymentInstructionsSentAt ? `Betaalinstructie verstuurd op ${new Date(order.paymentInstructionsSentAt).toLocaleString("nl-NL")}.` : "Betaalinformatie volgt na bevestiging."}</p>
     </section>
@@ -1367,6 +1417,9 @@ document.addEventListener("click", async (event) => {
   const saveOrderAdmin = event.target.closest("[data-save-order-admin]");
   const sendPaymentInstructions = event.target.closest("[data-send-payment-instructions]");
   const markPaid = event.target.closest("[data-mark-paid]");
+  const resendTrack = event.target.closest("[data-resend-track]");
+  const markShipped = event.target.closest("[data-mark-shipped]");
+  const sendStatusMail = event.target.closest("[data-send-status-mail]");
   const printOrderButton = event.target.closest("[data-print-order]");
   const printPackingSlipButton = event.target.closest("[data-print-packing-slip]");
   const exportButton = event.target.closest("[data-export-key]");
@@ -1559,18 +1612,41 @@ document.addEventListener("click", async (event) => {
 
   if (saveOrderAdmin) {
     const orderId = saveOrderAdmin.dataset.saveOrderAdmin;
-    TinyStore.saveOrders(
-      adminState.orders.map((order) =>
-        order.id === orderId
-          ? {
-              ...order,
-              shippingMethod: document.querySelector(`[data-order-shipping-method="${orderId}"]`).value.trim(),
-              trackTrace: document.querySelector(`[data-order-track-trace="${orderId}"]`).value.trim(),
-              adminNotes: document.querySelector(`[data-order-admin-notes="${orderId}"]`).value.trim(),
-            }
-          : order,
-      ),
-    );
+    const order = adminState.orders.find((item) => item.id === orderId);
+    if (!order) {
+      return;
+    }
+    const previousTrack = order.trackTrace || "";
+    const nextTrack = document.querySelector(`[data-order-track-trace="${orderId}"]`).value.trim();
+    let updatedOrder = {
+      ...order,
+      shippingMethod: document.querySelector(`[data-order-shipping-method="${orderId}"]`).value.trim(),
+      trackTrace: nextTrack,
+      adminNotes: document.querySelector(`[data-order-admin-notes="${orderId}"]`).value.trim(),
+    };
+    if (nextTrack && nextTrack !== previousTrack) {
+      updatedOrder = appendStatusHistory(updatedOrder, "track", previousTrack || "-", nextTrack);
+      try {
+        await sendTrackTraceMail(updatedOrder);
+        const now = new Date().toISOString();
+        updatedOrder = appendStatusHistory(
+          {
+            ...updatedOrder,
+            status: "Verzonden",
+            trackTraceMailSent: true,
+            trackTraceMailSentAt: now,
+            trackTraceLastSentCode: nextTrack,
+          },
+          "shipping",
+          "Track & trace mail",
+          `Verzonden naar ${updatedOrder.customer.email}`,
+        );
+        alert("Track & trace mail is verzonden naar de klant.");
+      } catch (error) {
+        alert(error.message);
+      }
+    }
+    TinyStore.saveOrders(adminState.orders.map((item) => (item.id === orderId ? updatedOrder : item)));
     renderAll();
   }
 
@@ -1578,6 +1654,9 @@ document.addEventListener("click", async (event) => {
     const orderId = sendPaymentInstructions.dataset.sendPaymentInstructions;
     const order = adminState.orders.find((item) => item.id === orderId);
     if (!order) {
+      return;
+    }
+    if (order.paymentInstructionsSentAt && !confirm("Betaalinstructie is al eerder verstuurd. Wil je opnieuw versturen?")) {
       return;
     }
 
@@ -1593,6 +1672,7 @@ document.addEventListener("click", async (event) => {
                 {
                   ...item,
                   paymentStatus: "Wacht op betaling",
+                  paymentInstructionsSent: true,
                   paymentInstructionsSentAt: now,
                   status: item.status === "Nieuw" ? "In afwachting van betaling" : item.status,
                 },
@@ -1644,6 +1724,87 @@ document.addEventListener("click", async (event) => {
     } catch (error) {
       markPaid.disabled = false;
       markPaid.textContent = "Markeer als betaald";
+      alert(error.message);
+    }
+  }
+
+  if (resendTrack) {
+    const orderId = resendTrack.dataset.resendTrack;
+    const order = adminState.orders.find((item) => item.id === orderId);
+    if (!order?.trackTrace) {
+      alert("Vul eerst een track & trace code in.");
+      return;
+    }
+    if (!confirm("Weet je zeker dat je de track & trace mail opnieuw wilt versturen?")) {
+      return;
+    }
+    resendTrack.disabled = true;
+    resendTrack.textContent = "Versturen...";
+    try {
+      await sendTrackTraceMail(order);
+      const now = new Date().toISOString();
+      TinyStore.saveOrders(
+        adminState.orders.map((item) =>
+          item.id === orderId
+            ? appendStatusHistory(
+                {
+                  ...item,
+                  trackTraceMailSent: true,
+                  trackTraceMailSentAt: now,
+                  trackTraceLastSentCode: item.trackTrace,
+                },
+                "shipping",
+                "Track & trace mail",
+                `Opnieuw verzonden naar ${item.customer.email}`,
+              )
+            : item,
+        ),
+      );
+      renderAll();
+    } catch (error) {
+      resendTrack.disabled = false;
+      resendTrack.textContent = "Track & trace mail opnieuw versturen";
+      alert(error.message);
+    }
+  }
+
+  if (markShipped) {
+    const orderId = markShipped.dataset.markShipped;
+    const order = adminState.orders.find((item) => item.id === orderId);
+    if (!order) {
+      return;
+    }
+    TinyStore.saveOrders(
+      adminState.orders.map((item) =>
+        item.id === orderId
+          ? appendStatusHistory({ ...item, status: "Verzonden" }, "status", item.status || "-", "Verzonden")
+          : item,
+      ),
+    );
+    renderAll();
+  }
+
+  if (sendStatusMail) {
+    const orderId = sendStatusMail.dataset.sendStatusMail;
+    const order = adminState.orders.find((item) => item.id === orderId);
+    if (!order) {
+      return;
+    }
+    sendStatusMail.disabled = true;
+    sendStatusMail.textContent = "Versturen...";
+    try {
+      await sendOrderStatusMail(order);
+      TinyStore.saveOrders(
+        adminState.orders.map((item) =>
+          item.id === orderId
+            ? appendStatusHistory(item, "status", "Klantmail", `Verstuurd naar ${item.customer.email}`)
+            : item,
+        ),
+      );
+      renderAll();
+    } catch (error) {
+      sendStatusMail.disabled = false;
+      sendStatusMail.textContent = "Klantmail sturen";
       alert(error.message);
     }
   }
@@ -1879,6 +2040,10 @@ settingsForm.addEventListener("submit", (event) => {
     orderRequestText: data.get("orderRequestText").trim(),
     orderSuccessText: data.get("orderSuccessText").trim(),
     contactText: data.get("contactText").trim(),
+    paymentHolder: data.get("paymentHolder").trim(),
+    paymentIban: data.get("paymentIban").trim(),
+    paymentDescription: data.get("paymentDescription").trim(),
+    paymentExtraText: data.get("paymentExtraText").trim(),
   });
   document.querySelector("[data-settings-message]").textContent = "Instellingen opgeslagen.";
   renderAll();

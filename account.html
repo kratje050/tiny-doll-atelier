@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="nl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Mijn account - Tiny Doll Atelier</title>
+    <meta name="description" content="Log in bij Tiny Doll Atelier om je aanvragen, betaalstatus en track & trace te bekijken." />
+    <meta name="theme-color" content="#6f4328" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/assets/app-icon-180.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/assets/app-icon-192.png" />
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/account.css" />
+  </head>
+  <body class="account-body">
+    <header class="account-header">
+      <a class="brand" href="/" aria-label="Terug naar Tiny Doll Atelier">
+        <span class="brand-mark">T</span>
+        <span>
+          <strong>Tiny Doll Atelier</strong>
+          <small>mijn account</small>
+        </span>
+      </a>
+      <nav class="account-topnav" aria-label="Account navigatie">
+        <a href="/">Webshop</a>
+        <a href="/account">Mijn account</a>
+        <button type="button" data-logout hidden>Uitloggen</button>
+      </nav>
+    </header>
+
+    <main class="account-main">
+      <section class="account-hero">
+        <p class="eyebrow">Mijn account</p>
+        <h1 data-page-title>Welkom bij Tiny Doll Atelier</h1>
+        <p data-page-intro>Log in om je aanvragen, betaalstatus en track & trace te bekijken.</p>
+      </section>
+
+      <section class="account-message" data-account-message hidden></section>
+
+      <section class="account-grid" data-auth-forms>
+        <form class="account-panel" data-login-form>
+          <h2>Inloggen</h2>
+          <label>E-mail <input name="email" type="email" autocomplete="email" required /></label>
+          <label>Wachtwoord <input name="password" type="password" autocomplete="current-password" required /></label>
+          <button class="primary-action" type="submit">Inloggen</button>
+          <a href="/forgot-password">Wachtwoord vergeten?</a>
+        </form>
+
+        <form class="account-panel" data-register-form>
+          <h2>Account aanmaken</h2>
+          <label>Naam <input name="name" autocomplete="name" required /></label>
+          <label>E-mail <input name="email" type="email" autocomplete="email" required /></label>
+          <label>Wachtwoord <input name="password" type="password" autocomplete="new-password" minlength="8" required /></label>
+          <p class="muted">Gebruik hetzelfde e-mailadres als je eerdere aanvragen. Dan worden die automatisch aan je account gekoppeld.</p>
+          <button class="primary-action" type="submit">Account aanmaken</button>
+        </form>
+      </section>
+
+      <section class="account-panel narrow" data-forgot-panel hidden>
+        <form data-forgot-form>
+          <h2>Wachtwoord resetten</h2>
+          <p class="muted">Vul je e-mailadres in. Als het bekend is, sturen we een tijdelijke resetlink.</p>
+          <label>E-mail <input name="email" type="email" autocomplete="email" required /></label>
+          <button class="primary-action" type="submit">Resetlink sturen</button>
+        </form>
+      </section>
+
+      <section class="account-panel narrow" data-reset-panel hidden>
+        <form data-reset-form>
+          <h2>Nieuw wachtwoord kiezen</h2>
+          <label>Nieuw wachtwoord <input name="password" type="password" autocomplete="new-password" minlength="8" required /></label>
+          <button class="primary-action" type="submit">Wachtwoord opslaan</button>
+        </form>
+      </section>
+
+      <section class="account-dashboard" data-account-dashboard hidden>
+        <div class="account-cards">
+          <article>
+            <span>Openstaande aanvragen</span>
+            <strong data-open-orders>0</strong>
+          </article>
+          <article>
+            <span>Wacht op betaling</span>
+            <strong data-payment-orders>0</strong>
+          </article>
+          <article>
+            <span>In productie</span>
+            <strong data-production-orders>0</strong>
+          </article>
+          <article>
+            <span>Cadeaubonnen</span>
+            <strong data-gift-card-count>0</strong>
+          </article>
+        </div>
+
+        <div class="account-layout">
+          <aside class="account-sidebar">
+            <a href="/account">Overzicht</a>
+            <a href="/account/orders">Mijn bestellingen</a>
+            <a href="/account/details">Mijn gegevens</a>
+            <a href="/#contact">Contact</a>
+          </aside>
+
+          <div class="account-content">
+            <section class="account-panel" data-overview-view>
+              <h2 data-welcome-title>Welkom</h2>
+              <p class="muted">Hier zie je je aanvragen, betaalstatus en verzending.</p>
+              <div data-latest-order></div>
+            </section>
+
+            <section class="account-panel" data-orders-view hidden>
+              <h2>Mijn bestellingen</h2>
+              <div class="order-list" data-account-orders></div>
+            </section>
+
+            <section class="account-panel" data-order-detail-view hidden>
+              <div data-account-order-detail></div>
+            </section>
+
+            <section class="account-panel" data-details-view hidden>
+              <form data-details-form>
+                <h2>Mijn gegevens</h2>
+                <div class="account-form-grid">
+                  <label>Naam <input name="name" autocomplete="name" required /></label>
+                  <label>E-mail <input name="email" type="email" disabled /></label>
+                  <label>Telefoon <input name="phone" autocomplete="tel" /></label>
+                  <label>Adres <input name="address" autocomplete="street-address" /></label>
+                  <label>Postcode <input name="postalCode" autocomplete="postal-code" /></label>
+                  <label>Plaats <input name="city" autocomplete="address-level2" /></label>
+                  <label>Land <input name="country" autocomplete="country-name" /></label>
+                </div>
+                <button class="primary-action" type="submit">Gegevens opslaan</button>
+              </form>
+              <form class="password-form" data-password-form>
+                <h3>Wachtwoord wijzigen</h3>
+                <label>Huidig wachtwoord <input name="currentPassword" type="password" autocomplete="current-password" required /></label>
+                <label>Nieuw wachtwoord <input name="newPassword" type="password" autocomplete="new-password" minlength="8" required /></label>
+                <button class="secondary-action" type="submit">Wachtwoord wijzigen</button>
+              </form>
+              <button class="link-button" type="button" data-delete-request>Account verwijderen aanvragen</button>
+              <p class="muted">Je gegevens zijn alleen zichtbaar voor jou en Tiny Doll Atelier. Bestellingen worden gekoppeld op je e-mailadres.</p>
+            </section>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script src="/account.js"></script>
+  </body>
+</html>

@@ -13,6 +13,7 @@ const state = {
   giftMessage: "",
   giftCardLookup: null,
   selectedProductId: "",
+  account: null,
 };
 
 const GIFT_WRAP_PRICE = Number(state.settings.giftWrapPrice || 2.95);
@@ -748,6 +749,13 @@ function showCheckout() {
 
   state.checkoutVisible = true;
   renderCart();
+  if (state.account) {
+    ["name", "email", "phone", "address", "postalCode", "city", "country"].forEach((key) => {
+      if (checkoutForm.elements[key] && !checkoutForm.elements[key].value) {
+        checkoutForm.elements[key].value = state.account[key] || "";
+      }
+    });
+  }
   checkoutForm.querySelector("input")?.focus();
 }
 
@@ -830,6 +838,20 @@ async function persistOrder(order) {
     });
   } catch {
     // De e-mail blijft leidend; online dashboardopslag is een extra synchronisatie.
+  }
+}
+
+async function loadAccountState() {
+  try {
+    const response = await fetch("/.netlify/functions/account?action=me", {
+      credentials: "same-origin",
+    });
+    const data = await response.json();
+    if (response.ok && data.ok) {
+      state.account = data.account;
+    }
+  } catch {
+    state.account = null;
   }
 }
 
@@ -1135,8 +1157,9 @@ checkoutForm.addEventListener("submit", async (event) => {
       notes: order.notes,
     });
     await persistOrder(order);
-    orderMessage.textContent =
-      "Bedankt, je aanvraag is verzonden. Je ontvangt persoonlijk de betaalinformatie na bevestiging.";
+    orderMessage.innerHTML = state.account
+      ? "Bedankt, je aanvraag is verzonden en gekoppeld aan je account."
+      : 'Bedankt, je aanvraag is verzonden. Wil je je aanvraag later makkelijk terugvinden? <a href="/register">Account aanmaken</a>';
     state.cart = {};
     state.checkoutVisible = false;
     state.giftWrap = false;
@@ -1294,6 +1317,7 @@ function renderShop() {
 }
 
 renderShop();
+loadAccountState();
 
 TinyStore.loadCloudData()
   .then((result) => {

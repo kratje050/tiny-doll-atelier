@@ -31,3 +31,38 @@ from = "/admin/logout"
 to = "/.netlify/functions/admin"
 status = 200
 force = true
+
+[[redirects]]
+from = "/account/order/*"
+to = "/account.html"
+status = 200
+
+[[redirects]]
+from = "/account/*"
+to = "/account.html"
+status = 200
+
+[[redirects]]
+from = "/account"
+to = "/account.html"
+status = 200
+
+[[redirects]]
+from = "/login"
+to = "/account.html"
+status = 200
+
+[[redirects]]
+from = "/register"
+to = "/account.html"
+status = 200
+
+[[redirects]]
+from = "/forgot-password"
+to = "/account.html"
+status = 200
+
+[[redirects]]
+from = "/reset-password"
+to = "/account.html"
+status = 200

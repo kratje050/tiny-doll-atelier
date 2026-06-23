@@ -87,8 +87,20 @@ function sanitizeOrder(input) {
     notes: clean(input.notes, 4000),
     adminNotes: "",
     trackTrace: "",
+    trackTraceMailSent: false,
+    trackTraceMailSentAt: "",
+    paymentInstructionsSent: false,
+    paymentInstructionsSentAt: "",
     shippingMethod: clean(input.shippingMethod, 120) || "Wordt afgestemd",
-    statusHistory: Array.isArray(input.statusHistory) ? input.statusHistory.slice(0, 10) : [],
+    statusHistory: [
+      {
+        at: clean(input.createdAt, 80) || new Date().toISOString(),
+        type: "created",
+        from: "-",
+        to: "Aanvraag ontvangen",
+      },
+      ...(Array.isArray(input.statusHistory) ? input.statusHistory.slice(0, 10) : []),
+    ],
   };
 }
 

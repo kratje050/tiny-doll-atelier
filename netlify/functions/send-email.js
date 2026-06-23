@@ -7,6 +7,8 @@ const allowedTypes = new Set([
   "gift-card-issued",
   "payment-instructions",
   "payment-received",
+  "track-trace",
+  "order-status",
   "return",
   "contact",
 ]);
@@ -32,12 +34,28 @@ const templates = {
       "Cadeaubon verzonden.\n\nCode: {cadeauboncode}\nOntvanger: {naam}\nE-mail ontvanger: {email}\nWaarde: {bedrag}\nResterend saldo: {saldo}\nGeldig tot: {geldigTot}\nDatum: {datum}",
   },
   "payment-instructions": {
-    customerSubject: "Betaalinformatie voor {ordernummer}",
+    customerSubject: "Betaalinstructie voor je aanvraag bij Tiny Doll Atelier",
     adminSubject: "Betaalinstructie verstuurd voor {ordernummer}",
     customerBody:
-      "Hallo {naam},\n\nBedankt voor je aanvraag. We hebben je bestelling gecontroleerd.\n\nOrdernummer: {ordernummer}\n\n{bestelling}\n\nTotaalbedrag: {totaal}\n\nJe bestelling is pas definitief nadat alles is bevestigd en betaald.\n\nBetaalmogelijkheden na bevestiging:\n- Bankoverschrijving\n- Betaalverzoek\n- Tikkie\n\nJe ontvangt de betaalgegevens persoonlijk van ons.\n\nLiefs,\n{webshopNaam}",
+      "Hallo {naam},\n\nBedankt voor je aanvraag. We hebben je bestelling gecontroleerd.\n\nOrdernummer: {ordernummer}\n\n{bestelling}\n\nTotaalbedrag: {totaal}\nBetaalstatus: Wacht op betaling\n\nJe bestelling is pas definitief nadat alles is bevestigd en betaald.\n\nJe kunt het totaalbedrag overmaken naar:\n\nRekeninghouder: {paymentHolder}\nIBAN: {paymentIban}\nOmschrijving: {paymentDescription}\n\nLet op: vermeld altijd het ordernummer als omschrijving, zodat we je betaling goed kunnen koppelen aan je aanvraag.\n\n{paymentExtraText}\n\nLiefs,\n{webshopNaam}",
     adminBody:
       "Betaalinstructie verstuurd.\n\nOrdernummer: {ordernummer}\nKlantnaam: {naam}\nE-mail: {email}\nTotaalbedrag: {totaal}\nDatum: {datum}",
+  },
+  "track-trace": {
+    customerSubject: "Je bestelling van Tiny Doll Atelier is verzonden",
+    adminSubject: "Track & trace verstuurd voor {ordernummer}",
+    customerBody:
+      "Hallo {naam},\n\nGoed nieuws, je bestelling is verzonden.\n\nOrdernummer: {ordernummer}\nTrack & trace: {tracktrace}\n\nJe kunt de zending volgen met bovenstaande code. Heb je vragen over je bestelling? Reageer dan gerust op deze mail.\n\nLiefs,\n{webshopNaam}",
+    adminBody:
+      "Track & trace mail verstuurd.\n\nOrdernummer: {ordernummer}\nKlantnaam: {naam}\nE-mail: {email}\nTrack & trace: {tracktrace}\nDatum: {datum}",
+  },
+  "order-status": {
+    customerSubject: "Update over je bestelling {ordernummer}",
+    adminSubject: "Klantmail verstuurd voor {ordernummer}",
+    customerBody:
+      "Hallo {naam},\n\nEr is een update over je bestelling.\n\nOrdernummer: {ordernummer}\nBestelstatus: {orderStatus}\nBetaalstatus: {paymentStatus}\n\nJe kunt je bestelling bekijken via je account als je met hetzelfde e-mailadres een account hebt aangemaakt.\n\nLiefs,\n{webshopNaam}",
+    adminBody:
+      "Klantmail verstuurd.\n\nOrdernummer: {ordernummer}\nKlantnaam: {naam}\nE-mail: {email}\nBestelstatus: {orderStatus}\nBetaalstatus: {paymentStatus}\nDatum: {datum}",
   },
   "payment-received": {
     customerSubject: "We hebben je betaling ontvangen",
@@ -539,7 +557,9 @@ function checkRateLimit(ip) {
 }
 
 function applyTemplate(template, values) {
-  return template.replace(/\{([a-zA-Z0-9_]+)\}/g, (_, key) => values[key] || "-");
+  return template
+    .replace(/\{\{([a-zA-Z0-9_]+)\}\}/g, (_, key) => values[key] || "-")
+    .replace(/\{([a-zA-Z0-9_]+)\}/g, (_, key) => values[key] || "-");
 }
 
 function normalizePayload(payload) {
@@ -579,6 +599,18 @@ function normalizePayload(payload) {
     cadeaubonBedrag: clean(payload.giftCardAmount, 80),
     cadeaubonSaldo: clean(payload.giftCardRemainingBalance, 80),
     gratisVerzending: clean(payload.freeShipping, 20),
+    paymentHolder: clean(payload.paymentHolder, 160) || "R Stavasius",
+    paymentIban: clean(payload.paymentIban, 80) || "NL25 RABO 0316 0597 49",
+    paymentDescription: clean(payload.paymentDescription, 120) || clean(payload.orderNumber || payload.orderId, 80),
+    paymentExtraText: clean(payload.paymentExtraText, 1000),
+    tracktrace: clean(payload.trackTrace, 160),
+    orderStatus: clean(payload.orderStatus, 120),
+    paymentStatus: clean(payload.paymentStatus, 120),
+    customerName: clean(payload.name, 160),
+    orderNumber: clean(payload.orderNumber || payload.orderId, 80),
+    orderTotal: clean(payload.total, 80),
+    products: clean(payload.orderSummary, 5000),
+    shopName: clean(payload.webshopNaam || process.env.WEBSHOP_NAME || "Tiny Doll Atelier", 120),
     orderItems: sanitizeOrderItems(payload.orderItems),
     datum: new Date().toLocaleString("nl-NL", { timeZone: "Europe/Amsterdam" }),
   };
@@ -594,6 +626,8 @@ function normalizePayload(payload) {
     "gift-card-issued": ["cadeauboncode", "bedrag", "saldo"],
     "payment-instructions": ["ordernummer", "bestelling", "totaal"],
     "payment-received": ["ordernummer", "bestelling", "totaal"],
+    "track-trace": ["ordernummer", "tracktrace"],
+    "order-status": ["ordernummer", "orderStatus", "paymentStatus"],
     order: ["ordernummer", "bestelling", "totaal"],
   }[type];
 
@@ -752,7 +786,7 @@ exports.handler = async (event) => {
     const adminEmail = process.env.ADMIN_EMAIL;
     const emailFrom = process.env.EMAIL_FROM;
 
-    if (["gift-card-issued", "payment-instructions", "payment-received"].includes(type) && !hasValidAdminSession(event)) {
+    if (["gift-card-issued", "payment-instructions", "payment-received", "track-trace", "order-status"].includes(type) && !hasValidAdminSession(event)) {
       return json(403, {
         ok: false,
         message: "Log opnieuw in bij beheer om deze mail te versturen.",
