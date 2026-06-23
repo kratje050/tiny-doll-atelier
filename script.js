@@ -81,6 +81,7 @@ const productModal = document.querySelector("[data-product-modal]");
 const modalAddButton = document.querySelector("[data-modal-add]");
 const contactForm = document.querySelector("[data-contact-form]");
 const returnForm = document.querySelector("[data-return-form]");
+const accountButton = document.querySelector(".account-button");
 
 const visitRecorded = TinyStore.recordVisit();
 let giftCardLookupTimer = null;
@@ -852,6 +853,9 @@ async function loadAccountState() {
     }
   } catch {
     state.account = null;
+  }
+  if (accountButton) {
+    accountButton.href = state.account ? "/account" : "/login";
   }
 }
 

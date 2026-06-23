@@ -4,6 +4,10 @@
   color: var(--ink);
 }
 
+.account-loading .account-main {
+  visibility: hidden;
+}
+
 .account-header {
   position: sticky;
   top: 0;

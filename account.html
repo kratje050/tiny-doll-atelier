@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="/styles.css" />
     <link rel="stylesheet" href="/account.css" />
   </head>
-  <body class="account-body">
+  <body class="account-body account-loading">
     <header class="account-header">
       <a class="brand" href="/" aria-label="Terug naar Tiny Doll Atelier">
         <span class="brand-mark">T</span>
@@ -37,18 +37,18 @@
 
       <section class="account-message" data-account-message hidden></section>
 
-      <section class="account-grid auth-flow" data-auth-forms>
+      <section class="account-grid auth-flow" data-auth-forms hidden>
         <form class="account-panel auth-card" data-login-form hidden>
           <h2>Inloggen</h2>
           <p class="muted">Log in om je aanvragen, bestellingen en cadeaubonnen terug te vinden.</p>
           <label>E-mail <input name="email" type="email" autocomplete="email" required /></label>
           <label>Wachtwoord <input name="password" type="password" autocomplete="current-password" required /></label>
           <button class="primary-action" type="submit">Inloggen</button>
-          <p class="auth-switch">Nog geen account? <button type="button" data-auth-link="/account">Maak hier een account aan</button></p>
+          <p class="auth-switch">Nog geen account? <button type="button" data-auth-link="/register">Maak hier een account aan</button></p>
           <p class="auth-switch"><button type="button" data-auth-link="/forgot-password">Wachtwoord vergeten?</button></p>
         </form>
 
-        <form class="account-panel auth-card" data-register-form>
+        <form class="account-panel auth-card" data-register-form hidden>
           <h2>Account aanmaken</h2>
           <p class="muted">Maak een account aan om je aanvragen, bestellingen en cadeaubonnen later makkelijk terug te vinden.</p>
           <label>Naam <input name="name" autocomplete="name" required /></label>

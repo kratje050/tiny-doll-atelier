@@ -16,6 +16,7 @@ const forgotPanel = document.querySelector("[data-forgot-panel]");
 const resetPanel = document.querySelector("[data-reset-panel]");
 const resetInvalidPanel = document.querySelector("[data-reset-invalid-panel]");
 const logoutButton = document.querySelector("[data-logout]");
+const accountOnlyViews = ["overview", "orders", "details", "order"];
 
 function money(value) {
   return new Intl.NumberFormat("nl-NL", { style: "currency", currency: "EUR" }).format(Number(value || 0));
@@ -60,6 +61,7 @@ function currentView() {
   if (path.startsWith("/account/orders")) return "orders";
   if (path.startsWith("/account/details")) return "details";
   if (path.startsWith("/forgot-password")) return "forgot";
+  if (path.startsWith("/reset-password-expired")) return "expired";
   if (path.startsWith("/reset-password")) return "reset";
   if (path.startsWith("/register")) return "register";
   if (path.startsWith("/login")) return "login";
@@ -75,6 +77,7 @@ function authMode() {
   if (view === "login") return "login";
   if (view === "forgot") return "forgot";
   if (view === "reset") return "reset";
+  if (view === "expired") return "expired";
   return "register";
 }
 
@@ -90,9 +93,10 @@ function paymentText(order) {
 function renderShell() {
   const view = currentView();
   const mode = authMode();
-  const authView = !state.account && !["forgot", "reset"].includes(view);
+  const authView = !state.account && ["login", "register"].includes(view);
   const forgotView = view === "forgot";
   const resetView = view === "reset";
+  const expiredView = view === "expired";
   const accountView = Boolean(state.account);
 
   authForms.hidden = !authView;
@@ -101,7 +105,7 @@ function renderShell() {
   forgotPanel.hidden = !forgotView || Boolean(state.account);
   resetPanel.hidden = !resetView || Boolean(state.account) || !state.resetTokenValid;
   resetInvalidPanel.hidden =
-    !resetView || Boolean(state.account) || state.resetTokenValid || !state.resetTokenChecked;
+    (!resetView && !expiredView) || Boolean(state.account) || (resetView && state.resetTokenValid) || (resetView && !state.resetTokenChecked);
   dashboard.hidden = !accountView;
   logoutButton.hidden = !state.account;
 
@@ -121,10 +125,14 @@ function renderShell() {
     pageIntro.textContent = state.resetTokenValid
       ? "Stel hieronder veilig een nieuw wachtwoord in."
       : "We controleren eerst of deze resetlink nog geldig is.";
+  } else if (mode === "expired") {
+    pageTitle.textContent = "Resetlink verlopen";
+    pageIntro.textContent = "Vraag een nieuwe tijdelijke resetlink aan.";
   } else {
     pageTitle.textContent = "Account aanmaken";
     pageIntro.textContent = "Maak een account aan om je aanvragen, bestellingen en cadeaubonnen later makkelijk terug te vinden.";
   }
+  document.body.classList.remove("account-loading");
 
   if (state.account) {
     renderDashboard();
@@ -149,8 +157,8 @@ async function validateResetRoute() {
   state.resetTokenValid = false;
   state.resetTokenChecked = true;
   if (!token) {
-    showMessage("Deze resetlink is ongeldig of verlopen. Vraag een nieuwe resetlink aan.", true);
-    renderShell();
+    history.replaceState(null, "", "/forgot-password");
+    showMessage("Vraag een nieuwe resetlink aan om je wachtwoord te wijzigen.", true);
     return;
   }
   try {
@@ -159,11 +167,20 @@ async function validateResetRoute() {
     showMessage("");
   } catch {
     state.resetTokenValid = false;
+    history.replaceState(null, "", "/reset-password-expired");
     showMessage("Deze resetlink is ongeldig of verlopen. Vraag een nieuwe resetlink aan.", true);
   }
 }
 
 async function renderRoute() {
+  const view = currentView();
+  if (!state.account && accountOnlyViews.includes(view)) {
+    history.replaceState(null, "", "/login");
+    showMessage("");
+  }
+  if (state.account && ["login", "register", "forgot", "reset", "expired"].includes(currentView())) {
+    history.replaceState(null, "", "/account");
+  }
   if (!state.account && currentView() === "reset") {
     await validateResetRoute();
   }
@@ -438,7 +455,7 @@ logoutButton.addEventListener("click", async () => {
   state.orders = [];
   state.giftCards = [];
   showMessage("Je bent uitgelogd.");
-  history.replaceState(null, "", "/account");
+  history.replaceState(null, "", "/login");
   renderRoute();
 });
 

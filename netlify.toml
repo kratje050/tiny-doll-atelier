@@ -66,3 +66,8 @@ status = 200
 from = "/reset-password"
 to = "/account.html"
 status = 200
+
+[[redirects]]
+from = "/reset-password-expired"
+to = "/account.html"
+status = 200
