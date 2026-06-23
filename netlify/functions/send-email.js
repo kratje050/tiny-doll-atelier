@@ -199,6 +199,19 @@ function publicImageUrl(value = "") {
   }
 }
 
+function publicProductUrl(productId = "", value = "") {
+  const url = clean(value, 4000);
+  if (url && !/^(data|blob|file):/i.test(url)) {
+    try {
+      return new URL(url, `${shopBaseUrl()}/`).href;
+    } catch {
+      // Valt terug op productId.
+    }
+  }
+  const id = clean(productId, 160);
+  return id ? `${shopBaseUrl()}/?product=${encodeURIComponent(id)}` : "";
+}
+
 function textToHtml(value) {
   return escapeHtml(value)
     .split(/\r?\n\r?\n/)
@@ -254,11 +267,13 @@ function sanitizeOrderItems(value) {
   const items = Array.isArray(value) ? value : [];
   return items
     .map((item) => ({
+      productId: clean(item.productId, 160),
       name: clean(item.name || item.productName, 180),
       quantity: Number(item.quantity) || 1,
       price: Number(item.price) || 0,
       lineTotal: Number(item.lineTotal) || (Number(item.price) || 0) * (Number(item.quantity) || 1),
       imageUrl: publicImageUrl(item.imageUrl || item.image),
+      productUrl: publicProductUrl(item.productId, item.productUrl),
       imageAlt: clean(item.imageAlt || item.name || item.productName, 220),
       category: clean(item.category, 120),
       popSize: clean(item.popSize, 120),
@@ -285,9 +300,14 @@ function renderOrderItemsHtml(items) {
       <div style="margin-bottom:12px;color:#6f4328;font-size:13px;letter-spacing:.08em;text-transform:uppercase;font-weight:800;">Bestelling</div>
       ${items
         .map((item) => {
+          const productLink = item.productUrl;
           const image = item.imageUrl
             ? `<td width="92" style="padding:0 14px 14px 0;vertical-align:top;">
-                <img src="${escapeHtml(item.imageUrl)}" alt="${escapeHtml(item.imageAlt || item.name)}" width="78" height="78" style="display:block;width:78px;height:78px;object-fit:cover;border-radius:8px;border:1px solid #eadbd0;background:#efe3d6;">
+                ${
+                  productLink
+                    ? `<a href="${escapeHtml(productLink)}" style="display:block;text-decoration:none;"><img src="${escapeHtml(item.imageUrl)}" alt="${escapeHtml(item.imageAlt || item.name)}" width="78" height="78" style="display:block;width:78px;height:78px;object-fit:cover;border-radius:8px;border:1px solid #eadbd0;background:#efe3d6;"></a>`
+                    : `<img src="${escapeHtml(item.imageUrl)}" alt="${escapeHtml(item.imageAlt || item.name)}" width="78" height="78" style="display:block;width:78px;height:78px;object-fit:cover;border-radius:8px;border:1px solid #eadbd0;background:#efe3d6;">`
+                }
               </td>`
             : `<td width="92" style="padding:0 14px 14px 0;vertical-align:top;">
                 <div style="display:grid;place-items:center;width:78px;height:78px;border-radius:8px;border:1px solid #eadbd0;background:#efe3d6;color:#806a59;font-size:11px;font-weight:800;text-align:center;line-height:1.15;">Geen afbeelding</div>
@@ -299,7 +319,13 @@ function renderOrderItemsHtml(items) {
               <tr>
                 ${image}
                 <td style="padding:0 0 14px;vertical-align:top;color:#342216;">
-                  <strong style="display:block;font-size:16px;margin-bottom:7px;">${escapeHtml(item.quantity)}x ${escapeHtml(item.name)}</strong>
+                  <strong style="display:block;font-size:16px;margin-bottom:7px;">
+                    ${
+                      productLink
+                        ? `<a href="${escapeHtml(productLink)}" style="color:#342216;text-decoration:underline;text-decoration-color:#dcc8b7;">${escapeHtml(item.quantity)}x ${escapeHtml(item.name)}</a>`
+                        : `${escapeHtml(item.quantity)}x ${escapeHtml(item.name)}`
+                    }
+                  </strong>
                   ${detailLine ? `<div style="color:#806a59;font-size:13px;line-height:1.5;margin-bottom:4px;">${escapeHtml(detailLine)}</div>` : ""}
                   <div style="color:#806a59;font-size:14px;line-height:1.7;">Prijs per stuk: ${escapeHtml(formatEuro(item.price))}</div>
                   <div style="color:#342216;font-size:15px;font-weight:800;line-height:1.7;">Totaal bedrag: ${escapeHtml(formatEuro(item.lineTotal || item.price * item.quantity))}</div>

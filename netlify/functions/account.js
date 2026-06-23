@@ -168,6 +168,7 @@ function publicOrder(data, order) {
           lineTotal: Number(item.lineTotal || Number(item.price || 0) * Number(item.quantity || 1)),
           imageUrl: item.imageUrl || item.image || productFallback(data, item)?.image || "",
           image: item.image || item.imageUrl || productFallback(data, item)?.image || "",
+          productUrl: item.productUrl || (item.productId ? `/?product=${encodeURIComponent(item.productId)}` : ""),
           imageAlt: item.imageAlt || item.name || item.productName || "",
           category: item.category || "",
           popSize: item.popSize || "",

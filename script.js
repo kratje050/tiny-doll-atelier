@@ -14,6 +14,7 @@ const state = {
   giftCardLookup: null,
   selectedProductId: "",
   account: null,
+  deepLinkedProductOpened: false,
 };
 
 const GIFT_WRAP_PRICE = Number(state.settings.giftWrapPrice || 2.95);
@@ -181,6 +182,24 @@ function publicImageUrl(src) {
   }
 }
 
+function publicShopUrl(path = "/") {
+  try {
+    const browserOrigin = window.location.origin || "";
+    const origin = !browserOrigin || browserOrigin === "null" || browserOrigin.startsWith("file:")
+      ? SHOP_BASE_URL
+      : /^https?:\/\/(localhost|127\.0\.0\.1)/.test(browserOrigin)
+      ? SHOP_BASE_URL
+      : browserOrigin;
+    return new URL(path, origin).href;
+  } catch {
+    return SHOP_BASE_URL;
+  }
+}
+
+function productPageUrl(productId) {
+  return publicShopUrl(`/?product=${encodeURIComponent(productId)}`);
+}
+
 function orderItemSnapshot(product, quantity) {
   const details = getProductDetails(product);
   const imageUrl = publicImageUrl(product.image);
@@ -193,6 +212,7 @@ function orderItemSnapshot(product, quantity) {
     lineTotal: Number((product.price * quantity).toFixed(2)),
     imageUrl,
     image: imageUrl,
+    productUrl: productPageUrl(product.id),
     imageAlt: product.name,
     category: categoryName(product.categoryId),
     popSize: details.size,
@@ -542,6 +562,18 @@ function closeProductModal() {
   productModal.classList.remove("is-open");
   productModal.setAttribute("aria-hidden", "true");
   document.body.classList.remove("modal-open");
+}
+
+function openLinkedProduct() {
+  if (state.deepLinkedProductOpened) {
+    return;
+  }
+  const productId = new URLSearchParams(window.location.search).get("product");
+  if (!productId || !state.products.some((product) => product.id === productId)) {
+    return;
+  }
+  state.deepLinkedProductOpened = true;
+  openProductModal(productId);
 }
 
 function openImageLightbox(src, alt = "") {
@@ -1481,6 +1513,7 @@ function renderShop() {
   renderReviews();
   renderProducts();
   renderCart();
+  openLinkedProduct();
 }
 
 renderShop();

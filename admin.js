@@ -276,6 +276,10 @@ function assetUrl(path) {
   }
 }
 
+function productPageUrl(productId) {
+  return productId ? assetUrl(`/?product=${encodeURIComponent(productId)}`) : "";
+}
+
 function productFallbackForItem(item) {
   return (
     adminState.products.find((product) => product.id && product.id === item.productId) ||
@@ -361,6 +365,7 @@ function orderItemsForMail(order) {
       productName: orderItemName(item),
       name: orderItemName(item),
       imageUrl: assetUrl(orderItemImage(item)),
+      productUrl: item.productUrl || productPageUrl(item.productId || product?.id || ""),
       imageAlt: item.imageAlt || orderItemName(item),
       lineTotal: item.lineTotal || item.price * item.quantity,
       category: item.category || details[0] || "",

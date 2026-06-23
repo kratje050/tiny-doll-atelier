@@ -81,6 +81,7 @@ function sanitizeOrder(input) {
           lineTotal: number(item.lineTotal) || number(item.price) * Math.max(1, Math.round(number(item.quantity) || 1)),
           imageUrl: clean(item.imageUrl || item.image, 4000),
           image: clean(item.image || item.imageUrl, 4000),
+          productUrl: clean(item.productUrl, 4000),
           imageAlt: clean(item.imageAlt || item.name || item.productName, 220),
           category: clean(item.category, 120),
           popSize: clean(item.popSize, 120),
