@@ -168,6 +168,11 @@ function cleanPublicData(data) {
   if (Array.isArray(publicData.reviews)) {
     publicData.reviews = publicData.reviews.filter((review) => review && review.active !== false);
   }
+  if (publicData.settings && typeof publicData.settings === "object") {
+    publicData.settings = { ...publicData.settings };
+    delete publicData.settings.chatbotStats;
+    delete publicData.settings.chatbotUnknownQuestions;
+  }
   return publicData;
 }
 

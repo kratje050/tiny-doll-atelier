@@ -488,6 +488,9 @@
               <label class="check-row"><input name="chatbotShowQuickQuestions" type="checkbox" /> Toon snelle vragen</label>
               <label class="check-row"><input name="chatbotProductSearchEnabled" type="checkbox" /> Producten zoeken in chat</label>
               <label class="check-row"><input name="chatbotAutoOpenEnabled" type="checkbox" /> Chat automatisch openen</label>
+              <label class="check-row"><input name="chatbotSaveHistory" type="checkbox" /> Chatgeschiedenis lokaal bewaren</label>
+              <label class="check-row"><input name="chatbotShowClearButton" type="checkbox" /> Knop chat wissen tonen</label>
+              <label class="check-row"><input name="chatbotShowBubble" type="checkbox" /> Chatballon tonen</label>
             </div>
             <div class="settings-grid">
               <label>Titel <input name="chatbotTitle" /></label>
@@ -495,11 +498,29 @@
               <label>Contact e-mail <input name="chatbotContactEmail" type="email" /></label>
               <label>Reactietijd <input name="chatbotResponseTime" /></label>
               <label>
+                Icoon
+                <select name="chatbotIcon">
+                  <option value="question">Vraagteken</option>
+                  <option value="heart">Hartje</option>
+                  <option value="chat">Chat</option>
+                  <option value="atelier">Atelier</option>
+                </select>
+              </label>
+              <label>
+                Positie
+                <select name="chatbotPosition">
+                  <option value="right">Rechtsonder</option>
+                  <option value="left">Linksonder</option>
+                </select>
+              </label>
+              <label>
                 Toon
                 <select name="chatbotTone">
                   <option value="friendly">Vriendelijk</option>
                   <option value="short">Kort en duidelijk</option>
                   <option value="warm">Extra warm</option>
+                  <option value="sweet">Lief en duidelijk</option>
+                  <option value="professional">Professioneel</option>
                 </select>
               </label>
               <label>
@@ -531,13 +552,70 @@
           </div>
 
           <div class="settings-block">
+            <h3>Productzoeker</h3>
+            <div class="visibility-grid">
+              <label class="check-row"><input name="chatbotShowProductImage" type="checkbox" /> Toon productfoto</label>
+              <label class="check-row"><input name="chatbotShowProductPrice" type="checkbox" /> Toon prijs</label>
+              <label class="check-row"><input name="chatbotShowProductStock" type="checkbox" /> Toon voorraadstatus</label>
+              <label class="check-row"><input name="chatbotShowProductDescription" type="checkbox" /> Toon korte omschrijving</label>
+              <label class="check-row"><input name="chatbotShowProductViewButton" type="checkbox" /> Toon knop Bekijk product</label>
+              <label class="check-row"><input name="chatbotShowProductAddButton" type="checkbox" /> Toon knop Toevoegen aan aanvraag</label>
+              <label class="check-row"><input name="chatbotSearchName" type="checkbox" /> Zoek in productnaam</label>
+              <label class="check-row"><input name="chatbotSearchCategory" type="checkbox" /> Zoek in categorie</label>
+              <label class="check-row"><input name="chatbotSearchDescription" type="checkbox" /> Zoek in omschrijving</label>
+              <label class="check-row"><input name="chatbotSearchMaterial" type="checkbox" /> Zoek in materiaal</label>
+              <label class="check-row"><input name="chatbotSearchSize" type="checkbox" /> Zoek in popmaat</label>
+            </div>
+          </div>
+
+          <div class="settings-block">
+            <h3>Zichtbaar op pagina's</h3>
+            <div class="visibility-grid">
+              <label class="check-row"><input name="chatbotShowHome" type="checkbox" /> Homepage</label>
+              <label class="check-row"><input name="chatbotShowCollection" type="checkbox" /> Collectie en producten</label>
+              <label class="check-row"><input name="chatbotShowProductDetail" type="checkbox" /> Productdetail</label>
+              <label class="check-row"><input name="chatbotShowCart" type="checkbox" /> Aanvraagmand</label>
+              <label class="check-row"><input name="chatbotShowGiftCard" type="checkbox" /> Cadeaubon</label>
+              <label class="check-row"><input name="chatbotShowContact" type="checkbox" /> Contact</label>
+              <label class="check-row"><input name="chatbotShowFaq" type="checkbox" /> FAQ</label>
+              <label class="check-row"><input name="chatbotShowAccount" type="checkbox" /> Accountpagina's</label>
+              <label class="check-row"><input name="chatbotShowAdmin" type="checkbox" /> Adminpaneel</label>
+            </div>
+          </div>
+
+          <div class="settings-block">
             <div class="panel-heading compact-heading">
               <div>
                 <h3>Antwoorden, zoekwoorden en snelle vragen</h3>
                 <span class="muted">Gebruik komma's tussen zoekwoorden. Je kunt per categorie de snelle knop tonen of verbergen.</span>
               </div>
+              <button class="secondary-action" type="button" data-chatbot-add-faq>Antwoord toevoegen</button>
             </div>
             <div class="chatbot-admin-list" data-chatbot-faq-list></div>
+          </div>
+
+          <div class="settings-block">
+            <h3>Test je chatbot</h3>
+            <div class="settings-grid">
+              <label>Testvraag <input data-chatbot-test-question placeholder="Bijv. Kan ik met iDEAL betalen?" /></label>
+              <button class="secondary-action" type="button" data-chatbot-test-button>Test antwoord</button>
+            </div>
+            <div class="chatbot-test-output" data-chatbot-test-output></div>
+          </div>
+
+          <div class="settings-block">
+            <h3>Statistieken</h3>
+            <div class="dashboard-grid compact-stats" data-chatbot-stats></div>
+          </div>
+
+          <div class="settings-block">
+            <div class="panel-heading compact-heading">
+              <div>
+                <h3>Onbeantwoorde vragen</h3>
+                <span class="muted">Sla geen persoonlijke gegevens op in chatbotantwoorden.</span>
+              </div>
+            </div>
+            <div class="chatbot-admin-list" data-chatbot-unknown-list></div>
           </div>
 
           <p class="form-note" data-chatbot-message></p>

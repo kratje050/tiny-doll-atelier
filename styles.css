@@ -1594,6 +1594,12 @@ h3 {
   pointer-events: none;
 }
 
+.chat-widget.is-left {
+  right: auto;
+  left: 20px;
+  justify-items: start;
+}
+
 .chat-widget[hidden] {
   display: none;
 }
@@ -1752,6 +1758,20 @@ h3 {
   background: var(--soft);
 }
 
+.chat-product-placeholder {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  background: var(--soft);
+  color: var(--muted);
+  font-size: 0.62rem;
+  font-weight: 900;
+  line-height: 1.1;
+  text-align: center;
+}
+
 .chat-product strong,
 .chat-product span {
   display: block;
@@ -1764,7 +1784,15 @@ h3 {
   line-height: 1.35;
 }
 
-.chat-product button {
+.chat-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.chat-product button,
+.chat-actions button {
   margin-top: 6px;
   padding: 6px 10px;
   border-radius: 999px;
@@ -1773,6 +1801,19 @@ h3 {
   box-shadow: inset 0 0 0 1px var(--line);
   font-size: 0.82rem;
   font-weight: 900;
+}
+
+.chat-actions button {
+  margin-top: 0;
+}
+
+.chat-actions button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.chat-message > .chat-actions {
+  margin-top: 10px;
 }
 
 .chat-quick-box {
@@ -2239,8 +2280,14 @@ h3 {
     bottom: 10px;
   }
 
+  .chat-widget.is-left {
+    left: 10px;
+    right: auto;
+  }
+
   .chat-widget.is-open {
     left: 10px;
+    right: 10px;
   }
 
   .chat-panel {
@@ -2265,6 +2312,14 @@ h3 {
 
   .chat-form .primary-action {
     width: 100%;
+  }
+
+  .chat-actions {
+    gap: 7px;
+  }
+
+  .chat-actions button {
+    min-height: 38px;
   }
 
   .chat-clear {

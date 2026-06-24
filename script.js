@@ -614,7 +614,8 @@ function applySettings() {
 
 function readChatHistory() {
   try {
-    const messages = JSON.parse(localStorage.getItem(CHAT_HISTORY_KEY) || "[]");
+    const storage = state.settings.chatbotSaveHistory === false ? sessionStorage : localStorage;
+    const messages = JSON.parse(storage.getItem(CHAT_HISTORY_KEY) || "[]");
     const maxMessages = Number(state.settings.chatbotMaxMessages || CHAT_MAX_MESSAGES);
     return Array.isArray(messages) ? messages.slice(-maxMessages) : [];
   } catch {
@@ -623,6 +624,10 @@ function readChatHistory() {
 }
 
 function saveChatHistory(messages) {
+  if (state.settings.chatbotSaveHistory === false) {
+    sessionStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(messages.slice(-Number(state.settings.chatbotMaxMessages || CHAT_MAX_MESSAGES))));
+    return;
+  }
   const maxMessages = Number(state.settings.chatbotMaxMessages || CHAT_MAX_MESSAGES);
   localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(messages.slice(-maxMessages)));
 }
@@ -635,7 +640,9 @@ function normalizedChatText(value) {
 }
 
 function chatbotFaqs() {
-  return [...(state.settings.chatbotFaqs || [])].sort((a, b) => Number(a.order || 0) - Number(b.order || 0));
+  return [...(state.settings.chatbotFaqs || [])]
+    .filter((faq) => faq.active !== false)
+    .sort((a, b) => Number(a.order || 0) - Number(b.order || 0));
 }
 
 function formatChatbotText(text) {
@@ -652,7 +659,87 @@ function applyChatbotTone(text) {
   if (state.settings.chatbotTone === "warm" && !cleanText.toLowerCase().startsWith("natuurlijk")) {
     return `Natuurlijk, ik help je graag. ${cleanText}`;
   }
+  if (state.settings.chatbotTone === "sweet" && !cleanText.toLowerCase().startsWith("lief")) {
+    return `Lief dat je het vraagt. ${cleanText}`;
+  }
+  if (state.settings.chatbotTone === "professional") {
+    return cleanText.replace("Hoi", "Hallo").replace("Liefs", "Met vriendelijke groet");
+  }
   return cleanText;
+}
+
+function chatbotIconText() {
+  return {
+    question: "?",
+    heart: "♡",
+    chat: "••",
+    atelier: "T",
+  }[state.settings.chatbotIcon || "question"] || "?";
+}
+
+function chatbotStats() {
+  return {
+    opens: 0,
+    questions: 0,
+    unknownQuestions: 0,
+    contactClicks: 0,
+    productSearches: 0,
+    cartAdds: 0,
+    quickQuestions: {},
+    ...(state.settings.chatbotStats || {}),
+  };
+}
+
+function saveChatbotSettingsPatch(patch) {
+  state.settings = TinyStore.saveSettings({ ...state.settings, ...patch });
+}
+
+function sendChatbotMetric(payload) {
+  fetch("/.netlify/functions/chatbot-stats", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  }).catch(() => {});
+}
+
+function recordChatbotMetric(type, detail = "") {
+  const stats = chatbotStats();
+  if (type === "open") stats.opens += 1;
+  if (type === "question") stats.questions += 1;
+  if (type === "unknown") stats.unknownQuestions += 1;
+  if (type === "contact") stats.contactClicks += 1;
+  if (type === "productSearch") stats.productSearches += 1;
+  if (type === "cartAdd") stats.cartAdds += 1;
+  if (type === "quick") {
+    stats.quickQuestions = { ...(stats.quickQuestions || {}) };
+    stats.quickQuestions[detail] = Number(stats.quickQuestions[detail] || 0) + 1;
+  }
+  saveChatbotSettingsPatch({ chatbotStats: stats });
+  sendChatbotMetric({ type, detail });
+}
+
+function logUnknownQuestion(question) {
+  const cleanQuestion = question.trim().slice(0, 180);
+  if (!cleanQuestion) {
+    return;
+  }
+  const unknownQuestions = [...(state.settings.chatbotUnknownQuestions || [])];
+  const existing = unknownQuestions.find(
+    (item) => normalizedChatText(item.question) === normalizedChatText(cleanQuestion),
+  );
+  if (existing) {
+    existing.count = Number(existing.count || 1) + 1;
+    existing.updatedAt = new Date().toISOString();
+  } else {
+    unknownQuestions.unshift({
+      question: cleanQuestion,
+      count: 1,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+  }
+  saveChatbotSettingsPatch({ chatbotUnknownQuestions: unknownQuestions.slice(0, 30) });
+  sendChatbotMetric({ type: "unknownQuestion", question: cleanQuestion });
 }
 
 function chatbotBuiltInKeywords(faqId) {
@@ -751,8 +838,14 @@ function hasProductSearchIntent(question) {
     "broek",
     "romper",
     "setje",
+    "set",
     "strik",
     "tutu",
+    "linnen",
+    "mousseline",
+    "accessoire",
+    "cadeaubon",
+    "34 cm",
   ].some((keyword) => normalizedQuestion.includes(keyword));
 }
 
@@ -811,17 +904,19 @@ function searchChatbotProducts(question) {
   }
 
   return state.products
+    .filter((product) => product.active !== false)
     .map((product) => {
+      const details = getProductDetails(product);
       const haystack = normalizedChatText(
         [
-          product.name,
-          product.description,
-          product.longDescription,
-          product.badge,
+          state.settings.chatbotSearchName !== false ? product.name : "",
+          state.settings.chatbotSearchDescription !== false ? product.description : "",
+          state.settings.chatbotSearchDescription !== false ? product.longDescription : "",
+          state.settings.chatbotSearchSize !== false ? product.badge : "",
           product.stock,
-          product.material,
-          product.size,
-          categoryName(product.categoryId),
+          state.settings.chatbotSearchMaterial !== false ? product.material || details.material : "",
+          state.settings.chatbotSearchSize !== false ? product.size || details.size : "",
+          state.settings.chatbotSearchCategory !== false ? categoryName(product.categoryId) : "",
         ].join(" "),
       );
       const score = terms.reduce((sum, term) => {
@@ -835,11 +930,119 @@ function searchChatbotProducts(question) {
     .map((result) => result.product);
 }
 
+function chatbotActionsForCategory(id) {
+  const actions = {
+    bestellen: [
+      { label: "Bekijk collectie", type: "link", target: "#collectie" },
+      { label: "Naar aanvraagmand", type: "cart" },
+      { label: "Hoe werkt betalen?", type: "question", value: "Hoe werkt betalen?" },
+    ],
+    betalen: [
+      { label: "Aanvraag afronden", type: "cart" },
+      { label: "Contact opnemen", type: "link", target: "#contact" },
+    ],
+    cadeaubon: [
+      { label: "Cadeaubon aanvragen", type: "link", target: "#cadeaubon" },
+      { label: "€10", type: "question", value: "Ik zoek een cadeaubon van 10 euro" },
+      { label: "€25", type: "question", value: "Ik zoek een cadeaubon van 25 euro" },
+      { label: "Hoe werkt betalen?", type: "question", value: "Hoe werkt betalen?" },
+    ],
+    maatwerk: [
+      { label: "32 cm", type: "question", value: "Maatwerk voor pop 32 cm" },
+      { label: "34 cm", type: "question", value: "Maatwerk voor pop 34 cm" },
+      { label: "36 cm", type: "question", value: "Maatwerk voor pop 36 cm" },
+      { label: "Maatwerk aanvragen", type: "link", target: "#maatwerk" },
+    ],
+    verzenden: [
+      { label: "Bekijk collectie", type: "link", target: "#collectie" },
+      { label: "Contact opnemen", type: "link", target: "#contact" },
+    ],
+    retour: [
+      { label: "Standaardproduct", type: "question", value: "Retour standaardproduct" },
+      { label: "Maatwerk", type: "question", value: "Retour maatwerk" },
+      { label: "Retour aanmelden", type: "link", target: "#retourneren" },
+    ],
+    account: [
+      { label: "Naar mijn account", type: "link", target: "/account" },
+      { label: "Inloggen", type: "link", target: "/login" },
+      { label: "Contact over bestelling", type: "link", target: "#contact" },
+    ],
+    contact: [
+      { label: "Contactformulier openen", type: "link", target: "#contact" },
+      { label: "Mail sturen", type: "mail" },
+      { label: "Instagram bekijken", type: "instagram" },
+    ],
+    producten: [
+      { label: "Bekijk collectie", type: "link", target: "#collectie" },
+      { label: "Verder zoeken", type: "focus" },
+    ],
+    fallback: [
+      { label: "Contactformulier openen", type: "link", target: "#contact" },
+      { label: "Bekijk FAQ", type: "link", target: "#veelgestelde-vragen" },
+      { label: "Stel andere vraag", type: "focus" },
+    ],
+  };
+  return actions[id] || [];
+}
+
+function chatbotFlowAnswer(question) {
+  const normalizedQuestion = normalizedChatText(question);
+  if (/maatwerk/.test(normalizedQuestion) && /(32|34|36|anders|linnen|mousseline|naturel|roze|setje|accessoire)/.test(normalizedQuestion)) {
+    return {
+      text: applyChatbotTone(
+        "Mooi! Voor maatwerk kun je de popmaat, stijl, stof en kleur doorgeven. We stemmen daarna persoonlijk af wat mogelijk is.",
+      ),
+      products: [],
+      actions: [
+        { label: "Linnen", type: "question", value: "Ik wil maatwerk in linnen stijl" },
+        { label: "Mousseline", type: "question", value: "Ik wil maatwerk in mousseline stijl" },
+        { label: "Naturel", type: "question", value: "Ik wil naturel maatwerk" },
+        { label: "Maatwerk aanvragen", type: "link", target: "#maatwerk" },
+        { label: "Contact opnemen", type: "link", target: "#contact" },
+      ],
+    };
+  }
+  if (/retour/.test(normalizedQuestion) && /standaard/.test(normalizedQuestion)) {
+    return {
+      text: applyChatbotTone("Een standaardproduct kan binnen 14 dagen worden aangemeld voor retour, als het ongebruikt en netjes is."),
+      products: [],
+      actions: chatbotActionsForCategory("retour"),
+    };
+  }
+  if (/retour/.test(normalizedQuestion) && /maatwerk/.test(normalizedQuestion)) {
+    return {
+      text: applyChatbotTone("Maatwerk kan mogelijk niet retour als het speciaal volgens persoonlijke wensen is gemaakt. Neem gerust contact op, dan kijken we mee."),
+      products: [],
+      actions: chatbotActionsForCategory("retour"),
+    };
+  }
+  if (/annuleer|annuleren/.test(normalizedQuestion)) {
+    return {
+      text: applyChatbotTone("Een aanvraag kan meestal worden geannuleerd zolang deze nog niet definitief bevestigd en verwerkt is."),
+      products: [],
+      actions: chatbotActionsForCategory("retour"),
+    };
+  }
+  if (/cadeaubon/.test(normalizedQuestion) && /(10|15|25|50|eigen)/.test(normalizedQuestion)) {
+    return {
+      text: applyChatbotTone("Je vraagt de cadeaubon eerst aan. Na bevestiging en betaling maken we de cadeauboncode aan en sturen we deze naar de ontvanger."),
+      products: [],
+      actions: chatbotActionsForCategory("cadeaubon"),
+    };
+  }
+  return null;
+}
+
 function createChatbotAnswer(question) {
+  const flowAnswer = chatbotFlowAnswer(question);
+  if (flowAnswer) {
+    return flowAnswer;
+  }
+
   const faq = findChatbotFaq(question);
 
   if (faq && !hasProductSearchIntent(question)) {
-    return { text: applyChatbotTone(faq.answer), products: [] };
+    return { text: applyChatbotTone(faq.answer), products: [], actions: chatbotActionsForCategory(faq.id) };
   }
 
   const products = searchChatbotProducts(question);
@@ -850,17 +1053,19 @@ function createChatbotAnswer(question) {
         ? applyChatbotTone(faq.answer)
         : applyChatbotTone(state.settings.chatbotProductIntro || "Ik vond deze producten die mogelijk passen bij je vraag:"),
       products: products.map((product) => product.id),
+      actions: chatbotActionsForCategory(faq?.id || "producten"),
     };
   }
 
   if (faq) {
-    return { text: applyChatbotTone(faq.answer), products: [] };
+    return { text: applyChatbotTone(faq.answer), products: [], actions: chatbotActionsForCategory(faq.id) };
   }
 
   if (hasProductSearchIntent(question)) {
     return {
       text: formatChatbotText(state.settings.chatbotNoProductText || state.settings.chatbotFallback),
       products: [],
+      actions: chatbotActionsForCategory("fallback"),
     };
   }
 
@@ -870,12 +1075,14 @@ function createChatbotAnswer(question) {
         "Dat weet ik niet zeker. Stuur ons gerust een bericht via het contactformulier of mail naar {email}.",
     ),
     products: [],
+    actions: chatbotActionsForCategory("fallback"),
+    unknown: true,
   };
 }
 
-function addChatbotMessage(role, text, products = []) {
+function addChatbotMessage(role, text, products = [], actions = []) {
   const messages = readChatHistory();
-  messages.push({ role, text, products });
+  messages.push({ role, text, products, actions });
   saveChatHistory(messages);
   renderChatbotMessages(messages);
 }
@@ -894,17 +1101,47 @@ function renderChatbotMessages(messages = readChatHistory()) {
       const productHtml = products.length
         ? `<div class="chat-products">${products
             .map(
-              (product) => `
+              (product) => {
+                const details = getProductDetails(product);
+                const canOrder = canOrderProduct(product);
+                return `
                 <article class="chat-product">
-                  ${product.image ? `<img src="${escapeHtml(product.image)}" alt="${escapeHtml(product.name)}" onerror="this.hidden=true">` : ""}
+                  ${
+                    state.settings.chatbotShowProductImage !== false
+                      ? product.image
+                        ? `<img src="${escapeHtml(product.image)}" alt="${escapeHtml(product.name)}" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'chat-product-placeholder',textContent:'Geen afbeelding'}))">`
+                        : `<span class="chat-product-placeholder">Geen afbeelding</span>`
+                      : ""
+                  }
                   <div>
                     <strong>${escapeHtml(product.name)}</strong>
-                    <span>${formatMoney(product.price)}</span>
-                    <span>${escapeHtml(product.description || "")}</span>
-                    <button type="button" data-chat-product="${escapeHtml(product.id)}">Bekijk product</button>
+                    ${state.settings.chatbotShowProductPrice !== false ? `<span>${formatMoney(product.price)}</span>` : ""}
+                    ${state.settings.chatbotShowProductStock !== false ? `<span>${escapeHtml(details.stockStatus)}</span>` : ""}
+                    ${state.settings.chatbotShowProductDescription !== false ? `<span>${escapeHtml(product.description || "")}</span>` : ""}
+                    <div class="chat-actions">
+                      ${
+                        state.settings.chatbotShowProductViewButton !== false
+                          ? `<button type="button" data-chat-product="${escapeHtml(product.id)}">Bekijk product</button>`
+                          : ""
+                      }
+                      ${
+                        state.settings.chatbotShowProductAddButton !== false
+                          ? `<button type="button" data-chat-add-product="${escapeHtml(product.id)}" ${canOrder ? "" : "disabled"}>${canOrder ? "Toevoegen aan aanvraag" : "Uitverkocht"}</button>`
+                          : ""
+                      }
+                    </div>
                   </div>
                 </article>
-              `,
+              `;
+              },
+            )
+            .join("")}</div>`
+        : "";
+      const actionHtml = message.actions?.length
+        ? `<div class="chat-actions">${message.actions
+            .map(
+              (action) =>
+                `<button type="button" data-chat-action="${escapeHtml(action.type)}" data-chat-action-value="${escapeHtml(action.value || action.target || "")}">${escapeHtml(action.label)}</button>`,
             )
             .join("")}</div>`
         : "";
@@ -913,6 +1150,7 @@ function renderChatbotMessages(messages = readChatHistory()) {
           <span class="chat-message-label">${message.role === "user" ? "Jij" : "Tiny Doll Atelier"}</span>
           <p>${escapeHtml(message.text)}</p>
           ${productHtml}
+          ${actionHtml}
         </article>
       `;
     })
@@ -957,13 +1195,64 @@ function renderChatbotQuickQuestions() {
     .join("");
 }
 
+function chatbotPageContext() {
+  const path = window.location.pathname;
+  const hash = window.location.hash;
+  const params = new URLSearchParams(window.location.search);
+  if (path.includes("admin")) {
+    return { allowed: Boolean(state.settings.chatbotShowAdmin), text: "" };
+  }
+  if (path.includes("account")) {
+    return {
+      allowed: state.settings.chatbotShowAccount !== false,
+      text: "Je kunt hier je aanvragen, betaalstatus en track & trace bekijken.",
+    };
+  }
+  if (params.get("product")) {
+    return {
+      allowed: state.settings.chatbotShowProductDetail !== false,
+      text: "Heb je een vraag over dit product?",
+    };
+  }
+  if (hash === "#collectie") {
+    return {
+      allowed: state.settings.chatbotShowCollection !== false,
+      text: "Zoek je hulp bij het kiezen van een setje?",
+    };
+  }
+  if (hash === "#cadeaubon") {
+    return {
+      allowed: state.settings.chatbotShowGiftCard !== false,
+      text: "Wil je weten hoe een cadeaubon werkt?",
+    };
+  }
+  if (hash === "#contact") {
+    return {
+      allowed: state.settings.chatbotShowContact !== false,
+      text: "Wil je persoonlijk contact opnemen?",
+    };
+  }
+  if (hash.includes("faq") || hash.includes("veelgestelde")) {
+    return {
+      allowed: state.settings.chatbotShowFaq !== false,
+      text: "Zoek je antwoord op een veelgestelde vraag?",
+    };
+  }
+  return {
+    allowed: state.settings.chatbotShowHome !== false,
+    text: "Waarmee kan ik je helpen?",
+  };
+}
+
 function ensureChatbotWelcome() {
   const messages = readChatHistory();
   if (!messages.length) {
+    const context = chatbotPageContext();
     messages.push({
       role: "bot",
-      text: formatChatbotText(state.settings.chatbotWelcome),
+      text: formatChatbotText(context.text || state.settings.chatbotWelcome),
       products: [],
+      actions: chatbotActionsForCategory("bestellen"),
     });
     saveChatHistory(messages);
   }
@@ -975,13 +1264,20 @@ function renderChatbot() {
     return;
   }
 
-  widget.hidden = !state.settings.chatbotEnabled;
-  if (!state.settings.chatbotEnabled) {
+  const pageContext = chatbotPageContext();
+  widget.hidden = !state.settings.chatbotEnabled || !pageContext.allowed;
+  if (!state.settings.chatbotEnabled || !pageContext.allowed) {
     return;
   }
 
   document.querySelector("[data-chat-title]").textContent = state.settings.chatbotTitle || "Tiny Doll Atelier hulp";
   document.querySelector("[data-chat-button-text]").textContent = state.settings.chatbotButtonText || "Hulp nodig?";
+  const icon = document.querySelector(".chat-toggle-icon");
+  if (icon) {
+    icon.textContent = chatbotIconText();
+  }
+  widget.classList.toggle("is-left", state.settings.chatbotPosition === "left");
+  document.querySelector("[data-chat-clear]").hidden = state.settings.chatbotShowClearButton === false;
   const privacyText = document.querySelector("[data-chat-privacy]");
   if (privacyText) {
     privacyText.textContent =
@@ -1009,6 +1305,10 @@ function setChatbotOpen(open) {
   toggle.setAttribute("aria-label", open ? "Chat sluiten" : "Chat openen");
   if (open) {
     clearTimeout(chatbotAutoOpenTimer);
+    if (!widget.dataset.openRecorded) {
+      widget.dataset.openRecorded = "1";
+      recordChatbotMetric("open");
+    }
     document.querySelector("[data-chat-input]")?.focus();
   }
 }
@@ -1037,6 +1337,7 @@ function submitChatbotQuestion(question) {
 
   clearTimeout(chatbotTypingTimer);
   chatbotTyping = false;
+  recordChatbotMetric("question");
   addChatbotMessage("user", cleanQuestion);
   renderChatbotQuickQuestions();
   chatbotTyping = true;
@@ -1044,9 +1345,54 @@ function submitChatbotQuestion(question) {
   chatbotTypingTimer = setTimeout(() => {
     const answer = createChatbotAnswer(cleanQuestion);
     chatbotTyping = false;
-    addChatbotMessage("bot", answer.text, answer.products);
+    if (answer.products?.length) {
+      recordChatbotMetric("productSearch");
+    }
+    if (answer.unknown) {
+      recordChatbotMetric("unknown");
+      logUnknownQuestion(cleanQuestion);
+    }
+    addChatbotMessage("bot", answer.text, answer.products, answer.actions);
     renderChatbotQuickQuestions();
   }, Number(state.settings.chatbotTypingDelay || CHAT_TYPING_DELAY));
+}
+
+function handleChatbotAction(type, value = "") {
+  if (type === "question") {
+    submitChatbotQuestion(value);
+    return;
+  }
+  if (type === "cart") {
+    openCart();
+    addChatbotMessage("bot", "Ik heb je aanvraagmand geopend. Je hoeft nog niet direct te betalen.", [], [
+      { label: "Hoe werkt betalen?", type: "question", value: "Hoe werkt betalen?" },
+      { label: "Verder shoppen", type: "link", target: "#collectie" },
+    ]);
+    return;
+  }
+  if (type === "link") {
+    window.location.href = value;
+    if (String(value).includes("contact")) {
+      recordChatbotMetric("contact");
+    }
+    return;
+  }
+  if (type === "mail") {
+    recordChatbotMetric("contact");
+    window.location.href = `#contact`;
+    addChatbotMessage("bot", `Je kunt mailen naar ${state.settings.chatbotContactEmail || state.settings.email}.`, [], []);
+    return;
+  }
+  if (type === "instagram") {
+    recordChatbotMetric("contact");
+    if (state.settings.instagramUrl) {
+      window.open(state.settings.instagramUrl, "_blank", "noopener");
+    }
+    return;
+  }
+  if (type === "focus") {
+    document.querySelector("[data-chat-input]")?.focus();
+  }
 }
 
 function renderReviews() {
@@ -1870,8 +2216,10 @@ document.querySelector("[data-chat-close]")?.addEventListener("click", () => set
 
 document.querySelector("[data-chat-clear]")?.addEventListener("click", () => {
   localStorage.removeItem(CHAT_HISTORY_KEY);
+  sessionStorage.removeItem(CHAT_HISTORY_KEY);
   ensureChatbotWelcome();
   renderChatbotMessages();
+  renderChatbotQuickQuestions();
 });
 
 document.querySelector("[data-chat-form]")?.addEventListener("submit", (event) => {
@@ -1886,15 +2234,31 @@ document.querySelector("[data-chat-quick-questions]")?.addEventListener("click",
   if (!button) {
     return;
   }
+  recordChatbotMetric("quick", button.textContent.trim());
   submitChatbotQuestion(button.dataset.chatQuickQuestion || button.textContent);
 });
 
 document.querySelector("[data-chat-messages]")?.addEventListener("click", (event) => {
-  const button = event.target.closest("[data-chat-product]");
-  if (!button) {
-    return;
+  const productButton = event.target.closest("[data-chat-product]");
+  const addProductButton = event.target.closest("[data-chat-add-product]");
+  const actionButton = event.target.closest("[data-chat-action]");
+  if (productButton) {
+    openProductModal(productButton.dataset.chatProduct);
   }
-  openProductModal(button.dataset.chatProduct);
+  if (addProductButton) {
+    const product = state.products.find((item) => item.id === addProductButton.dataset.chatAddProduct);
+    if (product && canOrderProduct(product)) {
+      addToCart(product.id);
+      recordChatbotMetric("cartAdd");
+      addChatbotMessage("bot", `Ik heb ${product.name} toegevoegd aan je aanvraag.`, [], [
+        { label: "Bekijk aanvraagmand", type: "cart" },
+        { label: "Verder shoppen", type: "link", target: "#collectie" },
+      ]);
+    }
+  }
+  if (actionButton) {
+    handleChatbotAction(actionButton.dataset.chatAction, actionButton.dataset.chatActionValue);
+  }
 });
 
 checkoutForm.addEventListener("submit", async (event) => {

@@ -1862,7 +1862,12 @@ function renderChatbotSettings() {
         <article class="chatbot-admin-card" data-chatbot-faq-row="${escapeAttribute(faq.id || `chatbot-${index + 1}`)}">
           <div class="chatbot-admin-card-top">
             <strong>${escapeHtml(faq.title || "Vraag")}</strong>
-            <label class="check-row"><input data-chatbot-field="quickEnabled" type="checkbox" ${faq.quickEnabled !== false ? "checked" : ""} /> Snelle knop tonen</label>
+            <div class="inline-actions">
+              <label class="check-row"><input data-chatbot-field="active" type="checkbox" ${faq.active !== false ? "checked" : ""} /> Actief</label>
+              <label class="check-row"><input data-chatbot-field="quickEnabled" type="checkbox" ${faq.quickEnabled !== false ? "checked" : ""} /> Snelle knop tonen</label>
+              <button class="row-button" type="button" data-chatbot-preview="${escapeAttribute(faq.id || `chatbot-${index + 1}`)}">Voorbeeld bekijken</button>
+              <button class="row-button danger" type="button" data-chatbot-delete-faq="${escapeAttribute(faq.id || `chatbot-${index + 1}`)}">Verwijderen</button>
+            </div>
           </div>
           <input data-chatbot-field="id" type="hidden" value="${escapeAttribute(faq.id || `chatbot-${index + 1}`)}" />
           <div class="settings-grid">
@@ -1876,6 +1881,9 @@ function renderChatbotSettings() {
       `,
     )
     .join("");
+
+  renderChatbotStats();
+  renderChatbotUnknownQuestions();
 }
 
 function collectChatbotFaqs() {
@@ -1888,11 +1896,142 @@ function collectChatbotFaqs() {
         quickQuestion: value("quickQuestion")?.value.trim() || "Vraag stellen",
         keywords: value("keywords")?.value.trim() || "",
         answer: value("answer")?.value.trim() || "",
+        active: value("active")?.checked !== false,
         quickEnabled: value("quickEnabled")?.checked !== false,
         order: Number(value("order")?.value) || index + 1,
       };
     })
     .sort((a, b) => Number(a.order || 0) - Number(b.order || 0));
+}
+
+function chatbotAdminFaqs() {
+  return [...(adminState.settings.chatbotFaqs || [])]
+    .filter((faq) => faq.active !== false)
+    .sort((a, b) => Number(a.order || 0) - Number(b.order || 0));
+}
+
+function normalizedAdminChatText(value) {
+  return String(value || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+function chatbotAdminMatch(question) {
+  const normalizedQuestion = normalizedAdminChatText(question);
+  const matches = chatbotAdminFaqs()
+    .map((faq) => {
+      const keywords = String(faq.keywords || "")
+        .split(",")
+        .map((keyword) => normalizedAdminChatText(keyword.trim()))
+        .filter(Boolean);
+      const matchedKeywords = keywords.filter((keyword) => normalizedQuestion.includes(keyword));
+      return { faq, matchedKeywords, score: matchedKeywords.length };
+    })
+    .filter((match) => match.score > 0)
+    .sort((a, b) => b.score - a.score || Number(a.faq.order || 0) - Number(b.faq.order || 0))[0];
+  return matches || null;
+}
+
+function chatbotAdminProductResults(question) {
+  if (!adminState.settings.chatbotProductSearchEnabled) {
+    return [];
+  }
+  const terms = normalizedAdminChatText(question)
+    .split(/[^a-z0-9]+/)
+    .filter((term) => term.length > 3);
+  if (!terms.length) {
+    return [];
+  }
+  return adminState.products
+    .filter((product) => product.active !== false)
+    .map((product) => {
+      const haystack = normalizedAdminChatText(
+        [
+          adminState.settings.chatbotSearchName !== false ? product.name : "",
+          adminState.settings.chatbotSearchCategory !== false ? categoryName(product.categoryId) : "",
+          adminState.settings.chatbotSearchDescription !== false ? `${product.description || ""} ${product.longDescription || ""}` : "",
+          adminState.settings.chatbotSearchMaterial !== false ? product.material || "" : "",
+          adminState.settings.chatbotSearchSize !== false ? `${product.size || ""} ${product.badge || ""}` : "",
+        ].join(" "),
+      );
+      return { product, score: terms.filter((term) => haystack.includes(term)).length };
+    })
+    .filter((match) => match.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, Number(adminState.settings.chatbotProductLimit || 3))
+    .map((match) => match.product);
+}
+
+function renderChatbotStats() {
+  const container = document.querySelector("[data-chatbot-stats]");
+  if (!container) {
+    return;
+  }
+  const stats = adminState.settings.chatbotStats || {};
+  const quickQuestions = stats.quickQuestions || {};
+  const topQuick = Object.entries(quickQuestions).sort((a, b) => Number(b[1]) - Number(a[1]))[0];
+  const items = [
+    ["Chat geopend", stats.opens || 0],
+    ["Vragen gesteld", stats.questions || 0],
+    ["Onbekende vragen", stats.unknownQuestions || 0],
+    ["Contactknop gebruikt", stats.contactClicks || 0],
+    ["Productzoekopdrachten", stats.productSearches || 0],
+    ["Toegevoegd vanuit chat", stats.cartAdds || 0],
+    ["Populairste snelle vraag", topQuick ? `${topQuick[0]} (${topQuick[1]}x)` : "-"],
+  ];
+  container.innerHTML = items
+    .map(([label, value]) => `<article class="metric-card"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></article>`)
+    .join("");
+}
+
+function renderChatbotUnknownQuestions() {
+  const container = document.querySelector("[data-chatbot-unknown-list]");
+  if (!container) {
+    return;
+  }
+  const questions = adminState.settings.chatbotUnknownQuestions || [];
+  container.innerHTML = questions.length
+    ? questions
+        .map(
+          (item, index) => `
+            <article class="chatbot-admin-card">
+              <div class="chatbot-admin-card-top">
+                <strong>${escapeHtml(item.question || "Onbekende vraag")}</strong>
+                <span class="muted">${escapeHtml(item.count || 1)}x - ${item.updatedAt ? new Date(item.updatedAt).toLocaleString("nl-NL") : "-"}</span>
+              </div>
+              <div class="inline-actions">
+                <button class="row-button" type="button" data-chatbot-make-answer="${index}">Maak antwoord van deze vraag</button>
+                <button class="row-button danger" type="button" data-chatbot-delete-unknown="${index}">Verwijderen</button>
+              </div>
+            </article>
+          `,
+        )
+        .join("")
+    : '<p class="muted">Nog geen onbeantwoorde vragen opgeslagen.</p>';
+}
+
+function renderChatbotTest(question = "") {
+  const output = document.querySelector("[data-chatbot-test-output]");
+  if (!output) {
+    return;
+  }
+  const cleanQuestion = question.trim();
+  if (!cleanQuestion) {
+    output.innerHTML = '<p class="muted">Typ een vraag en klik op Test antwoord.</p>';
+    return;
+  }
+  const match = chatbotAdminMatch(cleanQuestion);
+  const products = chatbotAdminProductResults(cleanQuestion);
+  const answer = match?.faq?.answer || adminState.settings.chatbotFallback || "";
+  output.innerHTML = `
+    <article class="chatbot-admin-card">
+      <strong>Herkend: ${escapeHtml(match?.faq?.title || "Geen categorie")}</strong>
+      <p>${escapeHtml(answer)}</p>
+      <p class="muted">Zoekwoorden: ${escapeHtml(match?.matchedKeywords?.join(", ") || "-")}</p>
+      <p class="muted">Productresultaten: ${products.length ? products.map((product) => product.name).join(", ") : "-"}</p>
+    </article>
+  `;
 }
 
 function renderAll() {
@@ -2167,6 +2306,84 @@ document.addEventListener("click", async (event) => {
   const linkAllSuggestions = event.target.closest("[data-link-all-suggestions]");
   const unlinkOrder = event.target.closest("[data-unlink-order]");
   const printAccount = event.target.closest("[data-print-account]");
+  const chatbotPreview = event.target.closest("[data-chatbot-preview]");
+  const chatbotTestButton = event.target.closest("[data-chatbot-test-button]");
+  const chatbotDeleteUnknown = event.target.closest("[data-chatbot-delete-unknown]");
+  const chatbotMakeAnswer = event.target.closest("[data-chatbot-make-answer]");
+  const chatbotAddFaq = event.target.closest("[data-chatbot-add-faq]");
+  const chatbotDeleteFaq = event.target.closest("[data-chatbot-delete-faq]");
+
+  if (chatbotAddFaq) {
+    const faqs = collectChatbotFaqs();
+    faqs.push({
+      id: `chatbot-${Date.now()}`,
+      title: "Nieuwe vraag",
+      quickQuestion: "Nieuwe snelle vraag",
+      keywords: "",
+      answer: "",
+      active: true,
+      quickEnabled: true,
+      order: faqs.length + 1,
+    });
+    TinyStore.saveSettings({ ...adminState.settings, chatbotFaqs: faqs });
+    renderAll();
+  }
+
+  if (chatbotDeleteFaq) {
+    if (!confirm("Weet je zeker dat je dit chatbotantwoord wilt verwijderen?")) {
+      return;
+    }
+    TinyStore.saveSettings({
+      ...adminState.settings,
+      chatbotFaqs: collectChatbotFaqs().filter((faq) => faq.id !== chatbotDeleteFaq.dataset.chatbotDeleteFaq),
+    });
+    renderAll();
+  }
+
+  if (chatbotPreview) {
+    const faq = collectChatbotFaqs().find((item) => item.id === chatbotPreview.dataset.chatbotPreview);
+    renderChatbotTest(faq?.quickQuestion || faq?.title || "");
+    document.querySelector("[data-chatbot-test-output]")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+
+  if (chatbotTestButton) {
+    renderChatbotTest(document.querySelector("[data-chatbot-test-question]")?.value || "");
+  }
+
+  if (chatbotDeleteUnknown) {
+    const index = Number(chatbotDeleteUnknown.dataset.chatbotDeleteUnknown);
+    const questions = [...(adminState.settings.chatbotUnknownQuestions || [])];
+    questions.splice(index, 1);
+    TinyStore.saveSettings({ ...adminState.settings, chatbotUnknownQuestions: questions });
+    renderAll();
+  }
+
+  if (chatbotMakeAnswer) {
+    const index = Number(chatbotMakeAnswer.dataset.chatbotMakeAnswer);
+    const item = (adminState.settings.chatbotUnknownQuestions || [])[index];
+    if (item) {
+      const answer = prompt("Welk antwoord wil je voor deze vraag opslaan?");
+      if (answer) {
+        const faqs = [
+          ...(adminState.settings.chatbotFaqs || []),
+          {
+            id: `chatbot-${Date.now()}`,
+            title: item.question.slice(0, 40),
+            quickQuestion: item.question,
+            keywords: item.question,
+            answer,
+            active: true,
+            quickEnabled: false,
+            order: (adminState.settings.chatbotFaqs || []).length + 1,
+          },
+        ];
+        const questions = [...(adminState.settings.chatbotUnknownQuestions || [])];
+        questions.splice(index, 1);
+        TinyStore.saveSettings({ ...adminState.settings, chatbotFaqs: faqs, chatbotUnknownQuestions: questions });
+        renderAll();
+      }
+    }
+  }
 
   if (editProduct) {
     const product = adminState.products.find((item) => item.id === editProduct.dataset.editProduct);
@@ -3002,10 +3219,15 @@ chatbotForm.addEventListener("submit", (event) => {
     chatbotShowQuickQuestions: data.get("chatbotShowQuickQuestions") === "on",
     chatbotProductSearchEnabled: data.get("chatbotProductSearchEnabled") === "on",
     chatbotAutoOpenEnabled: data.get("chatbotAutoOpenEnabled") === "on",
+    chatbotSaveHistory: data.get("chatbotSaveHistory") === "on",
+    chatbotShowClearButton: data.get("chatbotShowClearButton") === "on",
+    chatbotShowBubble: data.get("chatbotShowBubble") === "on",
     chatbotTitle: data.get("chatbotTitle").trim(),
     chatbotButtonText: data.get("chatbotButtonText").trim(),
     chatbotContactEmail: data.get("chatbotContactEmail").trim(),
     chatbotResponseTime: data.get("chatbotResponseTime").trim(),
+    chatbotIcon: data.get("chatbotIcon"),
+    chatbotPosition: data.get("chatbotPosition"),
     chatbotTone: data.get("chatbotTone"),
     chatbotQuickQuestionsMode: data.get("chatbotQuickQuestionsMode"),
     chatbotWelcome: data.get("chatbotWelcome").trim(),
@@ -3019,6 +3241,26 @@ chatbotForm.addEventListener("submit", (event) => {
     chatbotProductLimit: Number(data.get("chatbotProductLimit")) || 3,
     chatbotProductIntro: data.get("chatbotProductIntro").trim(),
     chatbotNoProductText: data.get("chatbotNoProductText").trim(),
+    chatbotShowProductImage: data.get("chatbotShowProductImage") === "on",
+    chatbotShowProductPrice: data.get("chatbotShowProductPrice") === "on",
+    chatbotShowProductStock: data.get("chatbotShowProductStock") === "on",
+    chatbotShowProductDescription: data.get("chatbotShowProductDescription") === "on",
+    chatbotShowProductViewButton: data.get("chatbotShowProductViewButton") === "on",
+    chatbotShowProductAddButton: data.get("chatbotShowProductAddButton") === "on",
+    chatbotSearchName: data.get("chatbotSearchName") === "on",
+    chatbotSearchCategory: data.get("chatbotSearchCategory") === "on",
+    chatbotSearchDescription: data.get("chatbotSearchDescription") === "on",
+    chatbotSearchMaterial: data.get("chatbotSearchMaterial") === "on",
+    chatbotSearchSize: data.get("chatbotSearchSize") === "on",
+    chatbotShowHome: data.get("chatbotShowHome") === "on",
+    chatbotShowCollection: data.get("chatbotShowCollection") === "on",
+    chatbotShowProductDetail: data.get("chatbotShowProductDetail") === "on",
+    chatbotShowCart: data.get("chatbotShowCart") === "on",
+    chatbotShowGiftCard: data.get("chatbotShowGiftCard") === "on",
+    chatbotShowContact: data.get("chatbotShowContact") === "on",
+    chatbotShowFaq: data.get("chatbotShowFaq") === "on",
+    chatbotShowAccount: data.get("chatbotShowAccount") === "on",
+    chatbotShowAdmin: data.get("chatbotShowAdmin") === "on",
     chatbotFaqs: collectChatbotFaqs(),
   });
   document.querySelector("[data-chatbot-message]").textContent = "Chatbot instellingen opgeslagen.";
