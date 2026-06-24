@@ -281,6 +281,99 @@ const TinyStore = (() => {
       "Je plaatst eerst een aanvraag. Daarna controleren we voorraad, maatwerk en levertijd. Je ontvangt van ons persoonlijk de betaalinformatie. Je bestelling is pas definitief nadat alles is bevestigd en betaald.",
     orderSuccessText: "Bedankt, je aanvraag is verzonden. Je ontvangt persoonlijk de betaalinformatie na bevestiging.",
     contactText: "Heb je een vraag over een setje, maatwerk of een bestelling? Stuur gerust een bericht.",
+    chatbotEnabled: true,
+    chatbotTitle: "Tiny Doll Atelier hulp",
+    chatbotButtonText: "Hulp nodig?",
+    chatbotWelcome:
+      "Hallo! Ik help je graag met vragen over bestellen, cadeaubonnen, maatwerk, verzending, retourneren en je account.",
+    chatbotPrivacyText: "Deel geen wachtwoorden of gevoelige betaalgegevens in de chat.",
+    chatbotPlaceholder: "Typ je vraag...",
+    chatbotFallback:
+      "Dat weet ik niet zeker. Stuur ons gerust een bericht via het contactformulier of mail naar {email}.",
+    chatbotContactEmail: "ddytuber@gmail.com",
+    chatbotResponseTime: "meestal binnen 1 tot 2 werkdagen",
+    chatbotFaqs: [
+      {
+        id: "bestellen",
+        title: "Bestellen",
+        quickQuestion: "Hoe werkt bestellen?",
+        keywords: "bestellen, aanvraag, order, hoe werkt, winkelmandje, aanvragen",
+        answer:
+          "Bij Tiny Doll Atelier plaats je eerst een aanvraag. Daarna controleren we voorraad, maatwerk en levertijd. Je ontvangt daarna persoonlijk betaalinformatie per e-mail. Je bestelling is definitief nadat alles is bevestigd en betaald.",
+        quickEnabled: true,
+        order: 1,
+      },
+      {
+        id: "betalen",
+        title: "Betalen",
+        quickQuestion: "Hoe werkt betalen?",
+        keywords: "betalen, betaal, ideal, mollie, tikkie, overschrijving, betaalverzoek",
+        answer:
+          "Er is geen directe iDEAL of Mollie checkout. Na controle van je aanvraag ontvang je betaalinformatie. Betalen kan via bankoverschrijving, betaalverzoek of Tikkie.",
+        quickEnabled: true,
+        order: 2,
+      },
+      {
+        id: "cadeaubon",
+        title: "Cadeaubon",
+        quickQuestion: "Hoe werkt een cadeaubon?",
+        keywords: "cadeaubon, giftcard, bon, tegoed, code",
+        answer:
+          "Je kunt een cadeaubon aanvragen via de cadeaubonpagina. Na bevestiging en betaling maken we de cadeauboncode aan. De ontvanger krijgt de code pas nadat deze vanuit beheer is verstuurd.",
+        quickEnabled: true,
+        order: 3,
+      },
+      {
+        id: "maatwerk",
+        title: "Maatwerk",
+        quickQuestion: "Kan ik maatwerk aanvragen?",
+        keywords: "maatwerk, stof, kleur, popmaat, maat, afwerking, wensen",
+        answer:
+          "Maatwerk is mogelijk. Je kunt wensen doorgeven voor popmaat, stof, kleur en afwerking. We stemmen samen af wat mogelijk is en wat de levertijd wordt.",
+        quickEnabled: true,
+        order: 4,
+      },
+      {
+        id: "verzenden",
+        title: "Verzenden",
+        quickQuestion: "Wat is de levertijd?",
+        keywords: "verzenden, verzending, levertijd, pakket, track, trace, bezorging",
+        answer:
+          "Producten op voorraad worden meestal binnen 1 tot 3 werkdagen verzonden. Maatwerk of op aanvraag duurt meestal 3 tot 10 werkdagen. Verzending binnen Nederland kost standaard EUR 6,95. Belgie is in overleg.",
+        quickEnabled: true,
+        order: 5,
+      },
+      {
+        id: "retour",
+        title: "Retour",
+        quickQuestion: "Hoe werkt retourneren?",
+        keywords: "retour, terugsturen, annuleren, herroepen, herroeping",
+        answer:
+          "Standaardproducten kunnen binnen 14 dagen worden aangemeld voor retour. Maatwerkproducten kunnen mogelijk niet retour als ze speciaal volgens persoonlijke wensen zijn gemaakt.",
+        quickEnabled: true,
+        order: 6,
+      },
+      {
+        id: "account",
+        title: "Account",
+        quickQuestion: "Waar zie ik mijn bestelling?",
+        keywords: "account, login, inloggen, bestelling bekijken, mijn bestelling, status",
+        answer:
+          "Via Mijn account kun je je aanvragen, betaalstatus, cadeaubonnen en track & trace bekijken. Log in met hetzelfde e-mailadres als waarmee je je aanvraag hebt geplaatst.",
+        quickEnabled: true,
+        order: 7,
+      },
+      {
+        id: "contact",
+        title: "Contact",
+        quickQuestion: "Contact opnemen",
+        keywords: "contact, mail, e-mail, instagram, bericht, vraag",
+        answer:
+          "Je kunt contact opnemen via het contactformulier of mailen naar {email}. We reageren meestal binnen {reactietijd}.",
+        quickEnabled: true,
+        order: 8,
+      },
+    ],
   };
 
   const visibilityDefaults = Object.fromEntries(
@@ -332,6 +425,7 @@ const TinyStore = (() => {
       "showFaq7",
       "showOrderRequestText",
       "showContactText",
+      "chatbotEnabled",
     ].map((key) => [key, true]),
   );
 
@@ -603,8 +697,31 @@ const TinyStore = (() => {
     return write(keys.visits, visits);
   }
 
+  function normalizedChatbotFaqs(settings = {}) {
+    const savedFaqs = Array.isArray(settings.chatbotFaqs) ? settings.chatbotFaqs : [];
+    const savedById = new Map(savedFaqs.map((faq) => [faq.id, faq]));
+    const mergedDefaults = defaultSettings.chatbotFaqs.map((defaultFaq) => ({
+      ...defaultFaq,
+      ...(savedById.get(defaultFaq.id) || {}),
+    }));
+    const extraFaqs = savedFaqs.filter((faq) => faq?.id && !defaultSettings.chatbotFaqs.some((item) => item.id === faq.id));
+    return [...mergedDefaults, ...extraFaqs]
+      .map((faq, index) => ({
+        id: faq.id || `chatbot-${index + 1}`,
+        title: faq.title || "Vraag",
+        quickQuestion: faq.quickQuestion || faq.title || "Vraag stellen",
+        keywords: faq.keywords || "",
+        answer: faq.answer || "",
+        quickEnabled: faq.quickEnabled !== false,
+        order: Number(faq.order) || index + 1,
+      }))
+      .sort((a, b) => Number(a.order || 0) - Number(b.order || 0));
+  }
+
   function getSettings() {
-    const settings = { ...defaultSettings, ...visibilityDefaults, ...read(keys.settings, defaultSettings) };
+    const savedSettings = read(keys.settings, defaultSettings);
+    const settings = { ...defaultSettings, ...visibilityDefaults, ...savedSettings };
+    settings.chatbotFaqs = normalizedChatbotFaqs(settings);
     if (settings.returnTitle === "Retour of annulering") {
       settings.returnTitle = defaultSettings.returnTitle;
     }
@@ -615,7 +732,9 @@ const TinyStore = (() => {
   }
 
   function saveSettings(settings) {
-    return write(keys.settings, { ...defaultSettings, ...visibilityDefaults, ...settings });
+    const nextSettings = { ...defaultSettings, ...visibilityDefaults, ...settings };
+    nextSettings.chatbotFaqs = normalizedChatbotFaqs(nextSettings);
+    return write(keys.settings, nextSettings);
   }
 
   function getReviews() {

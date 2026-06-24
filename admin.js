@@ -101,6 +101,7 @@ const settingVisibilityKeys = [
   "showFaq7",
   "showOrderRequestText",
   "showContactText",
+  "chatbotEnabled",
 ];
 const views = document.querySelectorAll("[data-view]");
 const navButtons = document.querySelectorAll("[data-view-button]");
@@ -1833,6 +1834,52 @@ function renderSettings() {
       }
     }
   });
+  renderChatbotSettings();
+}
+
+function renderChatbotSettings() {
+  const list = settingsForm.querySelector("[data-chatbot-faq-list]");
+  if (!list) {
+    return;
+  }
+
+  list.innerHTML = (adminState.settings.chatbotFaqs || [])
+    .map(
+      (faq, index) => `
+        <article class="chatbot-admin-card" data-chatbot-faq-row="${escapeAttribute(faq.id || `chatbot-${index + 1}`)}">
+          <div class="chatbot-admin-card-top">
+            <strong>${escapeHtml(faq.title || "Vraag")}</strong>
+            <label class="check-row"><input data-chatbot-field="quickEnabled" type="checkbox" ${faq.quickEnabled !== false ? "checked" : ""} /> Snelle knop tonen</label>
+          </div>
+          <input data-chatbot-field="id" type="hidden" value="${escapeAttribute(faq.id || `chatbot-${index + 1}`)}" />
+          <div class="settings-grid">
+            <label>Categorie <input data-chatbot-field="title" value="${escapeAttribute(faq.title || "")}" /></label>
+            <label>Snelle vraag <input data-chatbot-field="quickQuestion" value="${escapeAttribute(faq.quickQuestion || "")}" /></label>
+            <label>Volgorde <input data-chatbot-field="order" type="number" min="1" step="1" value="${escapeAttribute(faq.order || index + 1)}" /></label>
+          </div>
+          <label>Zoekwoorden <textarea data-chatbot-field="keywords" rows="2">${escapeHtml(faq.keywords || "")}</textarea></label>
+          <label>Antwoord <textarea data-chatbot-field="answer" rows="4">${escapeHtml(faq.answer || "")}</textarea></label>
+        </article>
+      `,
+    )
+    .join("");
+}
+
+function collectChatbotFaqs() {
+  return [...settingsForm.querySelectorAll("[data-chatbot-faq-row]")]
+    .map((row, index) => {
+      const value = (field) => row.querySelector(`[data-chatbot-field="${field}"]`);
+      return {
+        id: value("id")?.value.trim() || `chatbot-${index + 1}`,
+        title: value("title")?.value.trim() || "Vraag",
+        quickQuestion: value("quickQuestion")?.value.trim() || "Vraag stellen",
+        keywords: value("keywords")?.value.trim() || "",
+        answer: value("answer")?.value.trim() || "",
+        quickEnabled: value("quickEnabled")?.checked !== false,
+        order: Number(value("order")?.value) || index + 1,
+      };
+    })
+    .sort((a, b) => Number(a.order || 0) - Number(b.order || 0));
 }
 
 function renderAll() {
@@ -2925,6 +2972,15 @@ settingsForm.addEventListener("submit", (event) => {
     paymentIban: data.get("paymentIban").trim(),
     paymentDescription: data.get("paymentDescription").trim(),
     paymentExtraText: data.get("paymentExtraText").trim(),
+    chatbotTitle: data.get("chatbotTitle").trim(),
+    chatbotButtonText: data.get("chatbotButtonText").trim(),
+    chatbotWelcome: data.get("chatbotWelcome").trim(),
+    chatbotPrivacyText: data.get("chatbotPrivacyText").trim(),
+    chatbotPlaceholder: data.get("chatbotPlaceholder").trim(),
+    chatbotFallback: data.get("chatbotFallback").trim(),
+    chatbotContactEmail: data.get("chatbotContactEmail").trim(),
+    chatbotResponseTime: data.get("chatbotResponseTime").trim(),
+    chatbotFaqs: collectChatbotFaqs(),
   });
   document.querySelector("[data-settings-message]").textContent = "Instellingen opgeslagen.";
   renderAll();

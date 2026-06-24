@@ -1,5 +1,7 @@
 const formatMoney = TinyStore.formatMoney;
 const COLLECTION_STATE_KEY = "tiny-doll-collection-state";
+const CHAT_HISTORY_KEY = "tiny-doll-chat-history";
+const CHAT_MAX_MESSAGES = 20;
 
 function collectionPageSize() {
   return window.matchMedia("(max-width: 640px)").matches ? 6 : 8;
@@ -603,6 +605,261 @@ function applySettings() {
     giftWrapLabel.lastChild.textContent = ` Cadeauverpakking toevoegen voor ${formatMoney(GIFT_WRAP_PRICE)}`;
     giftWrapLabel.hidden = !state.settings.showGiftWrapOption;
   }
+}
+
+function readChatHistory() {
+  try {
+    const messages = JSON.parse(localStorage.getItem(CHAT_HISTORY_KEY) || "[]");
+    return Array.isArray(messages) ? messages.slice(-CHAT_MAX_MESSAGES) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveChatHistory(messages) {
+  localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(messages.slice(-CHAT_MAX_MESSAGES)));
+}
+
+function normalizedChatText(value) {
+  return String(value || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+}
+
+function chatbotFaqs() {
+  return [...(state.settings.chatbotFaqs || [])].sort((a, b) => Number(a.order || 0) - Number(b.order || 0));
+}
+
+function formatChatbotText(text) {
+  return String(text || "")
+    .replaceAll("{email}", state.settings.chatbotContactEmail || state.settings.email || "ddytuber@gmail.com")
+    .replaceAll("{reactietijd}", state.settings.chatbotResponseTime || "1 tot 2 werkdagen");
+}
+
+function findChatbotFaq(question) {
+  const normalizedQuestion = normalizedChatText(question);
+  return chatbotFaqs().find((faq) => {
+    const keywords = String(faq.keywords || "")
+      .split(/[,;\n]/)
+      .map((keyword) => normalizedChatText(keyword).trim())
+      .filter(Boolean);
+    return keywords.some((keyword) => normalizedQuestion.includes(keyword));
+  });
+}
+
+function chatbotProductTerms(question) {
+  const stopWords = new Set([
+    "hebben",
+    "jullie",
+    "voor",
+    "zijn",
+    "waar",
+    "wat",
+    "hoe",
+    "kan",
+    "met",
+    "een",
+    "het",
+    "deze",
+    "die",
+    "dat",
+    "zoek",
+    "zoeken",
+    "product",
+    "producten",
+  ]);
+  return normalizedChatText(question)
+    .split(/[^a-z0-9]+/)
+    .map((word) => word.trim())
+    .filter((word) => word.length > 3 && !stopWords.has(word));
+}
+
+function wordVariants(word) {
+  return [
+    word,
+    word.replace(/jes$/, ""),
+    word.replace(/tje$/, ""),
+    word.replace(/s$/, ""),
+    word.replace(/en$/, ""),
+  ].filter((value, index, list) => value && list.indexOf(value) === index);
+}
+
+function searchChatbotProducts(question) {
+  const terms = chatbotProductTerms(question);
+  if (!terms.length) {
+    return [];
+  }
+
+  return state.products
+    .map((product) => {
+      const haystack = normalizedChatText(
+        [
+          product.name,
+          product.description,
+          product.longDescription,
+          product.badge,
+          product.stock,
+          product.material,
+          product.size,
+          categoryName(product.categoryId),
+        ].join(" "),
+      );
+      const score = terms.reduce((sum, term) => {
+        return sum + (wordVariants(term).some((variant) => haystack.includes(variant)) ? 1 : 0);
+      }, 0);
+      return { product, score };
+    })
+    .filter((result) => result.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 3)
+    .map((result) => result.product);
+}
+
+function createChatbotAnswer(question) {
+  const faq = findChatbotFaq(question);
+  const products = searchChatbotProducts(question);
+
+  if (products.length) {
+    return {
+      text: faq?.answer ? formatChatbotText(faq.answer) : "Ik vond deze producten die mogelijk passen bij je vraag:",
+      products: products.map((product) => product.id),
+    };
+  }
+
+  if (faq) {
+    return { text: formatChatbotText(faq.answer), products: [] };
+  }
+
+  return {
+    text: formatChatbotText(
+      state.settings.chatbotFallback ||
+        "Dat weet ik niet zeker. Stuur ons gerust een bericht via het contactformulier of mail naar {email}.",
+    ),
+    products: [],
+  };
+}
+
+function addChatbotMessage(role, text, products = []) {
+  const messages = readChatHistory();
+  messages.push({ role, text, products });
+  saveChatHistory(messages);
+  renderChatbotMessages(messages);
+}
+
+function renderChatbotMessages(messages = readChatHistory()) {
+  const container = document.querySelector("[data-chat-messages]");
+  if (!container) {
+    return;
+  }
+
+  container.innerHTML = messages
+    .map((message) => {
+      const products = (message.products || [])
+        .map((productId) => state.products.find((product) => product.id === productId))
+        .filter(Boolean);
+      const productHtml = products.length
+        ? `<div class="chat-products">${products
+            .map(
+              (product) => `
+                <article class="chat-product">
+                  ${product.image ? `<img src="${escapeHtml(product.image)}" alt="${escapeHtml(product.name)}" onerror="this.hidden=true">` : ""}
+                  <div>
+                    <strong>${escapeHtml(product.name)}</strong>
+                    <span>${formatMoney(product.price)}</span>
+                    <span>${escapeHtml(product.description || "")}</span>
+                    <button type="button" data-chat-product="${escapeHtml(product.id)}">Bekijk product</button>
+                  </div>
+                </article>
+              `,
+            )
+            .join("")}</div>`
+        : "";
+      return `
+        <article class="chat-message ${message.role === "user" ? "is-user" : "is-bot"}">
+          <p>${escapeHtml(message.text)}</p>
+          ${productHtml}
+        </article>
+      `;
+    })
+    .join("");
+  container.scrollTop = container.scrollHeight;
+}
+
+function renderChatbotQuickQuestions() {
+  const container = document.querySelector("[data-chat-quick-questions]");
+  if (!container) {
+    return;
+  }
+
+  container.innerHTML = chatbotFaqs()
+    .filter((faq) => faq.quickEnabled !== false && faq.quickQuestion)
+    .map(
+      (faq) =>
+        `<button type="button" data-chat-quick-question="${escapeHtml(faq.quickQuestion)}">${escapeHtml(faq.quickQuestion)}</button>`,
+    )
+    .join("");
+}
+
+function ensureChatbotWelcome() {
+  const messages = readChatHistory();
+  if (!messages.length) {
+    messages.push({
+      role: "bot",
+      text: formatChatbotText(state.settings.chatbotWelcome),
+      products: [],
+    });
+    saveChatHistory(messages);
+  }
+}
+
+function renderChatbot() {
+  const widget = document.querySelector("[data-chat-widget]");
+  if (!widget) {
+    return;
+  }
+
+  widget.hidden = !state.settings.chatbotEnabled;
+  if (!state.settings.chatbotEnabled) {
+    return;
+  }
+
+  document.querySelector("[data-chat-title]").textContent = state.settings.chatbotTitle || "Tiny Doll Atelier hulp";
+  document.querySelector("[data-chat-button-text]").textContent = state.settings.chatbotButtonText || "Hulp nodig?";
+  document.querySelector("[data-chat-privacy]").textContent =
+    state.settings.chatbotPrivacyText || "Deel geen wachtwoorden of gevoelige betaalgegevens in de chat.";
+  document.querySelector("[data-chat-input]").placeholder = state.settings.chatbotPlaceholder || "Typ je vraag...";
+  ensureChatbotWelcome();
+  renderChatbotMessages();
+  renderChatbotQuickQuestions();
+}
+
+function setChatbotOpen(open) {
+  const widget = document.querySelector("[data-chat-widget]");
+  const panel = document.querySelector("[data-chat-panel]");
+  const toggle = document.querySelector("[data-chat-toggle]");
+  if (!widget || !panel || !toggle) {
+    return;
+  }
+
+  widget.classList.toggle("is-open", open);
+  panel.setAttribute("aria-hidden", open ? "false" : "true");
+  toggle.setAttribute("aria-expanded", open ? "true" : "false");
+  toggle.setAttribute("aria-label", open ? "Chat sluiten" : "Chat openen");
+  if (open) {
+    document.querySelector("[data-chat-input]")?.focus();
+  }
+}
+
+function submitChatbotQuestion(question) {
+  const cleanQuestion = question.trim();
+  if (!cleanQuestion) {
+    return;
+  }
+
+  addChatbotMessage("user", cleanQuestion);
+  const answer = createChatbotAnswer(cleanQuestion);
+  addChatbotMessage("bot", answer.text, answer.products);
 }
 
 function renderReviews() {
@@ -1417,6 +1674,42 @@ modalAddButton.addEventListener("click", () => {
   }
 });
 
+document.querySelector("[data-chat-toggle]")?.addEventListener("click", () => {
+  const widget = document.querySelector("[data-chat-widget]");
+  setChatbotOpen(!widget?.classList.contains("is-open"));
+});
+
+document.querySelector("[data-chat-close]")?.addEventListener("click", () => setChatbotOpen(false));
+
+document.querySelector("[data-chat-clear]")?.addEventListener("click", () => {
+  localStorage.removeItem(CHAT_HISTORY_KEY);
+  ensureChatbotWelcome();
+  renderChatbotMessages();
+});
+
+document.querySelector("[data-chat-form]")?.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const input = event.currentTarget.elements.message;
+  submitChatbotQuestion(input.value);
+  input.value = "";
+});
+
+document.querySelector("[data-chat-quick-questions]")?.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-chat-quick-question]");
+  if (!button) {
+    return;
+  }
+  submitChatbotQuestion(button.dataset.chatQuickQuestion || button.textContent);
+});
+
+document.querySelector("[data-chat-messages]")?.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-chat-product]");
+  if (!button) {
+    return;
+  }
+  openProductModal(button.dataset.chatProduct);
+});
+
 checkoutForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const entries = cartEntries();
@@ -1652,6 +1945,7 @@ document.addEventListener("keydown", (event) => {
     closeCart();
     closeProductModal();
     closeMenu();
+    setChatbotOpen(false);
     document.body.classList.remove("modal-open");
   }
 });
@@ -1669,6 +1963,7 @@ function renderShop() {
   renderReviews();
   renderProducts();
   renderCart();
+  renderChatbot();
   openLinkedProduct();
 }
 

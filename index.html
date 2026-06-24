@@ -591,6 +591,33 @@
       </article>
     </aside>
 
+    <aside class="chat-widget" data-chat-widget hidden>
+      <button class="chat-toggle" type="button" data-chat-toggle aria-expanded="false" aria-controls="chat-panel" aria-label="Chat openen">
+        <span class="chat-toggle-icon" aria-hidden="true">?</span>
+        <span data-chat-button-text>Hulp nodig?</span>
+      </button>
+      <section class="chat-panel" id="chat-panel" data-chat-panel aria-hidden="true" role="dialog" aria-modal="false" aria-labelledby="chat-title">
+        <div class="chat-header">
+          <div>
+            <p class="eyebrow">Hulp</p>
+            <h2 id="chat-title" data-chat-title>Tiny Doll Atelier hulp</h2>
+          </div>
+          <button class="icon-button" type="button" data-chat-close aria-label="Chat sluiten">x</button>
+        </div>
+        <div class="chat-body">
+          <p class="chat-privacy" data-chat-privacy></p>
+          <div class="chat-messages" data-chat-messages aria-live="polite"></div>
+          <div class="chat-quick-questions" data-chat-quick-questions></div>
+        </div>
+        <form class="chat-form" data-chat-form>
+          <label class="sr-only" for="chat-input">Stel je vraag</label>
+          <input id="chat-input" name="message" data-chat-input autocomplete="off" placeholder="Typ je vraag..." />
+          <button class="primary-action" type="submit">Verstuur</button>
+        </form>
+        <button class="chat-clear" type="button" data-chat-clear>Chat wissen</button>
+      </section>
+    </aside>
+
     <template id="product-card-template">
       <article class="product-card">
         <div class="product-photo">

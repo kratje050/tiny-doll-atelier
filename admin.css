@@ -465,6 +465,11 @@ h2 {
   border-bottom: 1px solid var(--line);
 }
 
+.compact-heading {
+  padding: 10px 0 0;
+  border-bottom: 0;
+}
+
 .order-toolbar {
   display: grid;
   width: min(100%, 920px);
@@ -852,6 +857,28 @@ td strong {
 .settings-block h3 {
   margin: 0;
   font-size: 1rem;
+}
+
+.chatbot-admin-list {
+  display: grid;
+  gap: 14px;
+}
+
+.chatbot-admin-card {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.chatbot-admin-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .wide-field {
