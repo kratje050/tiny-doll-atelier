@@ -297,7 +297,7 @@ const TinyStore = (() => {
         id: "bestellen",
         title: "Bestellen",
         quickQuestion: "Hoe werkt bestellen?",
-        keywords: "bestellen, aanvraag, order, hoe werkt, winkelmandje, aanvragen",
+        keywords: "bestellen, bestelling plaatsen, aanvraag, order, hoe werkt, winkelmandje, aanvragen",
         answer:
           "Bij Tiny Doll Atelier plaats je eerst een aanvraag. Daarna controleren we voorraad, maatwerk en levertijd. Je ontvangt daarna persoonlijk betaalinformatie per e-mail. Je bestelling is definitief nadat alles is bevestigd en betaald.",
         quickEnabled: true,
@@ -307,7 +307,7 @@ const TinyStore = (() => {
         id: "betalen",
         title: "Betalen",
         quickQuestion: "Hoe werkt betalen?",
-        keywords: "betalen, betaal, ideal, mollie, tikkie, overschrijving, betaalverzoek",
+        keywords: "betalen, betaal, betaling, ideal, mollie, tikkie, overschrijving, bankoverschrijving, betaalverzoek, iban",
         answer:
           "Er is geen directe iDEAL of Mollie checkout. Na controle van je aanvraag ontvang je betaalinformatie. Betalen kan via bankoverschrijving, betaalverzoek of Tikkie.",
         quickEnabled: true,
@@ -317,7 +317,7 @@ const TinyStore = (() => {
         id: "cadeaubon",
         title: "Cadeaubon",
         quickQuestion: "Hoe werkt een cadeaubon?",
-        keywords: "cadeaubon, giftcard, bon, tegoed, code",
+        keywords: "cadeaubon, cadeaubonnen, giftcard, bon, tegoed, saldo, code",
         answer:
           "Je kunt een cadeaubon aanvragen via de cadeaubonpagina. Na bevestiging en betaling maken we de cadeauboncode aan. De ontvanger krijgt de code pas nadat deze vanuit beheer is verstuurd.",
         quickEnabled: true,
@@ -337,7 +337,7 @@ const TinyStore = (() => {
         id: "verzenden",
         title: "Verzenden",
         quickQuestion: "Wat is de levertijd?",
-        keywords: "verzenden, verzending, levertijd, pakket, track, trace, bezorging",
+        keywords: "verzenden, verzending, levertijd, levering, pakket, track, trace, bezorging, hoelang, hoe lang, duurt, wanneer",
         answer:
           "Producten op voorraad worden meestal binnen 1 tot 3 werkdagen verzonden. Maatwerk of op aanvraag duurt meestal 3 tot 10 werkdagen. Verzending binnen Nederland kost standaard EUR 6,95. Belgie is in overleg.",
         quickEnabled: true,
@@ -347,7 +347,7 @@ const TinyStore = (() => {
         id: "retour",
         title: "Retour",
         quickQuestion: "Hoe werkt retourneren?",
-        keywords: "retour, terugsturen, annuleren, herroepen, herroeping",
+        keywords: "retour, retourneren, terugsturen, annuleren, herroepen, herroeping, terug",
         answer:
           "Standaardproducten kunnen binnen 14 dagen worden aangemeld voor retour. Maatwerkproducten kunnen mogelijk niet retour als ze speciaal volgens persoonlijke wensen zijn gemaakt.",
         quickEnabled: true,

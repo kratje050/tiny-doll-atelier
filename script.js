@@ -1,7 +1,10 @@
 const formatMoney = TinyStore.formatMoney;
 const COLLECTION_STATE_KEY = "tiny-doll-collection-state";
-const CHAT_HISTORY_KEY = "tiny-doll-chat-history";
+const CHAT_HISTORY_KEY = "tiny-doll-chat-history-v2";
 const CHAT_MAX_MESSAGES = 20;
+const CHAT_TYPING_DELAY = 650;
+let chatbotTypingTimer = null;
+let chatbotTyping = false;
 
 function collectionPageSize() {
   return window.matchMedia("(max-width: 640px)").matches ? 6 : 8;
@@ -637,15 +640,105 @@ function formatChatbotText(text) {
     .replaceAll("{reactietijd}", state.settings.chatbotResponseTime || "1 tot 2 werkdagen");
 }
 
-function findChatbotFaq(question) {
+function chatbotBuiltInKeywords(faqId) {
+  const keywords = {
+    bestellen: [
+      "bestellen",
+      "bestelling plaatsen",
+      "aanvraag",
+      "aanvragen",
+      "winkelmand",
+      "winkelmandje",
+      "order",
+      "hoe werkt bestellen",
+    ],
+    betalen: [
+      "betalen",
+      "betaling",
+      "betaal",
+      "ideal",
+      "mollie",
+      "tikkie",
+      "overschrijving",
+      "bankoverschrijving",
+      "betaalverzoek",
+      "rekening",
+      "iban",
+    ],
+    cadeaubon: ["cadeaubon", "cadeaubonnen", "giftcard", "bon", "tegoed", "saldo", "code"],
+    maatwerk: ["maatwerk", "stof", "kleur", "popmaat", "maat", "afwerking", "wensen", "op maat"],
+    verzenden: [
+      "verzenden",
+      "verzending",
+      "levertijd",
+      "levering",
+      "pakket",
+      "track",
+      "trace",
+      "bezorgen",
+      "bezorging",
+      "hoelang",
+      "hoe lang",
+      "duurt",
+      "wanneer binnen",
+      "wanneer krijg",
+    ],
+    retour: ["retour", "retourneren", "terugsturen", "annuleren", "herroepen", "herroeping", "terug"],
+    account: ["account", "login", "inloggen", "mijn bestelling", "bestelling bekijken", "status", "wachtwoord"],
+    contact: ["contact", "mail", "e-mail", "email", "instagram", "bericht", "vraag", "bereiken"],
+  };
+  return keywords[faqId] || [];
+}
+
+function chatbotKeywordScore(question, faq) {
   const normalizedQuestion = normalizedChatText(question);
-  return chatbotFaqs().find((faq) => {
-    const keywords = String(faq.keywords || "")
+  const keywords = [
+    ...chatbotBuiltInKeywords(faq.id),
+    ...String(faq.keywords || "")
       .split(/[,;\n]/)
-      .map((keyword) => normalizedChatText(keyword).trim())
-      .filter(Boolean);
-    return keywords.some((keyword) => normalizedQuestion.includes(keyword));
-  });
+      .map((keyword) => keyword.trim()),
+  ]
+    .map((keyword) => normalizedChatText(keyword).trim())
+    .filter(Boolean);
+
+  return keywords.reduce((score, keyword) => {
+    if (normalizedQuestion === keyword) {
+      return score + 4;
+    }
+    if (normalizedQuestion.includes(keyword)) {
+      return score + Math.min(3, Math.max(1, keyword.split(/\s+/).length));
+    }
+    return score;
+  }, 0);
+}
+
+function findChatbotFaq(question) {
+  return chatbotFaqs()
+    .map((faq) => ({ faq, score: chatbotKeywordScore(question, faq) }))
+    .filter((match) => match.score > 0)
+    .sort((a, b) => b.score - a.score || Number(a.faq.order || 0) - Number(b.faq.order || 0))[0]?.faq;
+}
+
+function hasProductSearchIntent(question) {
+  const normalizedQuestion = normalizedChatText(question);
+  return [
+    "hebben jullie",
+    "heb je",
+    "zoek",
+    "zoeken",
+    "verkopen",
+    "collectie",
+    "product",
+    "producten",
+    "haarband",
+    "jurk",
+    "jurkje",
+    "broek",
+    "romper",
+    "setje",
+    "strik",
+    "tutu",
+  ].some((keyword) => normalizedQuestion.includes(keyword));
 }
 
 function chatbotProductTerms(question) {
@@ -668,6 +761,13 @@ function chatbotProductTerms(question) {
     "zoeken",
     "product",
     "producten",
+    "bestelling",
+    "bestellen",
+    "duurt",
+    "hoelang",
+    "lang",
+    "levertijd",
+    "wanneer",
   ]);
   return normalizedChatText(question)
     .split(/[^a-z0-9]+/)
@@ -686,6 +786,10 @@ function wordVariants(word) {
 }
 
 function searchChatbotProducts(question) {
+  if (!hasProductSearchIntent(question)) {
+    return [];
+  }
+
   const terms = chatbotProductTerms(question);
   if (!terms.length) {
     return [];
@@ -718,6 +822,11 @@ function searchChatbotProducts(question) {
 
 function createChatbotAnswer(question) {
   const faq = findChatbotFaq(question);
+
+  if (faq && !hasProductSearchIntent(question)) {
+    return { text: formatChatbotText(faq.answer), products: [] };
+  }
+
   const products = searchChatbotProducts(question);
 
   if (products.length) {
@@ -753,7 +862,7 @@ function renderChatbotMessages(messages = readChatHistory()) {
     return;
   }
 
-  container.innerHTML = messages
+  const messageHtml = messages
     .map((message) => {
       const products = (message.products || [])
         .map((productId) => state.products.find((product) => product.id === productId))
@@ -777,12 +886,22 @@ function renderChatbotMessages(messages = readChatHistory()) {
         : "";
       return `
         <article class="chat-message ${message.role === "user" ? "is-user" : "is-bot"}">
+          <span class="chat-message-label">${message.role === "user" ? "Jij" : "Tiny Doll Atelier"}</span>
           <p>${escapeHtml(message.text)}</p>
           ${productHtml}
         </article>
       `;
     })
     .join("");
+  const typingHtml = chatbotTyping
+    ? `
+      <article class="chat-message is-bot is-typing">
+        <span class="chat-message-label">Tiny Doll Atelier</span>
+        <p><span>Aan het typen</span><span class="typing-dots" aria-hidden="true"><i></i><i></i><i></i></span></p>
+      </article>
+    `
+    : "";
+  container.innerHTML = messageHtml + typingHtml;
   container.scrollTop = container.scrollHeight;
 }
 
@@ -857,9 +976,16 @@ function submitChatbotQuestion(question) {
     return;
   }
 
+  clearTimeout(chatbotTypingTimer);
+  chatbotTyping = false;
   addChatbotMessage("user", cleanQuestion);
-  const answer = createChatbotAnswer(cleanQuestion);
-  addChatbotMessage("bot", answer.text, answer.products);
+  chatbotTyping = true;
+  renderChatbotMessages();
+  chatbotTypingTimer = setTimeout(() => {
+    const answer = createChatbotAnswer(cleanQuestion);
+    chatbotTyping = false;
+    addChatbotMessage("bot", answer.text, answer.products);
+  }, CHAT_TYPING_DELAY);
 }
 
 function renderReviews() {
