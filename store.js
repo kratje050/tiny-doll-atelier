@@ -290,8 +290,21 @@ const TinyStore = (() => {
     chatbotPlaceholder: "Typ je vraag...",
     chatbotFallback:
       "Dat weet ik niet zeker. Stuur ons gerust een bericht via het contactformulier of mail naar {email}.",
+    chatbotHandoffText: "Wil je dat we persoonlijk meekijken? Mail gerust naar {email}.",
     chatbotContactEmail: "ddytuber@gmail.com",
     chatbotResponseTime: "meestal binnen 1 tot 2 werkdagen",
+    chatbotShowPrivacyText: true,
+    chatbotShowQuickQuestions: true,
+    chatbotProductSearchEnabled: true,
+    chatbotAutoOpenEnabled: false,
+    chatbotTone: "friendly",
+    chatbotQuickQuestionsMode: "chips",
+    chatbotTypingDelay: 650,
+    chatbotAutoOpenDelay: 8,
+    chatbotMaxMessages: 20,
+    chatbotProductLimit: 3,
+    chatbotProductIntro: "Ik vond deze producten die mogelijk passen bij je vraag:",
+    chatbotNoProductText: "Ik vond geen passend product. Kijk gerust in de collectie of stel je vraag via contact.",
     chatbotFaqs: [
       {
         id: "bestellen",

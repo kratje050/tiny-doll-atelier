@@ -24,6 +24,7 @@
         <button type="button" data-view-button="customers">Klanten</button>
         <button type="button" data-view-button="customeraccounts">Klantaccounts</button>
         <button type="button" data-view-button="orders">Bestellingen</button>
+        <button type="button" data-view-button="chatbot">Chatbot</button>
         <button type="button" data-view-button="settings">Instellingen</button>
         <button type="button" data-view-button="backup">Back-up</button>
       </nav>
@@ -470,6 +471,80 @@
         </section>
       </section>
 
+      <section class="admin-view" data-view="chatbot">
+        <form class="panel form-panel settings-panel" data-chatbot-form>
+          <div class="panel-heading">
+            <div>
+              <h2>Chatbot beheer</h2>
+              <span class="muted">Bepaal hoe de hulpchat reageert, zoekt en eruitziet.</span>
+            </div>
+          </div>
+
+          <div class="settings-block">
+            <h3>Basis</h3>
+            <div class="visibility-grid">
+              <label class="check-row"><input name="chatbotEnabled" type="checkbox" /> Toon chatbot op webshop</label>
+              <label class="check-row"><input name="chatbotShowPrivacyText" type="checkbox" /> Toon privacytekst</label>
+              <label class="check-row"><input name="chatbotShowQuickQuestions" type="checkbox" /> Toon snelle vragen</label>
+              <label class="check-row"><input name="chatbotProductSearchEnabled" type="checkbox" /> Producten zoeken in chat</label>
+              <label class="check-row"><input name="chatbotAutoOpenEnabled" type="checkbox" /> Chat automatisch openen</label>
+            </div>
+            <div class="settings-grid">
+              <label>Titel <input name="chatbotTitle" /></label>
+              <label>Knoptekst <input name="chatbotButtonText" /></label>
+              <label>Contact e-mail <input name="chatbotContactEmail" type="email" /></label>
+              <label>Reactietijd <input name="chatbotResponseTime" /></label>
+              <label>
+                Toon
+                <select name="chatbotTone">
+                  <option value="friendly">Vriendelijk</option>
+                  <option value="short">Kort en duidelijk</option>
+                  <option value="warm">Extra warm</option>
+                </select>
+              </label>
+              <label>
+                Snelle vragen stijl
+                <select name="chatbotQuickQuestionsMode">
+                  <option value="chips">Compacte rij</option>
+                  <option value="minimal">Alleen na welkom</option>
+                  <option value="hidden">Verbergen</option>
+                </select>
+              </label>
+            </div>
+            <label>Welkomstbericht <textarea name="chatbotWelcome" rows="3"></textarea></label>
+            <label>Privacytekst <textarea name="chatbotPrivacyText" rows="2"></textarea></label>
+            <label>Placeholder invoerveld <input name="chatbotPlaceholder" /></label>
+            <label>Fallbackantwoord <textarea name="chatbotFallback" rows="3"></textarea></label>
+            <label>Doorverwijstekst naar contact <textarea name="chatbotHandoffText" rows="2"></textarea></label>
+          </div>
+
+          <div class="settings-block">
+            <h3>Gedrag en weergave</h3>
+            <div class="settings-grid">
+              <label>Typvertraging in milliseconden <input name="chatbotTypingDelay" type="number" min="0" step="50" /></label>
+              <label>Automatisch openen na seconden <input name="chatbotAutoOpenDelay" type="number" min="0" step="1" /></label>
+              <label>Max. berichten bewaren <input name="chatbotMaxMessages" type="number" min="5" max="60" step="1" /></label>
+              <label>Max. producten tonen <input name="chatbotProductLimit" type="number" min="1" max="6" step="1" /></label>
+            </div>
+            <label>Tekst boven productresultaten <input name="chatbotProductIntro" /></label>
+            <label>Tekst als er geen product gevonden is <input name="chatbotNoProductText" /></label>
+          </div>
+
+          <div class="settings-block">
+            <div class="panel-heading compact-heading">
+              <div>
+                <h3>Antwoorden, zoekwoorden en snelle vragen</h3>
+                <span class="muted">Gebruik komma's tussen zoekwoorden. Je kunt per categorie de snelle knop tonen of verbergen.</span>
+              </div>
+            </div>
+            <div class="chatbot-admin-list" data-chatbot-faq-list></div>
+          </div>
+
+          <p class="form-note" data-chatbot-message></p>
+          <button class="primary-button" type="submit">Chatbot opslaan</button>
+        </form>
+      </section>
+
       <section class="admin-view" data-view="settings">
         <form class="panel form-panel settings-panel" data-settings-form>
           <div class="panel-heading">
@@ -640,27 +715,6 @@
               <label>Vraag 7 <input name="faq7Question" /></label>
               <label>Antwoord 7 <textarea name="faq7Answer" rows="2"></textarea></label>
             </div>
-          </div>
-          <div class="settings-block">
-            <h3>Chatbot</h3>
-            <div class="visibility-grid">
-              <label class="check-row"><input name="chatbotEnabled" type="checkbox" /> Toon chatbot op webshop</label>
-            </div>
-            <div class="settings-grid">
-              <label>Titel <input name="chatbotTitle" /></label>
-              <label>Knoptekst <input name="chatbotButtonText" /></label>
-              <label>Contact e-mail <input name="chatbotContactEmail" type="email" /></label>
-              <label>Reactietijd <input name="chatbotResponseTime" /></label>
-            </div>
-            <label>Welkomstbericht <textarea name="chatbotWelcome" rows="3"></textarea></label>
-            <label>Privacytekst <textarea name="chatbotPrivacyText" rows="2"></textarea></label>
-            <label>Placeholder invoerveld <input name="chatbotPlaceholder" /></label>
-            <label>Fallbackantwoord <textarea name="chatbotFallback" rows="3"></textarea></label>
-            <div class="panel-heading compact-heading">
-              <h3>Chatbot kennis en snelle vragen</h3>
-              <span class="muted">Pas zoekwoorden, antwoorden en volgorde aan.</span>
-            </div>
-            <div class="chatbot-admin-list" data-chatbot-faq-list></div>
           </div>
           <p class="form-note" data-settings-message></p>
           <button class="primary-button" type="submit">Instellingen opslaan</button>

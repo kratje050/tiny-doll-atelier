@@ -101,7 +101,6 @@ const settingVisibilityKeys = [
   "showFaq7",
   "showOrderRequestText",
   "showContactText",
-  "chatbotEnabled",
 ];
 const views = document.querySelectorAll("[data-view]");
 const navButtons = document.querySelectorAll("[data-view-button]");
@@ -111,6 +110,7 @@ const discountForm = document.querySelector("[data-discount-form]");
 const giftCardForm = document.querySelector("[data-gift-card-form]");
 const reviewForm = document.querySelector("[data-review-form]");
 const settingsForm = document.querySelector("[data-settings-form]");
+const chatbotForm = document.querySelector("[data-chatbot-form]");
 const accountCreateForm = document.querySelector("[data-account-create-form]");
 const productUpload = document.querySelector("[data-product-upload]");
 const extraImageUpload = document.querySelector("[data-extra-image-upload]");
@@ -1834,11 +1834,24 @@ function renderSettings() {
       }
     }
   });
-  renderChatbotSettings();
 }
 
 function renderChatbotSettings() {
-  const list = settingsForm.querySelector("[data-chatbot-faq-list]");
+  if (!chatbotForm) {
+    return;
+  }
+
+  Object.entries(adminState.settings).forEach(([key, value]) => {
+    if (chatbotForm.elements[key]) {
+      if (chatbotForm.elements[key].type === "checkbox") {
+        chatbotForm.elements[key].checked = Boolean(value);
+      } else {
+        chatbotForm.elements[key].value = value ?? "";
+      }
+    }
+  });
+
+  const list = chatbotForm.querySelector("[data-chatbot-faq-list]");
   if (!list) {
     return;
   }
@@ -1866,7 +1879,7 @@ function renderChatbotSettings() {
 }
 
 function collectChatbotFaqs() {
-  return [...settingsForm.querySelectorAll("[data-chatbot-faq-row]")]
+  return [...chatbotForm.querySelectorAll("[data-chatbot-faq-row]")]
     .map((row, index) => {
       const value = (field) => row.querySelector(`[data-chatbot-field="${field}"]`);
       return {
@@ -1892,6 +1905,7 @@ function renderAll() {
   renderReviews();
   renderEmailTemplates();
   renderSettings();
+  renderChatbotSettings();
   renderCustomers();
   renderAccountManagement();
   renderOrders();
@@ -2902,6 +2916,7 @@ settingsForm.addEventListener("submit", (event) => {
   event.preventDefault();
   const data = new FormData(settingsForm);
   TinyStore.saveSettings({
+    ...adminState.settings,
     ...Object.fromEntries(settingVisibilityKeys.map((key) => [key, data.get(key) === "on"])),
     shopName: data.get("shopName").trim(),
     email: data.get("email").trim(),
@@ -2972,17 +2987,41 @@ settingsForm.addEventListener("submit", (event) => {
     paymentIban: data.get("paymentIban").trim(),
     paymentDescription: data.get("paymentDescription").trim(),
     paymentExtraText: data.get("paymentExtraText").trim(),
+  });
+  document.querySelector("[data-settings-message]").textContent = "Instellingen opgeslagen.";
+  renderAll();
+});
+
+chatbotForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const data = new FormData(chatbotForm);
+  TinyStore.saveSettings({
+    ...adminState.settings,
+    chatbotEnabled: data.get("chatbotEnabled") === "on",
+    chatbotShowPrivacyText: data.get("chatbotShowPrivacyText") === "on",
+    chatbotShowQuickQuestions: data.get("chatbotShowQuickQuestions") === "on",
+    chatbotProductSearchEnabled: data.get("chatbotProductSearchEnabled") === "on",
+    chatbotAutoOpenEnabled: data.get("chatbotAutoOpenEnabled") === "on",
     chatbotTitle: data.get("chatbotTitle").trim(),
     chatbotButtonText: data.get("chatbotButtonText").trim(),
+    chatbotContactEmail: data.get("chatbotContactEmail").trim(),
+    chatbotResponseTime: data.get("chatbotResponseTime").trim(),
+    chatbotTone: data.get("chatbotTone"),
+    chatbotQuickQuestionsMode: data.get("chatbotQuickQuestionsMode"),
     chatbotWelcome: data.get("chatbotWelcome").trim(),
     chatbotPrivacyText: data.get("chatbotPrivacyText").trim(),
     chatbotPlaceholder: data.get("chatbotPlaceholder").trim(),
     chatbotFallback: data.get("chatbotFallback").trim(),
-    chatbotContactEmail: data.get("chatbotContactEmail").trim(),
-    chatbotResponseTime: data.get("chatbotResponseTime").trim(),
+    chatbotHandoffText: data.get("chatbotHandoffText").trim(),
+    chatbotTypingDelay: Number(data.get("chatbotTypingDelay")) || 0,
+    chatbotAutoOpenDelay: Number(data.get("chatbotAutoOpenDelay")) || 0,
+    chatbotMaxMessages: Number(data.get("chatbotMaxMessages")) || 20,
+    chatbotProductLimit: Number(data.get("chatbotProductLimit")) || 3,
+    chatbotProductIntro: data.get("chatbotProductIntro").trim(),
+    chatbotNoProductText: data.get("chatbotNoProductText").trim(),
     chatbotFaqs: collectChatbotFaqs(),
   });
-  document.querySelector("[data-settings-message]").textContent = "Instellingen opgeslagen.";
+  document.querySelector("[data-chatbot-message]").textContent = "Chatbot instellingen opgeslagen.";
   renderAll();
 });
 

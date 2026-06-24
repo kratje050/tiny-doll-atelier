@@ -5,6 +5,8 @@ const CHAT_MAX_MESSAGES = 20;
 const CHAT_TYPING_DELAY = 650;
 let chatbotTypingTimer = null;
 let chatbotTyping = false;
+let chatbotAutoOpenTimer = null;
+let chatbotAutoOpenScheduled = false;
 
 function collectionPageSize() {
   return window.matchMedia("(max-width: 640px)").matches ? 6 : 8;
@@ -613,14 +615,16 @@ function applySettings() {
 function readChatHistory() {
   try {
     const messages = JSON.parse(localStorage.getItem(CHAT_HISTORY_KEY) || "[]");
-    return Array.isArray(messages) ? messages.slice(-CHAT_MAX_MESSAGES) : [];
+    const maxMessages = Number(state.settings.chatbotMaxMessages || CHAT_MAX_MESSAGES);
+    return Array.isArray(messages) ? messages.slice(-maxMessages) : [];
   } catch {
     return [];
   }
 }
 
 function saveChatHistory(messages) {
-  localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(messages.slice(-CHAT_MAX_MESSAGES)));
+  const maxMessages = Number(state.settings.chatbotMaxMessages || CHAT_MAX_MESSAGES);
+  localStorage.setItem(CHAT_HISTORY_KEY, JSON.stringify(messages.slice(-maxMessages)));
 }
 
 function normalizedChatText(value) {
@@ -638,6 +642,17 @@ function formatChatbotText(text) {
   return String(text || "")
     .replaceAll("{email}", state.settings.chatbotContactEmail || state.settings.email || "ddytuber@gmail.com")
     .replaceAll("{reactietijd}", state.settings.chatbotResponseTime || "1 tot 2 werkdagen");
+}
+
+function applyChatbotTone(text) {
+  const cleanText = formatChatbotText(text);
+  if (state.settings.chatbotTone === "short") {
+    return cleanText.split(". ").slice(0, 2).join(". ").trim();
+  }
+  if (state.settings.chatbotTone === "warm" && !cleanText.toLowerCase().startsWith("natuurlijk")) {
+    return `Natuurlijk, ik help je graag. ${cleanText}`;
+  }
+  return cleanText;
 }
 
 function chatbotBuiltInKeywords(faqId) {
@@ -786,7 +801,7 @@ function wordVariants(word) {
 }
 
 function searchChatbotProducts(question) {
-  if (!hasProductSearchIntent(question)) {
+  if (!state.settings.chatbotProductSearchEnabled || !hasProductSearchIntent(question)) {
     return [];
   }
 
@@ -816,7 +831,7 @@ function searchChatbotProducts(question) {
     })
     .filter((result) => result.score > 0)
     .sort((a, b) => b.score - a.score)
-    .slice(0, 3)
+    .slice(0, Number(state.settings.chatbotProductLimit || 3))
     .map((result) => result.product);
 }
 
@@ -824,24 +839,33 @@ function createChatbotAnswer(question) {
   const faq = findChatbotFaq(question);
 
   if (faq && !hasProductSearchIntent(question)) {
-    return { text: formatChatbotText(faq.answer), products: [] };
+    return { text: applyChatbotTone(faq.answer), products: [] };
   }
 
   const products = searchChatbotProducts(question);
 
   if (products.length) {
     return {
-      text: faq?.answer ? formatChatbotText(faq.answer) : "Ik vond deze producten die mogelijk passen bij je vraag:",
+      text: faq?.answer
+        ? applyChatbotTone(faq.answer)
+        : applyChatbotTone(state.settings.chatbotProductIntro || "Ik vond deze producten die mogelijk passen bij je vraag:"),
       products: products.map((product) => product.id),
     };
   }
 
   if (faq) {
-    return { text: formatChatbotText(faq.answer), products: [] };
+    return { text: applyChatbotTone(faq.answer), products: [] };
+  }
+
+  if (hasProductSearchIntent(question)) {
+    return {
+      text: formatChatbotText(state.settings.chatbotNoProductText || state.settings.chatbotFallback),
+      products: [],
+    };
   }
 
   return {
-    text: formatChatbotText(
+    text: applyChatbotTone(
       state.settings.chatbotFallback ||
         "Dat weet ik niet zeker. Stuur ons gerust een bericht via het contactformulier of mail naar {email}.",
     ),
@@ -911,6 +935,19 @@ function renderChatbotQuickQuestions() {
     return;
   }
 
+  const box = container.closest(".chat-quick-box");
+  const isVisible =
+    state.settings.chatbotShowQuickQuestions !== false &&
+    state.settings.chatbotQuickQuestionsMode !== "hidden" &&
+    (state.settings.chatbotQuickQuestionsMode !== "minimal" || readChatHistory().length <= 1);
+  if (box) {
+    box.hidden = !isVisible;
+  }
+  if (!isVisible) {
+    container.innerHTML = "";
+    return;
+  }
+
   container.innerHTML = chatbotFaqs()
     .filter((faq) => faq.quickEnabled !== false && faq.quickQuestion)
     .map(
@@ -945,12 +982,17 @@ function renderChatbot() {
 
   document.querySelector("[data-chat-title]").textContent = state.settings.chatbotTitle || "Tiny Doll Atelier hulp";
   document.querySelector("[data-chat-button-text]").textContent = state.settings.chatbotButtonText || "Hulp nodig?";
-  document.querySelector("[data-chat-privacy]").textContent =
-    state.settings.chatbotPrivacyText || "Deel geen wachtwoorden of gevoelige betaalgegevens in de chat.";
+  const privacyText = document.querySelector("[data-chat-privacy]");
+  if (privacyText) {
+    privacyText.textContent =
+      state.settings.chatbotPrivacyText || "Deel geen wachtwoorden of gevoelige betaalgegevens in de chat.";
+    privacyText.hidden = state.settings.chatbotShowPrivacyText === false;
+  }
   document.querySelector("[data-chat-input]").placeholder = state.settings.chatbotPlaceholder || "Typ je vraag...";
   ensureChatbotWelcome();
   renderChatbotMessages();
   renderChatbotQuickQuestions();
+  scheduleChatbotAutoOpen();
 }
 
 function setChatbotOpen(open) {
@@ -966,8 +1008,25 @@ function setChatbotOpen(open) {
   toggle.setAttribute("aria-expanded", open ? "true" : "false");
   toggle.setAttribute("aria-label", open ? "Chat sluiten" : "Chat openen");
   if (open) {
+    clearTimeout(chatbotAutoOpenTimer);
     document.querySelector("[data-chat-input]")?.focus();
   }
+}
+
+function scheduleChatbotAutoOpen() {
+  if (
+    chatbotAutoOpenScheduled ||
+    !state.settings.chatbotAutoOpenEnabled ||
+    sessionStorage.getItem("tiny-doll-chat-opened")
+  ) {
+    return;
+  }
+  chatbotAutoOpenScheduled = true;
+  const delay = Math.max(0, Number(state.settings.chatbotAutoOpenDelay || 0)) * 1000;
+  chatbotAutoOpenTimer = setTimeout(() => {
+    setChatbotOpen(true);
+    sessionStorage.setItem("tiny-doll-chat-opened", "1");
+  }, delay);
 }
 
 function submitChatbotQuestion(question) {
@@ -979,13 +1038,15 @@ function submitChatbotQuestion(question) {
   clearTimeout(chatbotTypingTimer);
   chatbotTyping = false;
   addChatbotMessage("user", cleanQuestion);
+  renderChatbotQuickQuestions();
   chatbotTyping = true;
   renderChatbotMessages();
   chatbotTypingTimer = setTimeout(() => {
     const answer = createChatbotAnswer(cleanQuestion);
     chatbotTyping = false;
     addChatbotMessage("bot", answer.text, answer.products);
-  }, CHAT_TYPING_DELAY);
+    renderChatbotQuickQuestions();
+  }, Number(state.settings.chatbotTypingDelay || CHAT_TYPING_DELAY));
 }
 
 function renderReviews() {
