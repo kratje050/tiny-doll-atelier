@@ -137,6 +137,7 @@ let cloudSaveInFlight = null;
 let onlineEditingEnabled = false;
 let cloudStatusElement = null;
 let cloudStatusTimer = null;
+let pendingCloudSaveMessage = "";
 let activeViewName = "dashboard";
 let viewRefreshCounter = 0;
 
@@ -197,8 +198,20 @@ async function restoreOnlineDataAfterFailedSave() {
   }
 }
 
+function runPendingCloudSave() {
+  if (!pendingCloudSaveMessage || cloudSyncing) {
+    return;
+  }
+
+  const message = pendingCloudSaveMessage;
+  pendingCloudSaveMessage = "";
+  queueCloudSave(message);
+}
+
 function queueCloudSave(successMessage = "Wijzigingen online opgeslagen.") {
   if (cloudSyncing) {
+    pendingCloudSaveMessage = successMessage;
+    setCloudStatus("Wijziging staat klaar om online op te slaan...");
     return;
   }
 
@@ -2072,6 +2085,7 @@ async function refreshCloudDataQuietly() {
     // De bestaande data blijft zichtbaar als online verversen tijdelijk niet lukt.
   } finally {
     cloudSyncing = false;
+    runPendingCloudSave();
   }
 }
 
@@ -2103,6 +2117,7 @@ async function refreshViewFromCloud(viewName) {
     setCloudStatus(error.message || "Online gegevens konden niet worden opgehaald.", true);
   } finally {
     cloudSyncing = false;
+    runPendingCloudSave();
   }
 }
 
@@ -3426,6 +3441,7 @@ async function initializeAdmin() {
     onlineEditingEnabled = readyForOnlineEditing;
     renderAll();
     setOnlineEditingEnabled(readyForOnlineEditing, readyMessage, { silent: readyForOnlineEditing });
+    runPendingCloudSave();
   }
 }
 

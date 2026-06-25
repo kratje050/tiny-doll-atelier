@@ -28,7 +28,7 @@ const state = {
   sortOption: savedCollectionState.sortOption || "manual",
   visibleProductCount: Math.max(collectionPageSize(), Number(savedCollectionState.visibleProductCount) || 0),
   cart: JSON.parse(localStorage.getItem("poppenatelier-cart") || "{}"),
-  products: TinyStore.getProducts().filter((product) => product.active),
+  products: TinyStore.getProducts().filter((product) => product.active !== false),
   categories: TinyStore.getCategories(),
   settings: TinyStore.getSettings(),
   reviews: TinyStore.getReviews(),
@@ -2502,7 +2502,7 @@ document.addEventListener("keydown", (event) => {
 });
 
 function refreshPublicState() {
-  state.products = TinyStore.getProducts().filter((product) => product.active);
+  state.products = TinyStore.getProducts().filter((product) => product.active !== false);
   state.categories = TinyStore.getCategories();
   state.settings = TinyStore.getSettings();
   state.reviews = TinyStore.getReviews();
